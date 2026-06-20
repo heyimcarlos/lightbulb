@@ -145,6 +145,17 @@ const table = sqliteTable("session", {
 
 - Always run `bun typecheck` from package directories (e.g., `packages/opencode`), never `tsc` directly.
 
+## Agent Skills / Work Routing
+
+This fork uses Matt Pocock-style engineering skills for product-shaped work:
+
+- `setup-matt-pocock-skills`: repo setup is recorded in `docs/agents/`.
+- `to-prd`: synthesize conversation/research into a GitHub PRD issue.
+- `to-issues`: split approved PRDs into vertical-slice GitHub issues.
+- `triage`: move requests through `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, and `wontfix`.
+
+Lightbulb-specific rule: parent orchestrators should delegate implementation/research into fresh child workers and receive summaries plus artifact handles. Do not let long implementation detail accumulate in the parent orchestration context.
+
 ## V2 Session Core
 
 - Keep durable prompt admission separate from model execution. `SessionV2.prompt(...)` admits one durable `session_input` row before scheduling advisory `SessionExecution.wake(sessionID)` unless `resume: false` requests admit-only behavior. The serialized runner promotes admitted inputs into visible user messages at safe boundaries.
