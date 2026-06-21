@@ -260,7 +260,7 @@ export function transitionDecisionArtifactInDb(db: Database.Interface["db"], inp
       status: input.decision.status,
       title: current.title,
       owner: input.decision.owner ?? current.owner ?? "unassigned",
-      ...(input.decision.reviewer ?? current.reviewer
+      ...(input.decision.reviewer !== undefined || current.reviewer
         ? { reviewer: input.decision.reviewer ?? current.reviewer ?? undefined }
         : {}),
       ...(input.decision.supersedesArtifactID ?? current.supersedesArtifactID
@@ -276,7 +276,7 @@ export function transitionDecisionArtifactInDb(db: Database.Interface["db"], inp
       const replacement = yield* readDecisionArtifactRow(db, artifact.account_id, decision.supersededByArtifactID)
       if (!replacement)
         return yield* Effect.fail(new ArtifactRegistrationRejected({ reason: "replacement decision artifact was not found" }))
-      if (!decisionForArtifact(replacement))
+      if (!isDecisionArtifactType(replacement.type) || !decisionForArtifact(replacement))
         return yield* Effect.fail(new ArtifactRegistrationRejected({ reason: "replacement artifact is not a decision artifact" }))
     }
 

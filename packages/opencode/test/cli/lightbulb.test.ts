@@ -30,6 +30,30 @@ describe("lightbulb dashboard display", () => {
     const retentionPolicy = { mode: "keep" as const }
     const retentionDecision = "keep" as const
 
+    const artifactHandle = {
+      id: artifactID,
+      type: "report" as const,
+      uri: ".lightbulb/runs/issue-3-dashboard.md",
+      summary: "Dashboard worker report.",
+      status: "registered" as const,
+      integrity: {
+        status: "unchecked" as const,
+        checksum: null,
+        checkedAt: null,
+        uncheckedReason: null,
+        expectedSizeBytes: null,
+        actualChecksum: null,
+        actualSizeBytes: null,
+      },
+      retentionPolicy: { mode: "keep" as const },
+      retentionDecision: "keep" as const,
+      producerKind: "worker" as const,
+      producerRunID: runID,
+      producerWorkerID: workerID,
+      source: {},
+      lineage,
+    }
+
     expect(
       formatLightbulbDashboard({
         account: {
@@ -74,23 +98,7 @@ describe("lightbulb dashboard display", () => {
                         artifactID,
                       },
                     ],
-                    artifacts: [
-                      {
-                        id: artifactID,
-                        type: "report",
-                        uri: ".lightbulb/runs/issue-3-dashboard.md",
-                        summary: "Dashboard worker report.",
-                        status: "registered",
-                        integrity,
-                        retentionPolicy,
-                        retentionDecision,
-                        producerKind: "worker",
-                        producerRunID: runID,
-                        producerWorkerID: workerID,
-                        source: {},
-                        lineage,
-                      },
-                    ],
+                    artifacts: [artifactHandle],
                   },
                 ],
               },
@@ -117,21 +125,7 @@ describe("lightbulb dashboard display", () => {
           ],
         },
         artifactHandles: [
-          {
-            id: artifactID,
-            type: "report",
-            uri: ".lightbulb/runs/issue-3-dashboard.md",
-            summary: "Dashboard worker report.",
-            status: "registered",
-            integrity,
-            retentionPolicy,
-            retentionDecision,
-            producerKind: "worker",
-            producerRunID: runID,
-            producerWorkerID: workerID,
-            source: {},
-            lineage,
-          },
+          artifactHandle,
           {
             id: decisionArtifactID,
             type: "adr",

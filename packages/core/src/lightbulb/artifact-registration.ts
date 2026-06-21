@@ -175,6 +175,78 @@ export function registerHarnessArtifactInDb(db: Database.Interface["db"], input:
   })
 }
 
+export function registerArtifactInDb(db: Database.Interface["db"], input: RegisterArtifactInput) {
+  return Effect.gen(function* () {
+    const now = Date.now()
+    const rejected = validateArtifactRegistrationInput(input)
+    if (rejected) return yield* Effect.fail(new ArtifactRegistrationRejected({ reason: rejected }))
+    const producer = yield* resolveWorkerArtifactProducer(db, input)
+    const artifactID = input.artifactID ?? (`lbartifact_${Identifier.ascending()}` as ArtifactID)
+    const integrity = yield* integrityForRegistration({
+      uri: input.uri,
+      baseDirectory: input.baseDirectory,
+      checksum: input.checksum,
+      sizeBytes: input.sizeBytes,
+      uncheckedReason: input.uncheckedReason,
+      now,
+    })
+
+    yield* db
+      .transaction((tx) =>
+        Effect.gen(function* () {
+          yield* tx
+            .insert(LightbulbArtifactTable)
+            .values({
+              id: artifactID,
+              account_id: producer.accountID,
+              producer_run_id: input.producerRunID,
+              producer_worker_id: input.producerWorkerID,
+              task_packet_id: input.taskPacketID,
+              producer_kind: "worker",
+              type: input.type,
+              uri: input.uri,
+              checksum: integrity.checksum,
+              status: "registered",
+              summary: input.summary,
+              metadata: {
+                ...input.metadata,
+                integrity: integrity.metadata,
+                ...(input.unresolvedDependencyIDs?.length
+                  ? { retention: { unresolvedDependencyIDs: input.unresolvedDependencyIDs } }
+                  : {}),
+              },
+              retention_policy: serializeRetentionPolicy(input.retentionPolicy),
+            })
+            .run()
+          yield* tx
+            .insert(LightbulbArtifactEdgeTable)
+            .values({
+              account_id: producer.accountID,
+              artifact_id: artifactID,
+              consumer_run_id: input.producerRunID,
+              consumer_worker_id: input.producerWorkerID,
+              relation: "produced_by",
+              summary: "Worker produced this artifact for parent review.",
+            })
+            .run()
+        }),
+      )
+      .pipe(Effect.orDie)
+
+    const artifact = yield* readArtifactHandle(db, {
+      artifactID,
+      baseDirectory: input.baseDirectory,
+      now,
+      liveCheck: true,
+    })
+    if (!artifact)
+      return yield* Effect.fail(
+        new ArtifactRegistrationRejected({ reason: "artifact registration did not produce a readable handle" }),
+      )
+    return artifact
+  })
+}
+
 export function resolveWorkerArtifactProducer(db: Database.Interface["db"], input: RegisterArtifactInput) {
   return Effect.gen(function* () {
     const run = yield* db

@@ -12,6 +12,9 @@ import {
   LightbulbGateTable,
   LightbulbGoalTable,
   LightbulbLoopTable,
+  LightbulbRouteSteerTable,
+  LightbulbRouteStopTable,
+  LightbulbRouteTable,
   LightbulbRunTable,
 } from "@opencode-ai/core/lightbulb/sql"
 import { Database } from "@opencode-ai/core/database/database"
@@ -75,6 +78,94 @@ describe("Lightbulb", () => {
           expect(graph?.events.map((event) => [event.aggregate_type, event.aggregate_id, event.type])).toEqual([
             ["run", seeded.runID, "lightbulb.tracer.seeded"],
           ])
+        }).pipe(Effect.provide(layer(tmp.path))),
+      ),
+    ),
+  )
+
+  it.live("plans and steers a goal route without losing the destination", () =>
+    Effect.acquireRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ).pipe(
+      Effect.flatMap((tmp) =>
+        Effect.gen(function* () {
+          const lightbulb = yield* Lightbulb.Service
+          const database = yield* Database.Service
+          const created = yield* lightbulb.createOrAdoptGoal({
+            accountName: "Route Account",
+            title: "Ship proactive steering",
+            objective: "Keep the destination fixed while steering through route stops.",
+            sourceRef: "github:heyimcarlos/lightbulb/issues/proactive-steering",
+            summary: "Google Maps-style loop route.",
+          })
+          const route = yield* lightbulb.planGoalRoute({
+            goalID: created.goal.id,
+            destination: "Merged proactive steering slice with passing verification gates",
+            summary: "Route from design through implementation and verification.",
+            stops: [
+              {
+                kind: "discovery",
+                title: "Confirm destination",
+                objective: "Translate the user request into one fixed arrival condition.",
+                evidence: "Goal contract names destination and anti-drift criteria.",
+              },
+              {
+                kind: "implementation",
+                title: "Persist route model",
+                objective: "Store route, stops, and steering events structurally.",
+                evidence: "SQLite rows exist for the route, stops, and steering events.",
+              },
+              {
+                kind: "verification",
+                title: "Verify arrival",
+                objective: "Run typecheck and migration-backed route tests.",
+                evidence: "Focused test suite passes and route state is readable.",
+              },
+            ],
+          })
+          const steered = yield* lightbulb.steerGoalRoute({
+            routeID: route.id,
+            reason: "user",
+            summary: "User redirected the loop from discovery into implementation without changing destination.",
+            instruction: "Continue toward the same arrival condition through the implementation stop.",
+            nextStopID: route.stops[1]!.id,
+          })
+          const readback = yield* lightbulb.readGoalRoute(route.id)
+          const graph = yield* lightbulb.readAccountGraph(created.goal.account_id)
+          const routeRows = yield* database.db.select().from(LightbulbRouteTable).all().pipe(Effect.orDie)
+          const stopRows = yield* database.db.select().from(LightbulbRouteStopTable).all().pipe(Effect.orDie)
+          const steerRows = yield* database.db.select().from(LightbulbRouteSteerTable).all().pipe(Effect.orDie)
+
+          expect(route.destination).toBe("Merged proactive steering slice with passing verification gates")
+          expect(route.status).toBe("active")
+          expect(route.currentStopID).toBe(route.stops[0]!.id)
+          expect(route.stops.map((stop) => [stop.sequence, stop.kind, stop.status, stop.title])).toEqual([
+            [0, "discovery", "active", "Confirm destination"],
+            [1, "implementation", "pending", "Persist route model"],
+            [2, "verification", "pending", "Verify arrival"],
+          ])
+          expect(steered.destination).toBe(route.destination)
+          expect(steered.status).toBe("rerouting")
+          expect(steered.currentStopID).toBe(route.stops[1]!.id)
+          expect(steered.stops.map((stop) => [stop.id, stop.status])).toEqual([
+            [route.stops[0]!.id, "blocked"],
+            [route.stops[1]!.id, "active"],
+            [route.stops[2]!.id, "pending"],
+          ])
+          expect(steered.steers.map((steer) => [steer.reason, steer.from_stop_id, steer.to_stop_id])).toEqual([
+            ["user", route.stops[0]!.id, route.stops[1]!.id],
+          ])
+          expect(readback?.currentStopID).toBe(route.stops[1]!.id)
+          expect(graph?.routes.map((item) => [item.id, item.destination, item.current_stop_id])).toEqual([
+            [route.id, route.destination, route.stops[1]!.id],
+          ])
+          expect(graph?.routeStops.map((stop) => stop.id)).toEqual(route.stops.map((stop) => stop.id))
+          expect(graph?.routeSteers.map((steer) => steer.id)).toEqual(steered.steers.map((steer) => steer.id))
+          expect(routeRows).toHaveLength(1)
+          expect(stopRows).toHaveLength(3)
+          expect(steerRows).toHaveLength(1)
+          expect(graph?.events.map((event) => event.type)).toContain("lightbulb.route.steered")
         }).pipe(Effect.provide(layer(tmp.path))),
       ),
     ),

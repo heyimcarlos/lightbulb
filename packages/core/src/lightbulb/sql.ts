@@ -34,6 +34,7 @@ export const LightbulbGoalTable = sqliteTable(
   (table) => [
     index("lightbulb_goal_account_idx").on(table.account_id),
     uniqueIndex("lightbulb_goal_account_source_ref_idx").on(table.account_id, table.source_ref),
+    uniqueIndex("lightbulb_goal_account_id_idx").on(table.account_id, table.id),
   ],
 )
 
@@ -59,6 +60,112 @@ export const LightbulbLoopTable = sqliteTable(
     index("lightbulb_loop_account_idx").on(table.account_id),
     index("lightbulb_loop_goal_idx").on(table.goal_id),
     uniqueIndex("lightbulb_loop_account_id_idx").on(table.account_id, table.id),
+  ],
+)
+
+export const LightbulbRouteTable = sqliteTable(
+  "lightbulb_route",
+  {
+    id: text().$type<Lightbulb.RouteID>().primaryKey(),
+    account_id: text()
+      .$type<Lightbulb.AccountID>()
+      .notNull()
+      .references(() => LightbulbAccountTable.id, { onDelete: "cascade" }),
+    goal_id: text()
+      .$type<Lightbulb.GoalID>()
+      .notNull()
+      .references(() => LightbulbGoalTable.id, { onDelete: "cascade" }),
+    destination: text().notNull(),
+    status: text().$type<Lightbulb.RouteStatus>().notNull(),
+    current_stop_id: text().$type<Lightbulb.RouteStopID>(),
+    summary: text().notNull(),
+    metadata: text({ mode: "json" }).$type<Record<string, unknown>>(),
+    ...Timestamps,
+  },
+  (table) => [
+    index("lightbulb_route_account_idx").on(table.account_id),
+    index("lightbulb_route_goal_idx").on(table.goal_id),
+    uniqueIndex("lightbulb_route_account_id_idx").on(table.account_id, table.id),
+    foreignKey({
+      columns: [table.account_id, table.goal_id],
+      foreignColumns: [LightbulbGoalTable.account_id, LightbulbGoalTable.id],
+      name: "lightbulb_route_account_goal_fk",
+    }).onDelete("cascade"),
+  ],
+)
+
+export const LightbulbRouteStopTable = sqliteTable(
+  "lightbulb_route_stop",
+  {
+    id: text().$type<Lightbulb.RouteStopID>().primaryKey(),
+    account_id: text()
+      .$type<Lightbulb.AccountID>()
+      .notNull()
+      .references(() => LightbulbAccountTable.id, { onDelete: "cascade" }),
+    route_id: text()
+      .$type<Lightbulb.RouteID>()
+      .notNull()
+      .references(() => LightbulbRouteTable.id, { onDelete: "cascade" }),
+    sequence: integer().notNull(),
+    kind: text().$type<Lightbulb.RouteStopKind>().notNull(),
+    status: text().$type<Lightbulb.RouteStopStatus>().notNull(),
+    title: text().notNull(),
+    objective: text().notNull(),
+    evidence: text().notNull(),
+    metadata: text({ mode: "json" }).$type<Record<string, unknown>>(),
+    ...Timestamps,
+  },
+  (table) => [
+    index("lightbulb_route_stop_account_idx").on(table.account_id),
+    index("lightbulb_route_stop_route_idx").on(table.route_id),
+    uniqueIndex("lightbulb_route_stop_route_sequence_idx").on(table.route_id, table.sequence),
+    uniqueIndex("lightbulb_route_stop_account_id_idx").on(table.account_id, table.id),
+    foreignKey({
+      columns: [table.account_id, table.route_id],
+      foreignColumns: [LightbulbRouteTable.account_id, LightbulbRouteTable.id],
+      name: "lightbulb_route_stop_account_route_fk",
+    }).onDelete("cascade"),
+  ],
+)
+
+export const LightbulbRouteSteerTable = sqliteTable(
+  "lightbulb_route_steer",
+  {
+    id: text().$type<Lightbulb.RouteSteerID>().primaryKey(),
+    account_id: text()
+      .$type<Lightbulb.AccountID>()
+      .notNull()
+      .references(() => LightbulbAccountTable.id, { onDelete: "cascade" }),
+    route_id: text()
+      .$type<Lightbulb.RouteID>()
+      .notNull()
+      .references(() => LightbulbRouteTable.id, { onDelete: "cascade" }),
+    reason: text().$type<Lightbulb.RouteSteerReason>().notNull(),
+    from_stop_id: text().$type<Lightbulb.RouteStopID>(),
+    to_stop_id: text().$type<Lightbulb.RouteStopID>(),
+    summary: text().notNull(),
+    instruction: text(),
+    metadata: text({ mode: "json" }).$type<Record<string, unknown>>(),
+    ...Timestamps,
+  },
+  (table) => [
+    index("lightbulb_route_steer_account_idx").on(table.account_id),
+    index("lightbulb_route_steer_route_idx").on(table.route_id),
+    foreignKey({
+      columns: [table.account_id, table.route_id],
+      foreignColumns: [LightbulbRouteTable.account_id, LightbulbRouteTable.id],
+      name: "lightbulb_route_steer_account_route_fk",
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [table.account_id, table.from_stop_id],
+      foreignColumns: [LightbulbRouteStopTable.account_id, LightbulbRouteStopTable.id],
+      name: "lightbulb_route_steer_account_from_stop_fk",
+    }).onDelete("set null"),
+    foreignKey({
+      columns: [table.account_id, table.to_stop_id],
+      foreignColumns: [LightbulbRouteStopTable.account_id, LightbulbRouteStopTable.id],
+      name: "lightbulb_route_steer_account_to_stop_fk",
+    }).onDelete("set null"),
   ],
 )
 

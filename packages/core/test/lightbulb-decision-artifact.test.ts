@@ -104,6 +104,105 @@ describe("Lightbulb decision artifact routing", () => {
     ),
   )
 
+  it.live("rejects blank reviewer transitions", () =>
+    Effect.acquireRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ).pipe(
+      Effect.flatMap((tmp) =>
+        Effect.gen(function* () {
+          const lightbulb = yield* Lightbulb.Service
+          const seeded = yield* lightbulb.seedTracerBullet()
+          yield* Effect.promise(() => Bun.write(path.join(tmp.path, "blank-reviewer.md"), "decision body"))
+
+          const decision = yield* lightbulb.registerDecisionArtifact({
+            accountID: seeded.accountID,
+            type: "adr",
+            uri: "blank-reviewer.md",
+            summary: "Decision with reviewer metadata.",
+            retentionPolicy: { mode: "keep" },
+            baseDirectory: tmp.path,
+            source: {
+              issueRef: "#24",
+            },
+            decision: {
+              status: "pending",
+              owner: "architecture",
+              reviewer: "maintainer",
+            },
+          })
+          const rejected = yield* lightbulb
+            .transitionDecisionArtifact({
+              artifactID: decision.id,
+              decision: {
+                status: "accepted",
+                reviewer: "",
+              },
+            })
+            .pipe(Effect.flip)
+
+          expect(rejected).toMatchObject({ reason: "decision reviewer is empty" })
+        }).pipe(Effect.provide(layer(tmp.path))),
+      ),
+    ),
+  )
+
+  it.live("rejects non-routable replacement artifacts", () =>
+    Effect.acquireRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ).pipe(
+      Effect.flatMap((tmp) =>
+        Effect.gen(function* () {
+          const lightbulb = yield* Lightbulb.Service
+          const seeded = yield* lightbulb.seedTracerBullet()
+          yield* Effect.promise(() => Bun.write(path.join(tmp.path, "old-decision.md"), "old decision"))
+
+          const decision = yield* lightbulb.registerDecisionArtifact({
+            accountID: seeded.accountID,
+            type: "adr",
+            uri: "old-decision.md",
+            summary: "Decision with a non-routable replacement.",
+            retentionPolicy: { mode: "keep" },
+            baseDirectory: tmp.path,
+            source: {
+              issueRef: "#24",
+            },
+            decision: {
+              status: "pending",
+              owner: "architecture",
+            },
+          })
+          const replacement = yield* lightbulb.registerHarnessArtifact({
+            accountID: seeded.accountID,
+            producerKind: "harness",
+            type: "report",
+            uri: "replacement-report.md",
+            summary: "Generic report with decision-shaped metadata.",
+            retentionPolicy: { mode: "keep" },
+            metadata: {
+              decision: {
+                status: "accepted",
+                owner: "architecture",
+              },
+            },
+          })
+          const rejected = yield* lightbulb
+            .transitionDecisionArtifact({
+              artifactID: decision.id,
+              decision: {
+                status: "superseded",
+                supersededByArtifactID: replacement.id,
+              },
+            })
+            .pipe(Effect.flip)
+
+          expect(rejected).toMatchObject({ reason: "replacement artifact is not a decision artifact" })
+        }).pipe(Effect.provide(layer(tmp.path))),
+      ),
+    ),
+  )
+
   it.live("holds ready issue routing for an unresolved decision gate", () =>
     Effect.acquireRelease(
       Effect.promise(() => tmpdir()),
