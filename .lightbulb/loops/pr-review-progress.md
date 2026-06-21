@@ -74,3 +74,14 @@
 - No GitHub status checks reported; merge state clean.
 - Squash-merged PR #51 into `dev` as `4396ba4fc9169e632bd334a3853c955bde5943f1` and post-merge verified the same focused gates on fetched `origin/dev`.
 - Closed issues #43 and #44 via PR merge; removed stale `ready-for-agent` labels and left `agent-reviewed` + `agent-integrated`.
+
+## 2026-06-21T19:36:43Z — PR #54/#55 review fixes pushed
+
+- PR #54 (`cleanup-automation`) fixed current-head Codex findings:
+  - Disabled `opencode github install` with a Lightbulb unsupported failure.
+  - Deleted `.github/workflows/publish-vscode.yml`.
+  - Resolved the two now-outdated Codex review threads after verification.
+- PR #54 local gates passed: `git diff --check`, upstream-action/publish grep guards, GitHub help/action tests (18 pass), Lightbulb CLI tests (5 pass), `packages/opencode:bun typecheck`, and installer unsupported smoke.
+- PR #55 (`repo-identity`) fixed the stale Lightbulb dashboard fixture required by current type definitions; local gates passed: `git diff --check`, Lightbulb CLI tests (5 pass), and `packages/opencode:bun typecheck`.
+- Pushed both branches and requested `@codex review` on both current heads.
+- Blocked from merge: GitHub checks still queued/pending; PR #54 current-head Codex review is EYES-only pending, and PR #55 current-head Codex response has not arrived yet.

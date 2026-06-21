@@ -1,37 +1,60 @@
 {
-  "pr": 51,
-  "url": "https://github.com/heyimcarlos/lightbulb/pull/51",
-  "head": "lightbulb-binary",
-  "base": "dev",
-  "head_sha": "8ab38303ed0d26919346ecd0fcb105cd5bf5cbfb",
-  "last_reviewed_at": "2026-06-21T17:29:20Z",
-  "state": "merged_post_merge_verified",
-  "external_codex_review": {
-    "requested": true,
-    "blocked": true,
-    "reason": "Codex connector returned a current-head usage-limit blocker after @codex review on head 8ab38303; no actionable top-level reviews, inline comments, or review threads existed."
-  },
-  "local_gates": {
-    "packages/opencode:bun test test/cli/lightbulb.test.ts --timeout 30000": "passed: 5 pass, 0 fail",
-    "packages/opencode:bun typecheck": "passed",
-    "source CLI smokes": "passed: lightbulb help, dashboard help, seeded JSON dashboard",
-    "wrapper CLI smokes": "passed: ./bin/lightbulb help, dashboard help, seeded JSON dashboard",
-    "packages/opencode:bun run build --single --skip-embed-web-ui": "passed with Bun 1.3.14; dist/opencode-linux-x64/bin/opencode --version smoke passed",
-    "pre-push:bun turbo typecheck": "passed: 23 successful, 0 failed",
-    "git diff --check": "passed"
-  },
-  "local_review": {
-    "actionable_findings": [
-      "Missing bun.lock bin metadata for the new lightbulb package bin; fixed and pushed in 8ab38303."
-    ],
-    "unresolved_findings": []
-  },
-  "evidence": {
-    "deck": ".lightbulb/evidence/pr-pending-lightbulb-binary/explainer.html",
-    "terminal_evidence": ".lightbulb/evidence/pr-pending-lightbulb-binary/terminal-screenshot.svg",
-    "verification": ".lightbulb/evidence/pr-pending-lightbulb-binary/verification.md"
-  },
-  "blockers": [],
-  "merge_commit": "4396ba4fc9169e632bd334a3853c955bde5943f1",
-  "issues_reconciled": [43, 44]
+  "updated_at": "2026-06-21T19:36:43Z",
+  "prs": [
+    {
+      "pr": 54,
+      "url": "https://github.com/heyimcarlos/lightbulb/pull/54",
+      "head": "cleanup-automation",
+      "base": "dev",
+      "head_sha": "f24fb81b68b15793a4fd68eb5e13a943aaa0d816",
+      "state": "pending_ci_and_current_head_codex_review",
+      "local_gates": {
+        "git diff --check": "passed",
+        "grep: anomalyco/opencode under script/github/.github": "passed: no matches",
+        "grep: opencode github run under github/.github/script": "passed: no matches",
+        "grep: VSCE_PAT|OPENVSX_TOKEN|publish-vscode under .github/workflows": "passed: no matches",
+        "packages/opencode:bun test test/cli/help/help-snapshots.test.ts test/cli/github-action.test.ts --timeout 30000": "passed: 18 pass, 0 fail",
+        "packages/opencode:bun test test/cli/lightbulb.test.ts --timeout 30000": "passed: 5 pass, 0 fail",
+        "packages/opencode:bun typecheck": "passed",
+        "packages/opencode:OPENCODE_DB=/tmp/lightbulb-pr54-install.sqlite bun src/index.ts github install": "passed: exits 1 with Lightbulb unsupported installer message"
+      },
+      "review_fixes": [
+        "Disabled opencode github install so it cannot open the upstream app or write anomalyco/opencode/github@latest workflows.",
+        "Deleted .github/workflows/publish-vscode.yml so Lightbulb tags/manual dispatch cannot publish the upstream opencode VS Code extension.",
+        "Resolved both stale Codex review threads after the fixes were pushed."
+      ],
+      "external_codex_review": {
+        "requested": true,
+        "pending": true,
+        "reason": "Latest @codex review comment on head f24fb81b has only an EYES reaction so far."
+      },
+      "blockers": [
+        "GitHub checks are still pending/queued on the latest head."
+      ]
+    },
+    {
+      "pr": 55,
+      "url": "https://github.com/heyimcarlos/lightbulb/pull/55",
+      "head": "repo-identity",
+      "base": "dev",
+      "head_sha": "c5ab88fff65d7e587b59aea0677aed1349e73210",
+      "state": "pending_ci_and_current_head_codex_review",
+      "local_gates": {
+        "git diff --check": "passed",
+        "packages/opencode:bun test test/cli/lightbulb.test.ts --timeout 30000": "passed: 5 pass, 0 fail",
+        "packages/opencode:bun typecheck": "passed"
+      },
+      "review_fixes": [
+        "Updated dashboard test fixture for current loop schedule fields so package typecheck passes."
+      ],
+      "external_codex_review": {
+        "requested": true,
+        "pending": true,
+        "reason": "Latest @codex review requested on head c5ab88ff; no current-head response yet."
+      },
+      "blockers": [
+        "GitHub checks are still pending/queued on the latest head."
+      ]
+    }
+  ]
 }
