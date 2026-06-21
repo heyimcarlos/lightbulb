@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <rect width="1280" height="720" fill="#080c16"/>
+  <rect x="70" y="60" width="1140" height="600" rx="28" fill="#10182a" stroke="#2b3b60" stroke-width="2"/>
+  <text x="110" y="130" fill="#eef4ff" font-family="Inter, Arial, sans-serif" font-size="44" font-weight="700">PR #30 decision artifact routing</text>
+  <text x="110" y="200" fill="#a7c7ff" font-family="Inter, Arial, sans-serif" font-size="28">Durable decisions now gate AFK dispatch by artifact handle.</text>
+  <text x="110" y="280" fill="#86efac" font-family="monospace" font-size="24">✓ packages/core decision tests passed</text>
+  <text x="110" y="325" fill="#86efac" font-family="monospace" font-size="24">✓ packages/core typecheck passed</text>
+  <text x="110" y="370" fill="#86efac" font-family="monospace" font-size="24">✓ migration check passed</text>
+  <text x="110" y="415" fill="#86efac" font-family="monospace" font-size="24">✓ packages/opencode dashboard test/typecheck passed</text>
+  <text x="110" y="460" fill="#86efac" font-family="monospace" font-size="24">✓ git diff --check origin/dev...HEAD passed</text>
+  <text x="110" y="540" fill="#eef4ff" font-family="Inter, Arial, sans-serif" font-size="26">Operator surface shows artifact lifecycle plus decision=&lt;status&gt;.</text>
+  <text x="110" y="585" fill="#eef4ff" font-family="Inter, Arial, sans-serif" font-size="26">Missing required decisions hold issues instead of dispatching workers.</text>
+</svg>

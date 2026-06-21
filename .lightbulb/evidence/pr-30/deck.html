@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>PR 30 Evidence: Decision Artifact Routing</title>
+  <style>
+    body { margin: 0; font-family: Inter, ui-sans-serif, system-ui, sans-serif; background: #080c16; color: #eef4ff; }
+    section { min-height: 100vh; padding: 64px; box-sizing: border-box; display: grid; align-content: center; gap: 24px; border-bottom: 1px solid #1e2a44; }
+    h1 { font-size: 56px; margin: 0; letter-spacing: -0.04em; }
+    h2 { font-size: 40px; margin: 0; color: #a7c7ff; }
+    p, li { font-size: 24px; line-height: 1.45; max-width: 1040px; }
+    code { background: #10182a; border: 1px solid #2b3b60; padding: 4px 8px; border-radius: 8px; color: #bfdbfe; }
+    .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+    .card { background: #10182a; border: 1px solid #2b3b60; border-radius: 18px; padding: 20px; min-height: 150px; }
+    .pass { color: #86efac; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <section>
+    <h1>Decision artifacts route worker dispatch</h1>
+    <p>PR #30 turns ADR/PRD/design decisions into artifact-backed gates so the harness can hold or release AFK work using durable handles instead of chat context.</p>
+  </section>
+  <section>
+    <h2>Visible routing outcomes</h2>
+    <div class="grid">
+      <div class="card">accepted<br><span class="pass">dispatch allowed</span></div>
+      <div class="card">pending / draft<br><span>decision hold</span></div>
+      <div class="card">rejected<br><span>decision rejected</span></div>
+      <div class="card">superseded<br><span>replacement-aware</span></div>
+    </div>
+  </section>
+  <section>
+    <h2>Operator surface</h2>
+    <ul>
+      <li>Worker dispatch skips decision-held issues with exact artifact/gate references.</li>
+      <li>Text dashboard handles show both artifact lifecycle and <code>decision=&lt;status&gt;</code>.</li>
+      <li>Missing required decision handles produce explicit holds instead of accidental AFK dispatch.</li>
+    </ul>
+  </section>
+  <section>
+    <h2>Verification</h2>
+    <p><code>packages/core</code> decision tests, typecheck, migration check, <code>packages/opencode</code> dashboard test/typecheck, and <code>git diff --check</code> passed during parent review.</p>
+  </section>
+</body>
+</html>

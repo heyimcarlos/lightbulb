@@ -2,6 +2,7 @@ export * as BuiltInTools from "./builtins"
 
 import { Layer } from "effect"
 import { BashTool } from "./bash"
+import { BrowserTool } from "./browser"
 import { ApplyPatchTool } from "./apply-patch"
 import { EditTool } from "./edit"
 import { GlobTool } from "./glob"
@@ -31,6 +32,7 @@ import { WriteTool } from "./write"
 export const locationLayer = Layer.mergeAll(
   ApplyPatchTool.layer,
   BashTool.layer,
+  BrowserTool.layer,
   EditTool.layer,
   GlobTool.layer,
   GrepTool.layer,

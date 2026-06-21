@@ -1,14 +1,21 @@
+import { Buffer } from "buffer"
 import { eq } from "drizzle-orm"
 import { Effect, Schema } from "effect"
 import type { Database } from "../database/database"
+import { Identifier } from "../util/identifier"
 import type {
   AccountID,
+  ArtifactID,
   ArtifactRetentionPolicy,
   ArtifactSourceReferences,
   RegisterArtifactInput,
+  RegisterHarnessArtifactInput,
 } from "../lightbulb"
+import { integrityForRegistration, readArtifactHandle, serializeRetentionPolicy } from "./artifact"
 import {
   LightbulbAccountTable,
+  LightbulbArtifactEdgeTable,
+  LightbulbArtifactTable,
   LightbulbGateTable,
   LightbulbGoalTable,
   LightbulbLoopTable,
@@ -39,6 +46,8 @@ const ARTIFACT_TYPES = [
   "log",
   "prd",
   "adr",
+  "design_discussion",
+  "html_decision",
   "run_report",
   "scaffold",
   "operator_summary",
@@ -64,6 +73,178 @@ export function validateArtifactRegistrationInput(input: {
   if (input.retentionPolicy.mode === "expire" && !Number.isFinite(input.retentionPolicy.expiresAt))
     return "artifact retention expiresAt must be finite"
   return
+}
+
+export function registerHarnessArtifactInDb(db: Database.Interface["db"], input: RegisterHarnessArtifactInput) {
+  return Effect.gen(function* () {
+    const now = Date.now()
+    if (input.producerKind !== "harness")
+      return yield* Effect.fail(
+        new ArtifactRegistrationRejected({ reason: "harness artifact producer kind must be harness" }),
+      )
+    if (input.inlineContent && Buffer.byteLength(input.inlineContent) > MAX_INLINE_ARTIFACT_BYTES) {
+      return yield* Effect.fail(
+        new ArtifactRegistrationRejected({
+          reason: `inline artifact content exceeds ${MAX_INLINE_ARTIFACT_BYTES} bytes; register a file or URI handle`,
+        }),
+      )
+    }
+    if (input.inlineContent)
+      return yield* Effect.fail(
+        new ArtifactRegistrationRejected({
+          reason: "inline artifact content is not accepted; register a file or URI handle",
+        }),
+      )
+    const rejected = validateArtifactRegistrationInput({ ...input, uri: input.uri ?? "" })
+    if (rejected) return yield* Effect.fail(new ArtifactRegistrationRejected({ reason: rejected }))
+
+    const source = yield* resolveHarnessArtifactSource(db, {
+      accountID: input.accountID,
+      source: input.source,
+    })
+    const artifactID = input.artifactID ?? (`lbartifact_${Identifier.ascending()}` as ArtifactID)
+    const integrity = yield* integrityForRegistration({
+      uri: input.uri ?? "",
+      baseDirectory: input.baseDirectory,
+      checksum: input.checksum,
+      sizeBytes: input.sizeBytes,
+      uncheckedReason: input.uncheckedReason,
+      now,
+    })
+
+    yield* db
+      .transaction((tx) =>
+        Effect.gen(function* () {
+          yield* tx
+            .insert(LightbulbArtifactTable)
+            .values({
+              id: artifactID,
+              account_id: input.accountID,
+              producer_run_id: null,
+              producer_worker_id: null,
+              task_packet_id: null,
+              producer_kind: "harness",
+              source_issue_ref: source.issueRef,
+              source_goal_id: source.goalID,
+              source_loop_id: source.loopID,
+              source_run_id: source.runID,
+              source_gate_id: source.gateID,
+              type: input.type,
+              uri: input.uri ?? "",
+              checksum: integrity.checksum,
+              status: "registered",
+              summary: input.summary,
+              metadata: {
+                ...input.metadata,
+                integrity: integrity.metadata,
+                ...(input.unresolvedDependencyIDs?.length
+                  ? { retention: { unresolvedDependencyIDs: input.unresolvedDependencyIDs } }
+                  : {}),
+              },
+              retention_policy: serializeRetentionPolicy(input.retentionPolicy),
+            })
+            .run()
+          if (source.runID) {
+            yield* tx
+              .insert(LightbulbArtifactEdgeTable)
+              .values({
+                account_id: input.accountID,
+                artifact_id: artifactID,
+                consumer_run_id: source.runID,
+                consumer_worker_id: null,
+                relation: "produced_by",
+                summary: "Harness registered this artifact for parent orchestration.",
+              })
+              .run()
+          }
+        }),
+      )
+      .pipe(Effect.orDie)
+
+    const artifact = yield* readArtifactHandle(db, {
+      artifactID,
+      baseDirectory: input.baseDirectory,
+      now,
+      liveCheck: true,
+    })
+    if (!artifact)
+      return yield* Effect.fail(
+        new ArtifactRegistrationRejected({ reason: "artifact registration did not produce a readable handle" }),
+      )
+    return artifact
+  })
+}
+
+export function registerArtifactInDb(db: Database.Interface["db"], input: RegisterArtifactInput) {
+  return Effect.gen(function* () {
+    const now = Date.now()
+    const rejected = validateArtifactRegistrationInput(input)
+    if (rejected) return yield* Effect.fail(new ArtifactRegistrationRejected({ reason: rejected }))
+    const producer = yield* resolveWorkerArtifactProducer(db, input)
+    const artifactID = input.artifactID ?? (`lbartifact_${Identifier.ascending()}` as ArtifactID)
+    const integrity = yield* integrityForRegistration({
+      uri: input.uri,
+      baseDirectory: input.baseDirectory,
+      checksum: input.checksum,
+      sizeBytes: input.sizeBytes,
+      uncheckedReason: input.uncheckedReason,
+      now,
+    })
+
+    yield* db
+      .transaction((tx) =>
+        Effect.gen(function* () {
+          yield* tx
+            .insert(LightbulbArtifactTable)
+            .values({
+              id: artifactID,
+              account_id: producer.accountID,
+              producer_run_id: input.producerRunID,
+              producer_worker_id: input.producerWorkerID,
+              task_packet_id: input.taskPacketID,
+              producer_kind: "worker",
+              type: input.type,
+              uri: input.uri,
+              checksum: integrity.checksum,
+              status: "registered",
+              summary: input.summary,
+              metadata: {
+                ...input.metadata,
+                integrity: integrity.metadata,
+                ...(input.unresolvedDependencyIDs?.length
+                  ? { retention: { unresolvedDependencyIDs: input.unresolvedDependencyIDs } }
+                  : {}),
+              },
+              retention_policy: serializeRetentionPolicy(input.retentionPolicy),
+            })
+            .run()
+          yield* tx
+            .insert(LightbulbArtifactEdgeTable)
+            .values({
+              account_id: producer.accountID,
+              artifact_id: artifactID,
+              consumer_run_id: input.producerRunID,
+              consumer_worker_id: input.producerWorkerID,
+              relation: "produced_by",
+              summary: "Worker produced this artifact for parent review.",
+            })
+            .run()
+        }),
+      )
+      .pipe(Effect.orDie)
+
+    const artifact = yield* readArtifactHandle(db, {
+      artifactID,
+      baseDirectory: input.baseDirectory,
+      now,
+      liveCheck: true,
+    })
+    if (!artifact)
+      return yield* Effect.fail(
+        new ArtifactRegistrationRejected({ reason: "artifact registration did not produce a readable handle" }),
+      )
+    return artifact
+  })
 }
 
 export function resolveWorkerArtifactProducer(db: Database.Interface["db"], input: RegisterArtifactInput) {
