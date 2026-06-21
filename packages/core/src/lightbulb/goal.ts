@@ -80,6 +80,9 @@ function createOrAdopt(
       Effect.gen(function* () {
         if (input.goalID) {
           const existing = yield* tx.select().from(LightbulbGoalTable).where(eq(LightbulbGoalTable.id, input.goalID)).get()
+          if (existing && input.accountID && existing.account_id !== input.accountID) {
+            return yield* Effect.die(new Error("Lightbulb goal belongs to a different account"))
+          }
           if (existing) return { goal: existing, adopted: true }
         }
         if (input.accountID && input.sourceRef) {

@@ -772,10 +772,16 @@ function toGoalRunTree(graph: AccountGraph, goal: GoalLifecycle): GoalRunTree {
   const workers = graph.workers.filter((worker) => runIDs.has(worker.run_id))
   const workerIDs = new Set(workers.map((worker) => worker.id))
   const artifacts = graph.artifacts.filter((artifact) => runIDs.has(artifact.producer_run_id))
+  const goalGraph = {
+    ...graph,
+    runs,
+    gates: graph.gates.filter((gate) => runIDs.has(gate.run_id)),
+    artifactEdges: graph.artifactEdges.filter((edge) => runIDs.has(edge.consumer_run_id)),
+  }
 
   return {
     goal: toGoalSummary(goal),
-    loops: loops.map((loop) => toDashboardLoop(graph, loop, runs)),
+    loops: loops.map((loop) => toDashboardLoop(goalGraph, loop, runs)),
     taskPackets: graph.taskPackets
       .filter((packet) => workerIDs.has(packet.worker_id))
       .map((packet) => ({
@@ -784,8 +790,8 @@ function toGoalRunTree(graph: AccountGraph, goal: GoalLifecycle): GoalRunTree {
         title: packet.title,
         status: packet.status,
       })),
-    gates: graph.gates.filter((gate) => runIDs.has(gate.run_id)).map(toDashboardGate),
-    artifactHandles: artifacts.map((artifact) => toGraphArtifactHandle(artifact, graph)),
+    gates: goalGraph.gates.map(toDashboardGate),
+    artifactHandles: artifacts.map((artifact) => toGraphArtifactHandle(artifact, goalGraph)),
   }
 }
 

@@ -8,6 +8,8 @@ import {
   LightbulbArtifactEdgeTable,
   LightbulbArtifactTable,
   LightbulbGateTable,
+  LightbulbGoalTable,
+  LightbulbLoopTable,
   LightbulbRunTable,
 } from "@opencode-ai/core/lightbulb/sql"
 import { Database } from "@opencode-ai/core/database/database"
@@ -150,6 +152,14 @@ describe("Lightbulb", () => {
             objective: "This should also adopt the existing goal.",
             sourceRef: "github:heyimcarlos/lightbulb/issues/16#retry",
           })
+          const mismatchedID = yield* lightbulb
+            .createOrAdoptGoal({
+              accountID: sameSourceWithoutAccount.goal.account_id,
+              goalID: first.goal.id,
+              title: "Mismatched ID goal",
+              objective: "This must not adopt across account boundaries.",
+            })
+            .pipe(Effect.exit)
           const graph = yield* lightbulb.readAccountGraph(first.goal.account_id)
           const isolatedGraph = yield* lightbulb.readAccountGraph(sameSourceWithoutAccount.goal.account_id)
 
@@ -157,6 +167,7 @@ describe("Lightbulb", () => {
           expect(bySource.adopted).toBe(true)
           expect(sameSourceWithoutAccount.adopted).toBe(false)
           expect(byID.adopted).toBe(true)
+          expect(Exit.isFailure(mismatchedID)).toBe(true)
           expect([first.goal.id, bySource.goal.id, byID.goal.id]).toEqual([
             first.goal.id,
             first.goal.id,
@@ -368,6 +379,50 @@ describe("Lightbulb", () => {
             title: "Unrelated goal",
             objective: "This goal should stay out of the seeded run tree.",
             sourceRef: "github:heyimcarlos/lightbulb/issues/unrelated",
+          })
+          const database = yield* Database.Service
+          const unrelatedGoal = yield* database.db
+            .select()
+            .from(LightbulbGoalTable)
+            .where(eq(LightbulbGoalTable.source_ref, "github:heyimcarlos/lightbulb/issues/unrelated"))
+            .get()
+            .pipe(Effect.orDie)
+          if (!unrelatedGoal) return yield* Effect.die(new Error("Unrelated goal was not created"))
+          const unrelatedLoopID = Lightbulb.LoopID.create()
+          const unrelatedRunID = Lightbulb.RunID.create()
+          const now = Date.now()
+          yield* database.db
+            .insert(LightbulbLoopTable)
+            .values({
+              id: unrelatedLoopID,
+              account_id: seeded.accountID,
+              goal_id: unrelatedGoal.id,
+              kind: "review",
+              status: "active",
+              summary: "Unrelated goal loop should stay outside the seeded run tree.",
+            })
+            .run()
+            .pipe(Effect.orDie)
+          yield* database.db
+            .insert(LightbulbRunTable)
+            .values({
+              id: unrelatedRunID,
+              account_id: seeded.accountID,
+              loop_id: unrelatedLoopID,
+              status: "complete",
+              review_status: "approved",
+              debug_status: "fixed",
+              gate_status: "passed",
+              summary: "Unrelated run consumed a seeded artifact.",
+              started_at: now,
+              completed_at: now,
+            })
+            .run()
+            .pipe(Effect.orDie)
+          yield* lightbulb.consumeArtifact({
+            artifactID: seeded.artifactID,
+            consumerRunID: unrelatedRunID,
+            summary: "Unrelated goal consumed this artifact later.",
           })
           const tree = yield* lightbulb.readGoalRunTree(seeded.goalID)
 
