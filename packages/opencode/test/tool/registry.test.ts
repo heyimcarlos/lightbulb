@@ -75,6 +75,58 @@ describe("tool.registry", () => {
     }),
   )
 
+  it.instance("exposes the browser computer-use tool to the server registry", () =>
+    Effect.gen(function* () {
+      const registry = yield* ToolRegistry.Service
+      const ids = yield* registry.ids()
+
+      expect(ids).toContain("browser")
+    }),
+  )
+
+  it.instance("runs the browser tool through agent-browser and records screenshot evidence", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const bin = path.join(test.directory, "bin")
+      yield* Effect.promise(() => fs.mkdir(bin, { recursive: true }))
+      const agentBrowser = path.join(bin, "agent-browser")
+      yield* Effect.promise(() =>
+        Bun.write(
+          agentBrowser,
+          '#!/usr/bin/env bash\nset -euo pipefail\necho "agent-browser:$*"\nif [ "${1:-}" = "screenshot" ]; then printf png > "$2"; fi\n',
+        ),
+      )
+      yield* Effect.promise(() => fs.chmod(agentBrowser, 0o755))
+      const previousPath = process.env.PATH
+      process.env.PATH = `${bin}:${previousPath ?? ""}`
+
+      const registry = yield* ToolRegistry.Service
+      const loaded = (yield* registry.all()).find((tool) => tool.id === "browser")
+      if (!loaded) throw new Error("browser tool was not loaded")
+      const agents = yield* Agent.Service
+      const screenshot = path.join(test.directory, "shot.png")
+      const asked: unknown[] = []
+      const result = yield* loaded.execute(
+        { provider: "local", action: "screenshot", path: screenshot },
+        {
+          sessionID: SessionID.make("ses_browser"),
+          messageID: MessageID.make("msg_browser"),
+          agent: (yield* agents.defaultInfo()).name,
+          abort: new AbortController().signal,
+          messages: [],
+          metadata: () => Effect.void,
+          ask: (input) => Effect.sync(() => asked.push(input)),
+        } satisfies Tool.Context,
+      )
+      process.env.PATH = previousPath
+
+      expect(result.output).toContain("agent-browser:screenshot")
+      expect(result.output).toContain(`Artifact: ${screenshot}`)
+      expect(yield* Effect.promise(() => Bun.file(screenshot).text())).toBe("png")
+      expect(asked).toEqual([expect.objectContaining({ permission: "browser", patterns: ["local:screenshot"] })])
+    }),
+  )
+
   it.instance("hides task background parameter unless experimental background subagents are enabled", () =>
     Effect.gen(function* () {
       const registry = yield* ToolRegistry.Service
