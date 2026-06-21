@@ -39,5 +39,6 @@ export const migrations = (
     import("./migration/20260612174303_project_dir_strategy"),
     import("./migration/20260621023940_lightbulb_schema"),
     import("./migration/20260621032253_lightbulb_artifact_edge_account"),
+    import("./migration/20260621093000_lightbulb_harness_artifacts"),
   ])
 ).map((module) => module.default) satisfies DatabaseMigration.Migration[]

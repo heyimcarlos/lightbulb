@@ -14,6 +14,7 @@ import sessionMessageProjectionOrderMigration from "@opencode-ai/core/database/m
 import eventSourcedSessionInputMigration from "@opencode-ai/core/database/migration/20260604172448_event_sourced_session_input"
 import contextEpochAgentMigration from "@opencode-ai/core/database/migration/20260605042240_add_context_epoch_agent"
 import simplifyIntegrationCredentialsMigration from "@opencode-ai/core/database/migration/20260611192811_lush_chimera"
+import harnessArtifactsMigration from "@opencode-ai/core/database/migration/20260621093000_lightbulb_harness_artifacts"
 import { ProjectV2 } from "@opencode-ai/core/project"
 import { ProjectTable } from "@opencode-ai/core/project/sql"
 import { AbsolutePath } from "@opencode-ai/core/schema"
@@ -103,6 +104,49 @@ describe("DatabaseMigration", () => {
         }),
       ),
     ).rejects.toThrow("Database is not empty and has no session table")
+  })
+
+  test("preserves artifact edges and gate links when rebuilding artifacts", async () => {
+    await run(
+      Effect.gen(function* () {
+        const db = yield* makeDb
+        yield* db.run(sql`PRAGMA foreign_keys = ON`)
+        yield* db.run(sql`CREATE TABLE lightbulb_account (id text PRIMARY KEY)`)
+        yield* db.run(sql`CREATE TABLE lightbulb_goal (id text PRIMARY KEY, account_id text NOT NULL, FOREIGN KEY (account_id) REFERENCES lightbulb_account(id) ON DELETE CASCADE)`)
+        yield* db.run(sql`CREATE TABLE lightbulb_loop (id text PRIMARY KEY, account_id text NOT NULL, goal_id text, FOREIGN KEY (account_id) REFERENCES lightbulb_account(id) ON DELETE CASCADE, FOREIGN KEY (goal_id) REFERENCES lightbulb_goal(id) ON DELETE SET NULL)`)
+        yield* db.run(sql`CREATE TABLE lightbulb_run (id text PRIMARY KEY, account_id text NOT NULL, UNIQUE(account_id, id), FOREIGN KEY (account_id) REFERENCES lightbulb_account(id) ON DELETE CASCADE)`)
+        yield* db.run(sql`CREATE TABLE lightbulb_worker (id text PRIMARY KEY, account_id text NOT NULL, run_id text NOT NULL, UNIQUE(account_id, id), UNIQUE(id, run_id), FOREIGN KEY (account_id, run_id) REFERENCES lightbulb_run(account_id, id) ON DELETE CASCADE)`)
+        yield* db.run(sql`CREATE TABLE lightbulb_task_packet (id text PRIMARY KEY, account_id text NOT NULL, worker_id text NOT NULL, UNIQUE(account_id, id), UNIQUE(id, worker_id), FOREIGN KEY (account_id, worker_id) REFERENCES lightbulb_worker(account_id, id) ON DELETE CASCADE)`)
+        yield* db.run(sql`CREATE TABLE lightbulb_artifact (id text PRIMARY KEY, account_id text NOT NULL, producer_run_id text, producer_worker_id text, task_packet_id text, type text NOT NULL, uri text NOT NULL, checksum text, status text NOT NULL, summary text NOT NULL, metadata text, retention_policy text NOT NULL, time_created integer NOT NULL, time_updated integer NOT NULL, FOREIGN KEY (account_id) REFERENCES lightbulb_account(id) ON DELETE CASCADE, FOREIGN KEY (account_id, producer_run_id) REFERENCES lightbulb_run(account_id, id) ON DELETE CASCADE, FOREIGN KEY (producer_worker_id, producer_run_id) REFERENCES lightbulb_worker(id, run_id) ON DELETE CASCADE, FOREIGN KEY (account_id, task_packet_id) REFERENCES lightbulb_task_packet(account_id, id) ON DELETE CASCADE, FOREIGN KEY (task_packet_id, producer_worker_id) REFERENCES lightbulb_task_packet(id, worker_id) ON DELETE CASCADE)`)
+        yield* db.run(sql`CREATE UNIQUE INDEX lightbulb_artifact_account_id_idx ON lightbulb_artifact (account_id, id)`)
+        yield* db.run(sql`CREATE TABLE lightbulb_artifact_edge (account_id text NOT NULL, artifact_id text NOT NULL, consumer_run_id text NOT NULL, consumer_worker_id text, relation text NOT NULL, summary text NOT NULL, time_created integer NOT NULL, PRIMARY KEY(account_id, artifact_id, consumer_run_id, relation), FOREIGN KEY (account_id) REFERENCES lightbulb_account(id) ON DELETE CASCADE, FOREIGN KEY (artifact_id) REFERENCES lightbulb_artifact(id) ON DELETE CASCADE, FOREIGN KEY (consumer_run_id) REFERENCES lightbulb_run(id) ON DELETE CASCADE, FOREIGN KEY (account_id, artifact_id) REFERENCES lightbulb_artifact(account_id, id) ON DELETE CASCADE, FOREIGN KEY (account_id, consumer_run_id) REFERENCES lightbulb_run(account_id, id) ON DELETE CASCADE, FOREIGN KEY (account_id, consumer_worker_id) REFERENCES lightbulb_worker(account_id, id) ON DELETE CASCADE)`)
+        yield* db.run(sql`CREATE TABLE lightbulb_gate (id text PRIMARY KEY, account_id text NOT NULL, run_id text NOT NULL, artifact_id text, status text NOT NULL, summary text NOT NULL, time_created integer NOT NULL, time_updated integer NOT NULL, FOREIGN KEY (account_id) REFERENCES lightbulb_account(id) ON DELETE CASCADE, FOREIGN KEY (run_id) REFERENCES lightbulb_run(id) ON DELETE CASCADE, FOREIGN KEY (artifact_id) REFERENCES lightbulb_artifact(id) ON DELETE SET NULL, FOREIGN KEY (account_id, run_id) REFERENCES lightbulb_run(account_id, id) ON DELETE CASCADE)`)
+        yield* db.run(sql`INSERT INTO lightbulb_account (id) VALUES ('acct')`)
+        yield* db.run(sql`INSERT INTO lightbulb_run (id, account_id) VALUES ('producer-run', 'acct'), ('consumer-run', 'acct')`)
+        yield* db.run(sql`INSERT INTO lightbulb_worker (id, account_id, run_id) VALUES ('producer-worker', 'acct', 'producer-run'), ('consumer-worker', 'acct', 'consumer-run')`)
+        yield* db.run(sql`INSERT INTO lightbulb_task_packet (id, account_id, worker_id) VALUES ('task', 'acct', 'producer-worker')`)
+        yield* db.run(sql`INSERT INTO lightbulb_artifact (id, account_id, producer_run_id, producer_worker_id, task_packet_id, type, uri, status, summary, retention_policy, time_created, time_updated) VALUES ('artifact', 'acct', 'producer-run', 'producer-worker', 'task', 'report', 'file:///artifact.md', 'ready', 'summary', 'keep', 1, 1)`)
+        yield* db.run(sql`INSERT INTO lightbulb_artifact_edge (account_id, artifact_id, consumer_run_id, consumer_worker_id, relation, summary, time_created) VALUES ('acct', 'artifact', 'consumer-run', 'consumer-worker', 'consumes', 'uses artifact', 2)`)
+        yield* db.run(sql`INSERT INTO lightbulb_gate (id, account_id, run_id, artifact_id, status, summary, time_created, time_updated) VALUES ('gate', 'acct', 'consumer-run', 'artifact', 'pending', 'review artifact', 3, 3)`)
+
+        yield* DatabaseMigration.applyOnly(db, [harnessArtifactsMigration])
+
+        expect(yield* db.all(sql`SELECT account_id, artifact_id, consumer_run_id, consumer_worker_id, relation, summary, time_created FROM lightbulb_artifact_edge`)).toEqual([
+          {
+            account_id: "acct",
+            artifact_id: "artifact",
+            consumer_run_id: "consumer-run",
+            consumer_worker_id: "consumer-worker",
+            relation: "consumes",
+            summary: "uses artifact",
+            time_created: 2,
+          },
+        ])
+        expect(yield* db.get(sql`SELECT artifact_id FROM lightbulb_gate WHERE id = 'gate'`)).toEqual({
+          artifact_id: "artifact",
+        })
+      }),
+    )
   })
 
   test("backfills existing Context Epoch rows to the build agent", async () => {

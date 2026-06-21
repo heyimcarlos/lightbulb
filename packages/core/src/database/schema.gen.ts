@@ -118,9 +118,15 @@ export default {
         CREATE TABLE \`lightbulb_artifact\` (
           \`id\` text PRIMARY KEY,
           \`account_id\` text NOT NULL,
-          \`producer_run_id\` text NOT NULL,
-          \`producer_worker_id\` text NOT NULL,
-          \`task_packet_id\` text NOT NULL,
+          \`producer_run_id\` text,
+          \`producer_worker_id\` text,
+          \`task_packet_id\` text,
+          \`producer_kind\` text NOT NULL,
+          \`source_issue_ref\` text,
+          \`source_goal_id\` text,
+          \`source_loop_id\` text,
+          \`source_run_id\` text,
+          \`source_gate_id\` text,
           \`type\` text NOT NULL,
           \`uri\` text NOT NULL,
           \`checksum\` text,
@@ -134,10 +140,24 @@ export default {
           CONSTRAINT \`fk_lightbulb_artifact_producer_run_id_lightbulb_run_id_fk\` FOREIGN KEY (\`producer_run_id\`) REFERENCES \`lightbulb_run\`(\`id\`) ON DELETE CASCADE,
           CONSTRAINT \`fk_lightbulb_artifact_producer_worker_id_lightbulb_worker_id_fk\` FOREIGN KEY (\`producer_worker_id\`) REFERENCES \`lightbulb_worker\`(\`id\`) ON DELETE CASCADE,
           CONSTRAINT \`fk_lightbulb_artifact_task_packet_id_lightbulb_task_packet_id_fk\` FOREIGN KEY (\`task_packet_id\`) REFERENCES \`lightbulb_task_packet\`(\`id\`) ON DELETE CASCADE,
+          CONSTRAINT \`fk_lightbulb_artifact_source_goal_id_lightbulb_goal_id_fk\` FOREIGN KEY (\`source_goal_id\`) REFERENCES \`lightbulb_goal\`(\`id\`) ON DELETE SET NULL,
+          CONSTRAINT \`fk_lightbulb_artifact_source_loop_id_lightbulb_loop_id_fk\` FOREIGN KEY (\`source_loop_id\`) REFERENCES \`lightbulb_loop\`(\`id\`) ON DELETE SET NULL,
+          CONSTRAINT \`fk_lightbulb_artifact_source_run_id_lightbulb_run_id_fk\` FOREIGN KEY (\`source_run_id\`) REFERENCES \`lightbulb_run\`(\`id\`) ON DELETE SET NULL,
           CONSTRAINT \`lightbulb_artifact_account_run_fk\` FOREIGN KEY (\`account_id\`,\`producer_run_id\`) REFERENCES \`lightbulb_run\`(\`account_id\`,\`id\`) ON DELETE CASCADE,
           CONSTRAINT \`lightbulb_artifact_producer_worker_run_fk\` FOREIGN KEY (\`producer_worker_id\`,\`producer_run_id\`) REFERENCES \`lightbulb_worker\`(\`id\`,\`run_id\`) ON DELETE CASCADE,
           CONSTRAINT \`lightbulb_artifact_account_task_packet_fk\` FOREIGN KEY (\`account_id\`,\`task_packet_id\`) REFERENCES \`lightbulb_task_packet\`(\`account_id\`,\`id\`) ON DELETE CASCADE,
-          CONSTRAINT \`lightbulb_artifact_task_packet_worker_fk\` FOREIGN KEY (\`task_packet_id\`,\`producer_worker_id\`) REFERENCES \`lightbulb_task_packet\`(\`id\`,\`worker_id\`) ON DELETE CASCADE
+          CONSTRAINT \`lightbulb_artifact_task_packet_worker_fk\` FOREIGN KEY (\`task_packet_id\`,\`producer_worker_id\`) REFERENCES \`lightbulb_task_packet\`(\`id\`,\`worker_id\`) ON DELETE CASCADE,
+          CONSTRAINT "lightbulb_artifact_producer_kind_fields" CHECK((
+                "producer_kind" = 'harness'
+                AND "producer_run_id" IS NULL
+                AND "producer_worker_id" IS NULL
+                AND "task_packet_id" IS NULL
+              ) OR (
+                "producer_kind" = 'worker'
+                AND "producer_run_id" IS NOT NULL
+                AND "producer_worker_id" IS NOT NULL
+                AND "task_packet_id" IS NOT NULL
+              ))
         );
       `)
       yield* tx.run(`
@@ -412,6 +432,10 @@ export default {
       yield* tx.run(`CREATE INDEX \`lightbulb_artifact_producer_run_idx\` ON \`lightbulb_artifact\` (\`producer_run_id\`);`)
       yield* tx.run(`CREATE INDEX \`lightbulb_artifact_producer_worker_idx\` ON \`lightbulb_artifact\` (\`producer_worker_id\`);`)
       yield* tx.run(`CREATE INDEX \`lightbulb_artifact_task_packet_idx\` ON \`lightbulb_artifact\` (\`task_packet_id\`);`)
+      yield* tx.run(`CREATE INDEX \`lightbulb_artifact_source_goal_idx\` ON \`lightbulb_artifact\` (\`source_goal_id\`);`)
+      yield* tx.run(`CREATE INDEX \`lightbulb_artifact_source_loop_idx\` ON \`lightbulb_artifact\` (\`source_loop_id\`);`)
+      yield* tx.run(`CREATE INDEX \`lightbulb_artifact_source_run_idx\` ON \`lightbulb_artifact\` (\`source_run_id\`);`)
+      yield* tx.run(`CREATE INDEX \`lightbulb_artifact_source_gate_idx\` ON \`lightbulb_artifact\` (\`source_gate_id\`);`)
       yield* tx.run(`CREATE UNIQUE INDEX \`lightbulb_artifact_account_id_idx\` ON \`lightbulb_artifact\` (\`account_id\`,\`id\`);`)
       yield* tx.run(`CREATE INDEX \`lightbulb_event_account_idx\` ON \`lightbulb_event\` (\`account_id\`);`)
       yield* tx.run(`CREATE INDEX \`lightbulb_event_aggregate_idx\` ON \`lightbulb_event\` (\`aggregate_type\`,\`aggregate_id\`,\`time_created\`);`)
