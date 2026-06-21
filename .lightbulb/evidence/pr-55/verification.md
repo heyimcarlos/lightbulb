@@ -20,6 +20,8 @@ From the repository root unless noted:
 - `packages/opencode`: `OPENCODE_DB=/tmp/lightbulb-issue46-smoke.sqlite ./bin/lightbulb --help` — passed.
 - `packages/opencode`: `OPENCODE_DB=/tmp/lightbulb-issue46-smoke.sqlite ./bin/lightbulb dashboard --help` — passed.
 - `packages/opencode`: `OPENCODE_DB=/tmp/lightbulb-issue46-smoke.sqlite ./bin/lightbulb dashboard --seed --format json` — passed.
+- `packages/opencode`: `bun test test/cli/lightbulb.test.ts --timeout 30000` — 5 pass, 0 fail.
+- `packages/opencode`: `bun typecheck` — passed after updating the dashboard fixture for the current loop schedule fields.
 
 ## Evidence artifacts
 
