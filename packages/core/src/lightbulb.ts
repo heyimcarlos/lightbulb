@@ -1,25 +1,12 @@
 export * as Lightbulb from "./lightbulb"
 export { ArtifactRegistrationRejected } from "./lightbulb/artifact-registration"
-export {
-  bootstrapLoopProfiles,
-  databaseLoopProfileStorage,
-  defaultAccountLoopProfilePolicy,
-  loopIDForProfile,
-  standardAccountLoopProfiles,
-} from "./lightbulb/loop-profile"
+export * from "./lightbulb/loop-profile"
 
 import { Buffer } from "buffer"
 import { and, asc, eq, or } from "drizzle-orm"
 import { Context, Effect, Layer, Schema } from "effect"
 import { Database } from "./database/database"
-import type {
-  CreateGoalInput,
-  CreateGoalResult,
-  GoalLifecycle,
-  GoalRunTree,
-  GoalSummary,
-  UpdateGoalStatusInput,
-} from "./lightbulb/goal"
+import type { CreateGoalInput, CreateGoalResult, GoalLifecycle, GoalRunTree, GoalSummary, UpdateGoalStatusInput } from "./lightbulb/goal"
 import { GoalLifecycleService } from "./lightbulb/goal"
 import { withStatics } from "./schema"
 import { Identifier } from "./util/identifier"
@@ -37,6 +24,7 @@ import {
   validateArtifactRegistrationInput,
 } from "./lightbulb/artifact-registration"
 import { toDashboard, toGoalRunTree } from "./lightbulb/dashboard"
+import { planGoalRoute as planGoalRouteInDb, readGoalRoute as readGoalRouteFromDb, steerGoalRoute as steerGoalRouteInDb } from "./lightbulb/route"
 import {
   LightbulbAccountTable,
   LightbulbArtifactEdgeTable,
@@ -45,16 +33,14 @@ import {
   LightbulbGateTable,
   LightbulbGoalTable,
   LightbulbLoopTable,
+  LightbulbRouteSteerTable,
+  LightbulbRouteStopTable,
+  LightbulbRouteTable,
   LightbulbRunTable,
   LightbulbTaskPacketTable,
   LightbulbWorkerTable,
 } from "./lightbulb/sql"
-import {
-  bootstrapLoopProfiles,
-  databaseLoopProfileStorage,
-  type LoopProfileBootstrapServiceInput,
-  type LoopProfileBootstrapSummary,
-} from "./lightbulb/loop-profile"
+import { bootstrapLoopProfiles, databaseLoopProfileStorage, type LoopProfileBootstrapServiceInput, type LoopProfileBootstrapSummary } from "./lightbulb/loop-profile"
 
 const prefixedID = <const Prefix extends string>(prefix: Prefix, brand: string) =>
   Schema.String.check(Schema.isStartsWith(`${prefix}_`)).pipe(
@@ -80,6 +66,9 @@ export const GateID = prefixedID("lbgate", "Lightbulb.GateID")
 export type GateID = typeof GateID.Type
 export const EventID = prefixedID("lbevent", "Lightbulb.EventID")
 export type EventID = typeof EventID.Type
+export const RouteID = prefixedID("lbroute", "Lightbulb.RouteID"); export type RouteID = typeof RouteID.Type
+export const RouteStopID = prefixedID("lbstop", "Lightbulb.RouteStopID"); export type RouteStopID = typeof RouteStopID.Type
+export const RouteSteerID = prefixedID("lbsteer", "Lightbulb.RouteSteerID"); export type RouteSteerID = typeof RouteSteerID.Type
 
 export type AccountStatus = "active" | "paused" | "archived"
 export type GoalStatus = "active" | "held" | "completed" | "cancelled" | "stopped"
@@ -108,6 +97,11 @@ export type ArtifactEdgeRelation = "produced_by" | "consumed_by" | "supersedes" 
 export type ArtifactProducerKind = "worker" | "harness"
 export type GateKind = "review" | "debug" | "verification"
 export type ArtifactIntegrityStatus = "verified" | "changed" | "missing" | "unchecked"
+export type RouteStatus = "active" | "rerouting" | "arrived" | "blocked" | "cancelled"
+export type RouteStopKind = "discovery" | "implementation" | "debug" | "review" | "integration" | "verification" | "decision" | "cleanup"
+export type RouteStopStatus = "pending" | "active" | "complete" | "blocked" | "skipped"
+export type RouteSteerReason = "user" | "blocker" | "failed_gate" | "new_evidence" | "schedule" | "system"
+
 export type ArtifactRetentionDecision =
   | "keep"
   | "expire"
@@ -131,38 +125,7 @@ export type ArtifactIntegritySummary = {
   readonly actualSizeBytes: number | null
 }
 
-export type {
-  CreateGoalInput,
-  CreateGoalResult,
-  GoalLifecycle,
-  GoalRunTree,
-  GoalSummary,
-  UpdateGoalStatusInput,
-} from "./lightbulb/goal"
-export type {
-  LoopProfileBootstrapInput,
-  LoopProfileBootstrapServiceInput,
-  LoopProfileBootstrapSummary,
-  LoopProfileBudgetEnvelope,
-  LoopProfileBudgetOverride,
-  LoopProfileBudgetPolicy,
-  LoopProfileCreateInput,
-  LoopProfileDefaultPolicy,
-  LoopProfileDefinition,
-  LoopProfileGoalRef,
-  LoopProfileGoalSnapshot,
-  LoopProfileHandle,
-  LoopProfileID,
-  LoopProfileOutcome,
-  LoopProfileReason,
-  LoopProfileScheduleEnvelope,
-  LoopProfileScheduleOverride,
-  LoopProfileSchedulePolicy,
-  LoopProfileStorage,
-  LoopProfileStoredLoop,
-  LoopProfileUpdateInput,
-} from "./lightbulb/loop-profile"
-
+export type { CreateGoalInput, CreateGoalResult, GoalLifecycle, GoalRunTree, GoalSummary, UpdateGoalStatusInput } from "./lightbulb/goal"
 export type ArtifactLineageEdge = {
   readonly relation: ArtifactEdgeRelation
   readonly runID: RunID
@@ -194,6 +157,16 @@ export type ArtifactHandle = {
   readonly lineage: ArtifactLineageEdge[]
 }
 
+export type RouteStopInput = { readonly kind: RouteStopKind; readonly title: string; readonly objective: string; readonly evidence: string; readonly metadata?: Record<string, unknown> }
+export type PlanGoalRouteInput = { readonly goalID: GoalID; readonly destination: string; readonly summary?: string; readonly stops: readonly RouteStopInput[]; readonly metadata?: Record<string, unknown> }
+export type SteerGoalRouteInput = { readonly routeID: RouteID; readonly reason: RouteSteerReason; readonly summary: string; readonly instruction?: string; readonly nextStopID?: RouteStopID; readonly metadata?: Record<string, unknown> }
+
+export type GoalRoute = typeof LightbulbRouteTable.$inferSelect & {
+  readonly currentStopID: RouteStopID | null
+  readonly stops: (typeof LightbulbRouteStopTable.$inferSelect)[]
+  readonly steers: (typeof LightbulbRouteSteerTable.$inferSelect)[]
+}
+
 export type AccountGraph = {
   readonly account: typeof LightbulbAccountTable.$inferSelect
   readonly goals: (typeof LightbulbGoalTable.$inferSelect)[]
@@ -201,6 +174,9 @@ export type AccountGraph = {
   readonly runs: (typeof LightbulbRunTable.$inferSelect)[]
   readonly workers: (typeof LightbulbWorkerTable.$inferSelect)[]
   readonly taskPackets: (typeof LightbulbTaskPacketTable.$inferSelect)[]
+  readonly routes: (typeof LightbulbRouteTable.$inferSelect)[]
+  readonly routeStops: (typeof LightbulbRouteStopTable.$inferSelect)[]
+  readonly routeSteers: (typeof LightbulbRouteSteerTable.$inferSelect)[]
   readonly artifacts: (typeof LightbulbArtifactTable.$inferSelect)[]
   readonly artifactEdges: (typeof LightbulbArtifactEdgeTable.$inferSelect)[]
   readonly gates: (typeof LightbulbGateTable.$inferSelect)[]
@@ -351,6 +327,9 @@ export interface Interface {
     readonly rawWorkerLog?: string
   }) => Effect.Effect<SeededGraph>
   readonly registerArtifact: (input: RegisterArtifactInput) => Effect.Effect<ArtifactHandle, ArtifactRegistrationRejected>
+  readonly planGoalRoute: (input: PlanGoalRouteInput) => Effect.Effect<GoalRoute>
+  readonly steerGoalRoute: (input: SteerGoalRouteInput) => Effect.Effect<GoalRoute>
+  readonly readGoalRoute: (routeID: RouteID) => Effect.Effect<GoalRoute | undefined>
   readonly registerHarnessArtifact: (
     input: RegisterHarnessArtifactInput,
   ) => Effect.Effect<ArtifactHandle, ArtifactRegistrationRejected>
@@ -565,6 +544,25 @@ export const layer = Layer.effect(
       }),
       readAccountGraph: Effect.fn("Lightbulb.readAccountGraph")(function* (accountID) {
         return yield* readAccountGraphFromDb(db, accountID)
+      }),
+      planGoalRoute: Effect.fn("Lightbulb.planGoalRoute")(function* (input) {
+        return yield* planGoalRouteInDb(db, input, {
+          route: RouteID.create,
+          stop: RouteStopID.create,
+          steer: RouteSteerID.create,
+          event: EventID.create,
+        })
+      }),
+      steerGoalRoute: Effect.fn("Lightbulb.steerGoalRoute")(function* (input) {
+        return yield* steerGoalRouteInDb(db, input, {
+          route: RouteID.create,
+          stop: RouteStopID.create,
+          steer: RouteSteerID.create,
+          event: EventID.create,
+        })
+      }),
+      readGoalRoute: Effect.fn("Lightbulb.readGoalRoute")(function* (routeID) {
+        return yield* readGoalRouteFromDb(db, routeID)
       }),
       readDashboard: Effect.fn("Lightbulb.readDashboard")(function* (accountID) {
         const graph = yield* readAccountGraphFromDb(db, accountID)
@@ -938,6 +936,27 @@ function readAccountGraphFromDb(db: Database.Interface["db"], accountID: Account
         .from(LightbulbTaskPacketTable)
         .where(eq(LightbulbTaskPacketTable.account_id, accountID))
         .orderBy(asc(LightbulbTaskPacketTable.time_created))
+        .all()
+        .pipe(Effect.orDie),
+      routes: yield* db
+        .select()
+        .from(LightbulbRouteTable)
+        .where(eq(LightbulbRouteTable.account_id, accountID))
+        .orderBy(asc(LightbulbRouteTable.time_created))
+        .all()
+        .pipe(Effect.orDie),
+      routeStops: yield* db
+        .select()
+        .from(LightbulbRouteStopTable)
+        .where(eq(LightbulbRouteStopTable.account_id, accountID))
+        .orderBy(asc(LightbulbRouteStopTable.sequence))
+        .all()
+        .pipe(Effect.orDie),
+      routeSteers: yield* db
+        .select()
+        .from(LightbulbRouteSteerTable)
+        .where(eq(LightbulbRouteSteerTable.account_id, accountID))
+        .orderBy(asc(LightbulbRouteSteerTable.time_created))
         .all()
         .pipe(Effect.orDie),
       artifacts: yield* db
