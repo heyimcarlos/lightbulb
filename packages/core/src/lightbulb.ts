@@ -58,6 +58,13 @@ export type ArtifactStatus = "registered" | "consumed" | "superseded" | "expired
 export type ArtifactEdgeRelation = "produced_by" | "consumed_by" | "supersedes" | "verifies"
 export type GateKind = "review" | "debug" | "verification"
 
+export type ArtifactLineageEdge = {
+  readonly relation: ArtifactEdgeRelation
+  readonly runID: RunID
+  readonly workerID: WorkerID | null
+  readonly summary: string
+}
+
 export type ArtifactHandle = {
   readonly id: ArtifactID
   readonly type: ArtifactType
@@ -66,6 +73,7 @@ export type ArtifactHandle = {
   readonly status: ArtifactStatus
   readonly producerRunID: RunID
   readonly producerWorkerID: WorkerID
+  readonly lineage: ArtifactLineageEdge[]
 }
 
 export type AccountGraph = {
@@ -115,6 +123,18 @@ export type ParentSummary = {
   readonly artifacts: ArtifactHandle[]
 }
 
+export type RegisterArtifactInput = {
+  readonly producerRunID: RunID
+  readonly producerWorkerID: WorkerID
+  readonly taskPacketID: TaskPacketID
+  readonly type: ArtifactType
+  readonly uri: string
+  readonly checksum?: string | null
+  readonly summary: string
+  readonly metadata?: Record<string, unknown>
+  readonly retentionPolicy?: string
+}
+
 export interface Interface {
   readonly seedTracerBullet: (input?: {
     readonly accountName?: string
@@ -122,6 +142,7 @@ export interface Interface {
     readonly artifactSummary?: string
     readonly rawWorkerLog?: string
   }) => Effect.Effect<SeededGraph>
+  readonly registerArtifact: (input: RegisterArtifactInput) => Effect.Effect<ArtifactHandle>
   readonly readAccountGraph: (accountID: AccountID) => Effect.Effect<AccountGraph | undefined>
   readonly consumeArtifact: (input: {
     readonly artifactID: ArtifactID
@@ -280,6 +301,67 @@ export const layer = Layer.effect(
           .pipe(Effect.orDie)
         return ids
       }),
+      registerArtifact: Effect.fn("Lightbulb.registerArtifact")(function* (input) {
+        const artifactID = ArtifactID.create()
+        const edgeSummary = "Worker produced this artifact for parent review."
+        return yield* db
+          .transaction((tx) =>
+            Effect.gen(function* () {
+              const run = yield* tx
+                .select({ account_id: LightbulbRunTable.account_id })
+                .from(LightbulbRunTable)
+                .where(eq(LightbulbRunTable.id, input.producerRunID))
+                .get()
+              if (!run) return yield* Effect.die(new Error("Lightbulb producer run not found"))
+              yield* tx
+                .insert(LightbulbArtifactTable)
+                .values({
+                  id: artifactID,
+                  account_id: run.account_id,
+                  producer_run_id: input.producerRunID,
+                  producer_worker_id: input.producerWorkerID,
+                  task_packet_id: input.taskPacketID,
+                  type: input.type,
+                  uri: input.uri,
+                  checksum: input.checksum ?? null,
+                  status: "registered",
+                  summary: input.summary,
+                  metadata: input.metadata,
+                  retention_policy: input.retentionPolicy ?? "keep",
+                })
+                .run()
+              yield* tx
+                .insert(LightbulbArtifactEdgeTable)
+                .values({
+                  account_id: run.account_id,
+                  artifact_id: artifactID,
+                  consumer_run_id: input.producerRunID,
+                  consumer_worker_id: input.producerWorkerID,
+                  relation: "produced_by",
+                  summary: edgeSummary,
+                })
+                .run()
+              return {
+                id: artifactID,
+                type: input.type,
+                uri: input.uri,
+                summary: input.summary,
+                status: "registered" as const,
+                producerRunID: input.producerRunID,
+                producerWorkerID: input.producerWorkerID,
+                lineage: [
+                  {
+                    relation: "produced_by" as const,
+                    runID: input.producerRunID,
+                    workerID: input.producerWorkerID,
+                    summary: edgeSummary,
+                  },
+                ],
+              }
+            }),
+          )
+          .pipe(Effect.orDie)
+      }),
       readAccountGraph: Effect.fn("Lightbulb.readAccountGraph")(function* (accountID) {
         const account = yield* db
           .select()
@@ -423,6 +505,18 @@ export const layer = Layer.effect(
           .orderBy(asc(LightbulbArtifactTable.time_created))
           .all()
           .pipe(Effect.orDie)
+        const artifactEdges = yield* db
+          .select()
+          .from(LightbulbArtifactEdgeTable)
+          .innerJoin(
+            LightbulbArtifactTable,
+            eq(LightbulbArtifactEdgeTable.artifact_id, LightbulbArtifactTable.id),
+          )
+          .where(eq(LightbulbArtifactTable.producer_run_id, runID))
+          .orderBy(asc(LightbulbArtifactEdgeTable.time_created))
+          .all()
+          .pipe(Effect.orDie)
+          .pipe(Effect.map((rows) => rows.map((row) => row.lightbulb_artifact_edge)))
 
         return {
           runID: run.id,
@@ -444,7 +538,12 @@ export const layer = Layer.effect(
             summary: gate.summary,
             artifactID: gate.artifact_id,
           })),
-          artifacts: artifacts.map(toArtifactHandle),
+          artifacts: artifacts.map((artifact) =>
+            toArtifactHandle(
+              artifact,
+              artifactEdges.filter((edge) => edge.artifact_id === artifact.id),
+            ),
+          ),
         }
       }),
     })
@@ -453,7 +552,10 @@ export const layer = Layer.effect(
 
 export const defaultLayer = layer.pipe(Layer.provide(Database.defaultLayer))
 
-function toArtifactHandle(row: typeof LightbulbArtifactTable.$inferSelect): ArtifactHandle {
+function toArtifactHandle(
+  row: typeof LightbulbArtifactTable.$inferSelect,
+  edges: readonly (typeof LightbulbArtifactEdgeTable.$inferSelect)[] = [],
+): ArtifactHandle {
   return {
     id: row.id,
     type: row.type,
@@ -462,5 +564,11 @@ function toArtifactHandle(row: typeof LightbulbArtifactTable.$inferSelect): Arti
     status: row.status,
     producerRunID: row.producer_run_id,
     producerWorkerID: row.producer_worker_id,
+    lineage: edges.map((edge) => ({
+      relation: edge.relation,
+      runID: edge.consumer_run_id,
+      workerID: edge.consumer_worker_id ?? null,
+      summary: edge.summary,
+    })),
   }
 }

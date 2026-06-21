@@ -11,6 +11,8 @@ The user explicitly wants the harness itself to create artifacts like files, rep
 
 Model artifacts as first-class durable objects with type, URI/path, checksum, producer run/worker, consumer runs/workers, status, summary, metadata, retention policy, and lineage edges.
 
+Artifact handles are the parent-facing representation. A handle carries the artifact ID, type, URI/path, summary, status, producer run/worker, and compact lineage edges. Parent summaries must pass handles and concise summaries instead of raw worker logs or full transcripts. Consumers record a lineage edge such as `consumed_by` when they use a handle, so later loops can trace produce/register/consume transitions without reopening raw output by default.
+
 ## Consequences
 
 - Parent orchestrators can receive artifact handles instead of raw logs.
