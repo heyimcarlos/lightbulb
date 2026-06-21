@@ -104,7 +104,7 @@ describe("tool.registry", () => {
       const loaded = (yield* registry.all()).find((tool) => tool.id === "browser")
       if (!loaded) throw new Error("browser tool was not loaded")
       const agents = yield* Agent.Service
-      const screenshot = path.join(test.directory, "shot.png")
+      const screenshot = "shot.png"
       const asked: unknown[] = []
       const result = yield* loaded.execute(
         { provider: "local", action: "screenshot", path: screenshot },
@@ -121,9 +121,34 @@ describe("tool.registry", () => {
       process.env.PATH = previousPath
 
       expect(result.output).toContain("agent-browser:screenshot")
-      expect(result.output).toContain(`Artifact: ${screenshot}`)
-      expect(yield* Effect.promise(() => Bun.file(screenshot).text())).toBe("png")
-      expect(asked).toEqual([expect.objectContaining({ permission: "browser", patterns: ["local:screenshot"] })])
+      expect(result.output).toContain(`Artifact: ${path.join(test.directory, screenshot)}`)
+      expect(yield* Effect.promise(() => Bun.file(path.join(test.directory, screenshot)).text())).toBe("png")
+      expect(asked).toEqual([expect.objectContaining({ permission: "browser", patterns: ["local:screenshot:shot.png"] })])
+    }),
+  )
+
+  it.instance("rejects browser screenshots outside the active instance directory", () =>
+    Effect.gen(function* () {
+      const registry = yield* ToolRegistry.Service
+      const loaded = (yield* registry.all()).find((tool) => tool.id === "browser")
+      if (!loaded) throw new Error("browser tool was not loaded")
+      const agents = yield* Agent.Service
+      const result = yield* loaded
+        .execute(
+          { provider: "local", action: "screenshot", path: "../escape.png" },
+          {
+            sessionID: SessionID.make("ses_browser_escape"),
+            messageID: MessageID.make("msg_browser_escape"),
+            agent: (yield* agents.defaultInfo()).name,
+            abort: new AbortController().signal,
+            messages: [],
+            metadata: () => Effect.void,
+            ask: () => Effect.void,
+          } satisfies Tool.Context,
+        )
+        .pipe(Effect.exit)
+
+      expect(Exit.isFailure(result)).toBe(true)
     }),
   )
 

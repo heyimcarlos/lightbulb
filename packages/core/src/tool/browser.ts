@@ -67,17 +67,17 @@ export const description = `Control a real browser for Lightbulb computer-use wo
 
 Use provider=local for visible local browser sessions through agent-browser. Use provider=firecrawl to create managed Interact sessions with CDP, liveViewUrl, and interactiveLiveViewUrl. Use provider=steel to drive Steel browser sessions through the Steel CLI. Browser work must produce observable evidence: screenshots, snapshots, DOM eval results, live view URLs, or CDP URLs.`
 
-const localCommand = (input: Input) => {
+const localCommand = (input: Input, cwd: string) => {
   if (input.action === "open") return ["open", requireField(input.url, "url")]
   if (input.action === "snapshot") return ["snapshot", "-i"]
-  if (input.action === "screenshot") return ["screenshot", input.path ?? defaultScreenshotPath(input.sessionName ?? "local")]
+  if (input.action === "screenshot") return ["screenshot", resolveArtifactPath(cwd, input.path ?? defaultScreenshotPath(input.sessionName ?? "local"))]
   if (input.action === "eval") return ["eval", requireField(input.code, "code")]
   if (input.action === "stop") return ["close", "--all"]
   if (input.action === "start") return ["open", input.url ?? "about:blank"]
   throw new Error(`local browser does not support ${input.action}`)
 }
 
-const steelCommand = (input: Input) => {
+const steelCommand = (input: Input, cwd: string) => {
   const mode = input.apiUrl ? ["--api-url", input.apiUrl] : []
   const session = input.sessionName ? ["--session", input.sessionName] : []
   if (input.action === "start") return ["browser", "start", ...session, ...mode]
@@ -85,7 +85,7 @@ const steelCommand = (input: Input) => {
   if (input.action === "stop") return ["browser", "stop", ...session, ...mode]
   if (input.action === "open") return ["browser", "open", requireField(input.url, "url"), ...session, ...mode]
   if (input.action === "snapshot") return ["browser", "snapshot", "-i", ...session, ...mode]
-  if (input.action === "screenshot") return ["browser", "screenshot", input.path ?? defaultScreenshotPath(input.sessionName ?? "steel"), ...session, ...mode]
+  if (input.action === "screenshot") return ["browser", "screenshot", resolveArtifactPath(cwd, input.path ?? defaultScreenshotPath(input.sessionName ?? "steel")), ...session, ...mode]
   if (input.action === "eval") return ["browser", "eval", requireField(input.code, "code"), ...session, ...mode]
   throw new Error(`steel browser does not support ${input.action}`)
 }
@@ -129,7 +129,7 @@ export const layer = Layer.effectDiscard(
                 source,
               })
               if (input.provider === "firecrawl") return yield* firecrawl(input)
-              return yield* runCli(input, input.provider === "steel" ? "steel" : "agent-browser", input.provider === "steel" ? steelCommand(input) : localCommand(input), appProcess)
+              return yield* runCli(input, input.provider === "steel" ? "steel" : "agent-browser", input.provider === "steel" ? steelCommand(input, process.cwd()) : localCommand(input, process.cwd()), appProcess)
             }).pipe(Effect.mapError((error) => new ToolFailure({ message: error instanceof Error ? error.message : "Browser action failed" }))),
         }),
       })
@@ -138,6 +138,7 @@ export const layer = Layer.effectDiscard(
 )
 
 function permissionResource(input: Input) {
+  if (input.action === "screenshot" && input.path) return `${input.provider}:${input.action}:${input.path}`
   if (input.url) return `${input.provider}:${input.action}:${input.url}`
   if (input.sessionID) return `${input.provider}:${input.action}:${input.sessionID}`
   if (input.sessionName) return `${input.provider}:${input.action}:${input.sessionName}`
@@ -155,6 +156,16 @@ function sanitizePathPart(value: string) {
 function requireField(value: string | undefined, field: string) {
   if (!value) throw new Error(`browser ${field} is required for this action`)
   return value
+}
+
+function resolveArtifactPath(cwd: string, artifactPath: string) {
+  if (path.isAbsolute(artifactPath)) throw new Error("browser screenshot path must be relative to the active instance")
+  const resolved = path.resolve(cwd, artifactPath)
+  const relative = path.relative(cwd, resolved)
+  if (relative.startsWith("..") || path.isAbsolute(relative)) {
+    throw new Error("browser screenshot path must stay inside the active instance")
+  }
+  return resolved
 }
 
 function redact(input: string) {
@@ -184,6 +195,7 @@ function runCli(input: Input, command: string, args: string[], appProcess: AppPr
       .pipe(Effect.mapError((error) => new Error(error.stderr || `Unable to run ${command}`)))
     const output = redact(result.stderr.length ? `${result.stdout.toString("utf8")}\nstderr:\n${result.stderr.toString("utf8")}` : result.stdout.toString("utf8"))
     const steel = command === "steel" ? parseSteelOutput(output) : {}
+    const notice = captureNotice(result.stdoutTruncated, result.stderrTruncated)
     return {
       provider: input.provider,
       action: input.action,
@@ -193,10 +205,17 @@ function runCli(input: Input, command: string, args: string[], appProcess: AppPr
       ...(steel.live_url ? { liveViewUrl: steel.live_url } : {}),
       ...(steel.connect_url ? { cdpUrl: steel.connect_url } : {}),
       ...(artifactPath ? { artifactPath } : {}),
-      output: output.trim() || `(no ${command} output)`,
+      output: notice ? `${output.trim()}\n\n${notice}` : output.trim() || `(no ${command} output)`,
       exitCode: result.exitCode,
     }
   })
+}
+
+function captureNotice(stdoutTruncated: boolean, stderrTruncated: boolean) {
+  if (stdoutTruncated && stderrTruncated) return "[stdout and stderr capture truncated at the in-memory safety limit]"
+  if (stdoutTruncated) return "[stdout capture truncated at the in-memory safety limit]"
+  if (stderrTruncated) return "[stderr capture truncated at the in-memory safety limit]"
+  return undefined
 }
 
 function firecrawl(input: Input): Effect.Effect<Output, Error> {

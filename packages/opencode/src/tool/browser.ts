@@ -84,6 +84,7 @@ function safeMetadata(input: Parameters) {
 }
 
 function permissionResource(input: Parameters) {
+  if (input.action === "screenshot" && input.path) return `${input.provider}:${input.action}:${input.path}`
   if (input.url) return `${input.provider}:${input.action}:${input.url}`
   if (input.sessionID) return `${input.provider}:${input.action}:${input.sessionID}`
   if (input.sessionName) return `${input.provider}:${input.action}:${input.sessionName}`
@@ -126,6 +127,16 @@ function requireField(value: string | undefined, field: string) {
   return value
 }
 
+function resolveArtifactPath(cwd: string, artifactPath: string) {
+  if (path.isAbsolute(artifactPath)) throw new Error("browser screenshot path must be relative to the active instance")
+  const resolved = path.resolve(cwd, artifactPath)
+  const relative = path.relative(cwd, resolved)
+  if (relative.startsWith("..") || path.isAbsolute(relative)) {
+    throw new Error("browser screenshot path must stay inside the active instance")
+  }
+  return resolved
+}
+
 function redact(input: string) {
   return input.replace(/(apiKey|token|key)=([^&\s]+)/gi, "$1=[REDACTED]").replace(/Bearer\s+[^\s]+/gi, "Bearer [REDACTED]")
 }
@@ -151,7 +162,7 @@ function runCli(
     try: async () => {
       if (signal.aborted) throw new Error(`browser ${input.action} cancelled`)
       const artifactPath = input.action === "screenshot" ? args.find((arg) => arg.endsWith(".png")) : undefined
-      const resolvedArtifactPath = artifactPath ? path.resolve(cwd, artifactPath) : undefined
+      const resolvedArtifactPath = artifactPath ? resolveArtifactPath(cwd, artifactPath) : undefined
       const commandArgs = resolvedArtifactPath ? args.map((arg) => (arg === artifactPath ? resolvedArtifactPath : arg)) : args
       if (resolvedArtifactPath) await fs.mkdir(path.dirname(resolvedArtifactPath), { recursive: true })
       const proc = Bun.spawn([command, ...commandArgs], { stdout: "pipe", stderr: "pipe", env: process.env, cwd })

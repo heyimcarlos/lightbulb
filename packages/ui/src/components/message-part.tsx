@@ -1851,7 +1851,7 @@ ToolRegistry.register({
         }}
         hideDetails={props.hideDetails || !body()}
         defaultOpen={props.defaultOpen ?? !!liveViewUrl()}
-        open={props.open ?? (liveViewUrl() ? true : undefined)}
+        open={props.open}
         onOpenChange={props.onOpenChange}
         defer={props.deferContent}
       >
