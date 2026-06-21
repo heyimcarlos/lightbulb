@@ -14,7 +14,7 @@ type DashboardArgs = {
 
 const decodeAccountID = Schema.decodeUnknownOption(Lightbulb.AccountID)
 
-const DashboardCommand = effectCmd({
+export const LightbulbDashboardCommand = effectCmd({
   command: "dashboard",
   describe: "show the Lightbulb account work graph",
   instance: false,
@@ -77,7 +77,7 @@ export const LightbulbCommand = effectCmd({
   command: "lightbulb",
   describe: "Lightbulb account orchestration tools",
   instance: false,
-  builder: (yargs: Argv) => yargs.command(DashboardCommand).demandCommand(),
+  builder: (yargs: Argv) => yargs.command(LightbulbDashboardCommand).demandCommand(),
   handler: Effect.fn("Cli.lightbulb")(function* () {}),
 })
 

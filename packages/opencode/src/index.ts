@@ -1,5 +1,6 @@
 import yargs from "yargs"
 import { hideBin } from "yargs/helpers"
+import path from "path"
 import { RunCommand } from "./cli/cmd/run"
 import { GenerateCommand } from "./cli/cmd/generate"
 import { ConsoleCommand } from "./cli/cmd/account"
@@ -26,16 +27,29 @@ import { WebCommand } from "./cli/cmd/web"
 import { PrCommand } from "./cli/cmd/pr"
 import { SessionCommand } from "./cli/cmd/session"
 import { DbCommand } from "./cli/cmd/db"
-import { LightbulbCommand } from "./cli/cmd/lightbulb"
+import { LightbulbCommand, LightbulbDashboardCommand } from "./cli/cmd/lightbulb"
 import { errorMessage } from "./util/error"
 import { PluginCommand } from "./cli/cmd/plug"
 import { Heap } from "./cli/heap"
 
 const args = hideBin(process.argv)
+const scriptName = cliScriptName()
+
+function cliScriptName() {
+  if (process.env.OPENCODE_CLI_NAME === "lightbulb") return "lightbulb"
+  if (path.basename(process.argv[1] ?? "").replace(/\.(cmd|exe)$/i, "") === "lightbulb") return "lightbulb"
+  return "opencode"
+}
+
+function isScriptHelp(text: string) {
+  if (text.startsWith(scriptName + " ")) return true
+  if (scriptName !== "lightbulb") return false
+  return text === scriptName || text.startsWith(scriptName + "\n") || text.startsWith(scriptName + "\r\n")
+}
 
 function show(out: string) {
   const text = out.trimStart()
-  if (!text.startsWith("opencode ")) {
+  if (!isScriptHelp(text)) {
     process.stderr.write(UI.logo() + EOL + EOL)
     process.stderr.write(text + EOL)
     return
@@ -45,7 +59,7 @@ function show(out: string) {
 
 const cli = yargs(args)
   .parserConfiguration({ "populate--": true })
-  .scriptName("opencode")
+  .scriptName(scriptName)
   .wrap(100)
   .help("help", "show help")
   .alias("help", "h")
@@ -102,7 +116,11 @@ const cli = yargs(args)
   .command(SessionCommand)
   .command(PluginCommand)
   .command(DbCommand)
-  .command(LightbulbCommand)
+
+const cliWithLightbulb =
+  scriptName === "lightbulb" ? cli.command(LightbulbDashboardCommand) : cli.command(LightbulbCommand)
+
+cliWithLightbulb
   .fail((msg, err) => {
     if (
       msg?.startsWith("Unknown argument") ||
@@ -110,7 +128,7 @@ const cli = yargs(args)
       msg?.startsWith("Invalid values:")
     ) {
       if (err) throw err
-      cli.showHelp(show)
+      cliWithLightbulb.showHelp(show)
     }
     if (err) throw err
     process.exit(1)
@@ -119,13 +137,13 @@ const cli = yargs(args)
 
 try {
   if (args.includes("-h") || args.includes("--help")) {
-    await cli.parse(args, (err: Error | undefined, _argv: unknown, out: string) => {
+    await cliWithLightbulb.parse(args, (err: Error | undefined, _argv: unknown, out: string) => {
       if (err) throw err
       if (!out) return
       show(out)
     })
   } else {
-    await cli.parse()
+    await cliWithLightbulb.parse()
   }
 } catch (e) {
   const formatted = FormatError(e)

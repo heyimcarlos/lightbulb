@@ -1,7 +1,69 @@
 import { describe, expect, test } from "bun:test"
+import { Effect } from "effect"
 import { EOL } from "os"
 import { Lightbulb } from "@opencode-ai/core/lightbulb"
 import { formatLightbulbDashboard } from "../../src/cli/cmd/lightbulb"
+import { cliIt } from "../lib/cli-process"
+
+const lightbulbEnv = { OPENCODE_CLI_NAME: "lightbulb", COLUMNS: "120" }
+
+describe("lightbulb CLI entrypoint", () => {
+  cliIt.live(
+    "shows Lightbulb help at the binary root",
+    ({ opencode }) =>
+      Effect.gen(function* () {
+        const result = yield* opencode.spawn(["--help"], { env: lightbulbEnv })
+
+        opencode.expectExit(result, 0, "lightbulb --help")
+        expect(result.stderr).toContain("lightbulb dashboard")
+        expect(result.stderr).toContain("dashboard")
+        expect(result.stderr).not.toContain("opencode lightbulb")
+      }),
+    60_000,
+  )
+
+  cliIt.live(
+    "shows dashboard help without the nested opencode lightbulb prefix",
+    ({ opencode }) =>
+      Effect.gen(function* () {
+        const result = yield* opencode.spawn(["dashboard", "--help"], { env: lightbulbEnv })
+
+        opencode.expectExit(result, 0, "lightbulb dashboard --help")
+        expect(result.stderr).toContain("lightbulb dashboard")
+        expect(result.stderr).toContain("show the Lightbulb account work graph")
+        expect(result.stderr).not.toContain("opencode lightbulb dashboard")
+      }),
+    60_000,
+  )
+
+  cliIt.live(
+    "seeds and prints the dashboard through the top-level Lightbulb command",
+    ({ opencode }) =>
+      Effect.gen(function* () {
+        const result = yield* opencode.spawn(["dashboard", "--seed", "--format", "json"], { env: lightbulbEnv })
+
+        opencode.expectExit(result, 0, "lightbulb dashboard --seed --format json")
+        const dashboard = JSON.parse(result.stdout) as Lightbulb.Dashboard
+        expect(dashboard.account.id).toStartWith("lbacc_")
+        expect(dashboard.goals).toHaveLength(1)
+        expect(dashboard.artifactHandles).toHaveLength(1)
+      }),
+    60_000,
+  )
+
+  cliIt.live(
+    "keeps the opencode lightbulb dashboard compatibility path",
+    ({ opencode }) =>
+      Effect.gen(function* () {
+        const result = yield* opencode.spawn(["lightbulb", "dashboard", "--help"], { env: { COLUMNS: "120" } })
+
+        opencode.expectExit(result, 0, "opencode lightbulb dashboard --help")
+        expect(result.stderr).toContain("opencode lightbulb dashboard")
+        expect(result.stderr).toContain("show the Lightbulb account work graph")
+      }),
+    60_000,
+  )
+})
 
 describe("lightbulb dashboard display", () => {
   test("renders the seeded account work graph as an operator surface", () => {
