@@ -1,30 +1,37 @@
 {
-  "pr": 50,
-  "url": "https://github.com/heyimcarlos/lightbulb/pull/50",
-  "head": "lightbulb-delegate",
+  "pr": 51,
+  "url": "https://github.com/heyimcarlos/lightbulb/pull/51",
+  "head": "lightbulb-binary",
   "base": "dev",
-  "head_sha": "1750583fb17ccf4a1012e51e8c088a91aaf3d571",
-  "last_reviewed_at": "2026-06-21T16:59:19Z",
+  "head_sha": "8ab38303ed0d26919346ecd0fcb105cd5bf5cbfb",
+  "last_reviewed_at": "2026-06-21T17:29:20Z",
   "state": "merged_post_merge_verified",
   "external_codex_review": {
     "requested": true,
     "blocked": true,
-    "reason": "Codex connector had returned a usage-limit blocker; @codex review was requested again for current head before merge and no actionable review comments were present."
+    "reason": "Codex connector returned a current-head usage-limit blocker after @codex review on head 8ab38303; no actionable top-level reviews, inline comments, or review threads existed."
   },
   "local_gates": {
-    "agent list smoke": "passed: lightbulb-implementer, lightbulb-locator, lightbulb-orchestrator, lightbulb-researcher, lightbulb-reviewer discovered",
+    "packages/opencode:bun test test/cli/lightbulb.test.ts --timeout 30000": "passed: 5 pass, 0 fail",
     "packages/opencode:bun typecheck": "passed",
-    "packages/opencode:bun test test/config/config.test.ts --timeout 30000": "passed: 94 pass, 0 fail",
+    "source CLI smokes": "passed: lightbulb help, dashboard help, seeded JSON dashboard",
+    "wrapper CLI smokes": "passed: ./bin/lightbulb help, dashboard help, seeded JSON dashboard",
+    "packages/opencode:bun run build --single --skip-embed-web-ui": "passed with Bun 1.3.14; dist/opencode-linux-x64/bin/opencode --version smoke passed",
+    "pre-push:bun turbo typecheck": "passed: 23 successful, 0 failed",
     "git diff --check": "passed"
   },
   "local_review": {
-    "actionable_findings": [],
+    "actionable_findings": [
+      "Missing bun.lock bin metadata for the new lightbulb package bin; fixed and pushed in 8ab38303."
+    ],
     "unresolved_findings": []
   },
   "evidence": {
-    "deck": ".lightbulb/evidence/pr-50/delegation-setup-evidence.html",
-    "terminal_evidence": ".lightbulb/evidence/pr-50/terminal-evidence.md"
+    "deck": ".lightbulb/evidence/pr-pending-lightbulb-binary/explainer.html",
+    "terminal_evidence": ".lightbulb/evidence/pr-pending-lightbulb-binary/terminal-screenshot.svg",
+    "verification": ".lightbulb/evidence/pr-pending-lightbulb-binary/verification.md"
   },
   "blockers": [],
-  "merge_commit": "3076665b6ec40e34b12dde1ccc5cb436ec63468a"
+  "merge_commit": "4396ba4fc9169e632bd334a3853c955bde5943f1",
+  "issues_reconciled": [43, 44]
 }

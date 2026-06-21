@@ -58,3 +58,19 @@
   - `git diff --check` — passed.
 - No GitHub status checks reported; merge state clean.
 - Squash-merged PR #50 into `dev` as `3076665b6ec40e34b12dde1ccc5cb436ec63468a` and post-merge verified the same focused gates on fetched `origin/dev`.
+
+## 2026-06-21T17:29:20Z — PR #51 review fix, merge, post-merge verify
+
+- Reviewed PR #51 (`lightbulb-binary`) at head `8ab38303ed0d26919346ecd0fcb105cd5bf5cbfb`.
+- Fixed parent review finding: added the missing `bun.lock` bin metadata for the new `lightbulb` package bin and updated evidence.
+- Re-requested `@codex review`; connector returned a current-head usage-limit blocker. No formal reviews, inline comments, or review threads existed.
+- Local gates passed from isolated worktrees with Bun 1.3.14:
+  - `packages/opencode: bun test test/cli/lightbulb.test.ts --timeout 30000` — 5 pass, 0 fail.
+  - `packages/opencode: bun typecheck` — passed.
+  - source and wrapper CLI smokes for `lightbulb --help`, `lightbulb dashboard --help`, and seeded JSON dashboard — passed.
+  - `packages/opencode: bun run build --single --skip-embed-web-ui` — passed with binary version smoke.
+  - pre-push `bun turbo typecheck` — 23 successful, 0 failed.
+  - `git diff --check` — passed.
+- No GitHub status checks reported; merge state clean.
+- Squash-merged PR #51 into `dev` as `4396ba4fc9169e632bd334a3853c955bde5943f1` and post-merge verified the same focused gates on fetched `origin/dev`.
+- Closed issues #43 and #44 via PR merge; removed stale `ready-for-agent` labels and left `agent-reviewed` + `agent-integrated`.
