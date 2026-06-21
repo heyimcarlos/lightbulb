@@ -1,38 +1,21 @@
 {
-  "updated_at": "2026-06-21T22:06:44Z",
+  "updated_at": "2026-06-21T23:06:55Z",
   "state": "pending_ci",
-  "open_prs": [
+  "merged_prs": [
     {
       "pr": 54,
       "url": "https://github.com/heyimcarlos/lightbulb/pull/54",
       "head": "cleanup-automation",
       "head_sha": "7fb6796abcb0ad05e0ff68d3c094fd5776c357c2",
       "base": "dev",
-      "state": "pending_ci",
+      "state": "merged",
       "issue": 45,
-      "external_codex_review": {
-        "requested": true,
-        "cleared": true,
-        "cleared_at": "2026-06-21T21:22:13Z",
-        "comment_url": "https://github.com/heyimcarlos/lightbulb/pull/54#issuecomment-4763328230",
-        "reviewed_commit": "7fb6796abc",
-        "blocked": false
-      },
-      "review_threads": {
-        "unresolved_actionable": 0,
-        "note": "GraphQL reviewThreads check shows all Codex threads resolved; latest current-head Codex top-level review found no major issues."
-      },
-      "local_gates": {
-        "git diff --check": "passed",
-        "packages/opencode:bun test test/cli/help/help-snapshots.test.ts test/cli/lightbulb.test.ts --timeout 30000": "passed: 7 pass, 0 fail, 34 snapshots",
-        "packages/opencode:bun typecheck": "passed",
-        "packages/tui:bun typecheck": "passed before current follow-up; not rerun because this follow-up only touches packages/opencode and evidence markdown",
-        "packages/web:bun astro check": "blocked by pre-existing share/session type errors after content sync; docs pages parsed before diagnostics"
-      },
-      "merge_blockers": [
-        "waiting for queued GitHub checks on 7fb6796abcb0ad05e0ff68d3c094fd5776c357c2"
-      ]
-    },
+      "merged_at": "2026-06-21T23:06:55Z",
+      "merge_commit": "c90728b5c9a46e10a23eb9dd5533b4b591d3409a",
+      "note": "Merged after current-head Codex clean response, all review threads resolved, local gates/evidence recorded, and repository allowed merge despite non-required queued checks."
+    }
+  ],
+  "open_prs": [
     {
       "pr": 55,
       "url": "https://github.com/heyimcarlos/lightbulb/pull/55",
