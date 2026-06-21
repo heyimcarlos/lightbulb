@@ -413,6 +413,11 @@ describe("Lightbulb", () => {
                   kind: "implementation",
                   status: "active",
                   summary: "Implementation loop owns the tracer bullet run.",
+                  profileID: null,
+                  schedule: null,
+                  budget: null,
+                  scheduleClassification: "not_due",
+                  scheduleReason: "schedule_not_configured",
                   runs: [
                     {
                       id: seeded.runID,

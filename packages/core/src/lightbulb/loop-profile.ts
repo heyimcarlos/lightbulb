@@ -168,7 +168,7 @@ type ValidatedProfile =
       readonly handle: LoopProfileHandle
     }
 
-type StoredLoopProfileMetadata = {
+export type LoopProfileMetadata = {
   readonly profileID: LoopProfileID
   readonly managed: boolean
   readonly schedule: LoopProfileScheduleEnvelope & { readonly custom: boolean }
@@ -429,7 +429,7 @@ function bootstrapProfile(
       })
     }
 
-    const current = readStoredLoopProfileMetadata(existing.metadata)
+    const current = readLoopProfileMetadata(existing.metadata)
     if (hasCustomPolicy(existing, current, profile.definition.profileID)) {
       return toHandle(profile.definition, {
         loopID: existing.id,
@@ -623,7 +623,7 @@ function mergeMetadata(existing: Record<string, unknown> | null, next: Record<st
 
 function hasCustomPolicy(
   loop: LoopProfileStoredLoop,
-  current: StoredLoopProfileMetadata | undefined,
+  current: LoopProfileMetadata | undefined,
   profileID: LoopProfileID,
 ) {
   if (!current) return metadataHasPolicy(loop.metadata)
@@ -639,7 +639,7 @@ function metadataHasPolicy(metadata: Record<string, unknown> | null) {
 function loopMatches(
   loop: LoopProfileStoredLoop,
   profile: Extract<ValidatedProfile, { valid: true }>,
-  current: StoredLoopProfileMetadata | undefined,
+  current: LoopProfileMetadata | undefined,
 ) {
   if (!current) return false
   return (
@@ -661,7 +661,7 @@ function loopMatches(
 
 function profileWithPreservedSchedule(
   profile: Extract<ValidatedProfile, { valid: true }>,
-  current: StoredLoopProfileMetadata | undefined,
+  current: LoopProfileMetadata | undefined,
 ): Extract<ValidatedProfile, { valid: true }> {
   if (!current || current.profileID !== profile.definition.profileID) return profile
   if (
@@ -681,7 +681,7 @@ function profileWithPreservedSchedule(
   return profile
 }
 
-function loopBudgetMatches(current: StoredLoopProfileMetadata["budget"], next: LoopProfileBudgetEnvelope) {
+function loopBudgetMatches(current: LoopProfileMetadata["budget"], next: LoopProfileBudgetEnvelope) {
   return (
     current.status === next.status &&
     current.maxRunsPerDay === next.maxRunsPerDay &&
@@ -692,9 +692,9 @@ function loopBudgetMatches(current: StoredLoopProfileMetadata["budget"], next: L
   )
 }
 
-function readStoredLoopProfileMetadata(
+export function readLoopProfileMetadata(
   metadata: Record<string, unknown> | null,
-): StoredLoopProfileMetadata | undefined {
+): LoopProfileMetadata | undefined {
   const loopProfile = isRecord(metadata) ? metadata.loop_profile : undefined
   if (!isRecord(loopProfile)) return
   const schedule = isRecord(loopProfile.schedule) ? loopProfile.schedule : undefined
