@@ -10,13 +10,21 @@ export function toGoalRunTree(graph: AccountGraph, goal: GoalLifecycle): GoalRun
   const runIDs = new Set(runs.map((run) => run.id))
   const workers = graph.workers.filter((worker) => runIDs.has(worker.run_id))
   const workerIDs = new Set(workers.map((worker) => worker.id))
+  const gates = graph.gates.filter((gate) => runIDs.has(gate.run_id))
+  const gateIDs = new Set(gates.map((gate) => gate.id))
   const artifacts = graph.artifacts.filter(
-    (artifact) => artifact.producer_run_id !== null && runIDs.has(artifact.producer_run_id),
+    (artifact) =>
+      (artifact.producer_run_id !== null && runIDs.has(artifact.producer_run_id)) ||
+      artifact.source_goal_id === goal.id ||
+      (artifact.source_loop_id !== null && loopIDs.has(artifact.source_loop_id)) ||
+      (artifact.source_run_id !== null && runIDs.has(artifact.source_run_id)) ||
+      (artifact.source_gate_id !== null && gateIDs.has(artifact.source_gate_id)) ||
+      graph.artifactEdges.some((edge) => edge.artifact_id === artifact.id && runIDs.has(edge.consumer_run_id)),
   )
   const goalGraph = {
     ...graph,
     runs,
-    gates: graph.gates.filter((gate) => runIDs.has(gate.run_id)),
+    gates,
     artifactEdges: graph.artifactEdges.filter((edge) => runIDs.has(edge.consumer_run_id)),
   }
 

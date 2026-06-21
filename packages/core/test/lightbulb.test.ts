@@ -438,6 +438,44 @@ describe("Lightbulb", () => {
             .where(eq(LightbulbArtifactTable.id, seeded.artifactID))
             .run()
             .pipe(Effect.orDie)
+          const goalSourceArtifact = yield* lightbulb.registerHarnessArtifact({
+            accountID: seeded.accountID,
+            producerKind: "harness",
+            type: "prd",
+            uri: "artifact://issue-16/goal-prd",
+            summary: "Goal source PRD handle.",
+            uncheckedReason: "external URI not fetched by test",
+            retentionPolicy: { mode: "keep" },
+            source: {
+              goalID: seeded.goalID,
+            },
+          })
+          const runSourceArtifact = yield* lightbulb.registerHarnessArtifact({
+            accountID: seeded.accountID,
+            producerKind: "harness",
+            type: "run_report",
+            uri: "artifact://issue-16/source-run-report",
+            summary: "Source run report handle.",
+            uncheckedReason: "external URI not fetched by test",
+            retentionPolicy: { mode: "keep" },
+            source: {
+              runID: seeded.runID,
+            },
+          })
+          const consumedArtifact = yield* lightbulb.registerHarnessArtifact({
+            accountID: seeded.accountID,
+            producerKind: "harness",
+            type: "plan",
+            uri: "artifact://issue-16/consumed-plan",
+            summary: "Consumed input artifact handle.",
+            uncheckedReason: "external URI not fetched by test",
+            retentionPolicy: { mode: "keep" },
+          })
+          yield* lightbulb.consumeArtifact({
+            artifactID: consumedArtifact.id,
+            consumerRunID: seeded.runID,
+            summary: "Goal run consumed this input plan.",
+          })
           const tree = yield* lightbulb.readGoalRunTree(seeded.goalID)
 
           expect(tree?.goal).toMatchObject({
@@ -480,10 +518,18 @@ describe("Lightbulb", () => {
           ])
           expect(tree?.artifactHandles.map((artifact) => [artifact.id, artifact.uri, artifact.summary])).toEqual([
             [seeded.artifactID, ".lightbulb/runs/issue-16-goal-lifecycle.md", "Goal lifecycle worker report."],
+            [goalSourceArtifact.id, "artifact://issue-16/goal-prd", "Goal source PRD handle."],
+            [runSourceArtifact.id, "artifact://issue-16/source-run-report", "Source run report handle."],
+            [consumedArtifact.id, "artifact://issue-16/consumed-plan", "Consumed input artifact handle."],
           ])
-          expect(tree?.artifactHandles[0]?.retentionDecision).toBe("hold-for-active-run")
-          expect(tree?.artifactHandles[0]?.lineage.map((edge) => edge.summary)).toEqual([
+          expect(tree?.artifactHandles.find((artifact) => artifact.id === seeded.artifactID)?.retentionDecision).toBe(
+            "hold-for-active-run",
+          )
+          expect(tree?.artifactHandles.find((artifact) => artifact.id === seeded.artifactID)?.lineage.map((edge) => edge.summary)).toEqual([
             "Worker produced this artifact for parent review.",
+          ])
+          expect(tree?.artifactHandles.find((artifact) => artifact.id === consumedArtifact.id)?.lineage.map((edge) => edge.summary)).toEqual([
+            "Goal run consumed this input plan.",
           ])
           expect(JSON.stringify(tree)).not.toContain("Unrelated goal")
         }).pipe(Effect.provide(layer(tmp.path))),

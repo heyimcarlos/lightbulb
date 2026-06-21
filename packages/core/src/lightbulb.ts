@@ -921,4 +921,3 @@ function readAccountGraphFromDb(db: Database.Interface["db"], accountID: Account
     }
   })
 }
-
