@@ -375,6 +375,111 @@ describe("Lightbulb decision artifact routing", () => {
     ),
   )
 
+  it.live("mirrors supersession when a transition records an accepted replacement", () =>
+    Effect.acquireRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ).pipe(
+      Effect.flatMap((tmp) =>
+        Effect.gen(function* () {
+          const lightbulb = yield* Lightbulb.Service
+          const seeded = yield* lightbulb.seedTracerBullet()
+          yield* Effect.promise(() => Bun.write(path.join(tmp.path, "old-transition.md"), "old decision body"))
+          yield* Effect.promise(() => Bun.write(path.join(tmp.path, "new-transition.md"), "new decision body"))
+
+          const oldDecision = yield* lightbulb.registerDecisionArtifact({
+            accountID: seeded.accountID,
+            type: "adr",
+            uri: "old-transition.md",
+            summary: "Original ADR awaiting transitioned replacement.",
+            retentionPolicy: { mode: "keep" },
+            baseDirectory: tmp.path,
+            source: {
+              issueRef: "#30",
+            },
+            decision: {
+              status: "pending",
+              owner: "architecture",
+              reviewer: "maintainer",
+            },
+          })
+          const replacement = yield* lightbulb.registerDecisionArtifact({
+            accountID: seeded.accountID,
+            type: "adr",
+            uri: "new-transition.md",
+            summary: "Replacement ADR promoted later.",
+            retentionPolicy: { mode: "keep" },
+            baseDirectory: tmp.path,
+            source: {
+              issueRef: "#30",
+            },
+            decision: {
+              status: "pending",
+              owner: "architecture",
+              reviewer: "maintainer",
+            },
+          })
+          yield* lightbulb.transitionDecisionArtifact({
+            artifactID: replacement.id,
+            decision: {
+              status: "accepted",
+              supersedesArtifactID: oldDecision.id,
+            },
+          })
+          const classification = yield* lightbulb.classifyIssueRouting({
+            accountID: seeded.accountID,
+            issueRef: "#30",
+            title: "Transition supersession",
+            labels: ["ready-for-agent"],
+          })
+
+          expect(classification.status).toBe("ready_for_afk")
+          expect(classification.decisionHolds).toEqual([])
+          expect(classification.decisionArtifacts.map((artifact) => [artifact.id, artifact.decision.status])).toEqual([
+            [oldDecision.id, "superseded"],
+            [replacement.id, "accepted"],
+          ])
+          expect(classification.decisionArtifacts[0]?.decision.supersededByArtifactID).toBe(replacement.id)
+          expect(classification.decisionArtifacts[1]?.decision.supersedesArtifactID).toBe(oldDecision.id)
+        }).pipe(Effect.provide(layer(tmp.path))),
+      ),
+    ),
+  )
+
+  it.live("holds routing when a required decision artifact is missing", () =>
+    Effect.acquireRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ).pipe(
+      Effect.flatMap((tmp) =>
+        Effect.gen(function* () {
+          const lightbulb = yield* Lightbulb.Service
+          const seeded = yield* lightbulb.seedTracerBullet()
+          const missingID = "lbartifact_missing_required" as Lightbulb.ArtifactID
+          const classification = yield* lightbulb.classifyIssueRouting({
+            accountID: seeded.accountID,
+            issueRef: "#31",
+            title: "Missing required decision",
+            labels: ["ready-for-agent"],
+            requiredDecisionArtifactIDs: [missingID],
+          })
+
+          expect(classification.status).toBe("held_for_decision")
+          expect(classification.decisionArtifacts).toEqual([])
+          expect(classification.decisionHolds).toEqual([
+            {
+              issueRef: "#31",
+              gateID: null,
+              artifactID: missingID,
+              status: "pending",
+              summary: "Required decision artifact was not found or is not decision-routable.",
+            },
+          ])
+        }).pipe(Effect.provide(layer(tmp.path))),
+      ),
+    ),
+  )
+
   it.live("keeps superseded replacement decisions scoped to the routed issue", () =>
     Effect.acquireRelease(
       Effect.promise(() => tmpdir()),

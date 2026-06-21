@@ -272,6 +272,14 @@ export function transitionDecisionArtifactInDb(db: Database.Interface["db"], inp
     }
     const rejected = validateDecision(decision)
     if (rejected) return yield* Effect.fail(new ArtifactRegistrationRejected({ reason: rejected }))
+    const superseded = decision.supersedesArtifactID
+      ? yield* readDecisionArtifactRow(db, artifact.account_id, decision.supersedesArtifactID)
+      : undefined
+    if (decision.supersedesArtifactID && !superseded)
+      return yield* Effect.fail(new ArtifactRegistrationRejected({ reason: "superseded decision artifact was not found" }))
+    const supersededDecision = superseded && isDecisionArtifactType(superseded.type) ? decisionForArtifact(superseded) : undefined
+    if (superseded && !supersededDecision)
+      return yield* Effect.fail(new ArtifactRegistrationRejected({ reason: "superseded artifact is not a decision artifact" }))
     if (decision.supersededByArtifactID) {
       const replacement = yield* readDecisionArtifactRow(db, artifact.account_id, decision.supersededByArtifactID)
       if (!replacement)
@@ -281,21 +289,44 @@ export function transitionDecisionArtifactInDb(db: Database.Interface["db"], inp
     }
 
     yield* db
-      .update(LightbulbArtifactTable)
-      .set({
-        status: decision.status === "superseded" ? "superseded" : artifact.status === "superseded" ? "registered" : artifact.status,
-        metadata: {
-          ...artifact.metadata,
-          decision: {
-            type: artifact.type,
-            sourceIssueRef: artifact.source_issue_ref,
-            sourceGateID: artifact.source_gate_id,
-            ...decisionMetadata(decision),
-          },
-        },
-      })
-      .where(eq(LightbulbArtifactTable.id, input.artifactID))
-      .run()
+      .transaction((tx) =>
+        Effect.gen(function* () {
+          yield* tx
+            .update(LightbulbArtifactTable)
+            .set({
+              status: decision.status === "superseded" ? "superseded" : artifact.status === "superseded" ? "registered" : artifact.status,
+              metadata: {
+                ...artifact.metadata,
+                decision: {
+                  type: artifact.type,
+                  sourceIssueRef: artifact.source_issue_ref,
+                  sourceGateID: artifact.source_gate_id,
+                  ...decisionMetadata(decision),
+                },
+              },
+            })
+            .where(eq(LightbulbArtifactTable.id, input.artifactID))
+            .run()
+
+          if (superseded && supersededDecision) {
+            yield* tx
+              .update(LightbulbArtifactTable)
+              .set({
+                status: "superseded",
+                metadata: {
+                  ...superseded.metadata,
+                  decision: {
+                    ...supersededDecision,
+                    status: "superseded",
+                    supersededByArtifactID: input.artifactID,
+                  },
+                },
+              })
+              .where(and(eq(LightbulbArtifactTable.account_id, artifact.account_id), eq(LightbulbArtifactTable.id, superseded.id)))
+              .run()
+          }
+        }),
+      )
       .pipe(Effect.orDie)
 
     const handle = yield* readArtifactHandle(db, {
@@ -327,9 +358,11 @@ export function classifyIssueRouting(db: Database.Interface["db"], input: IssueR
     const decisionArtifacts = handles
       .map((artifact) => (artifact ? toDecisionArtifactHandle(artifact) : undefined))
       .filter((artifact): artifact is DecisionArtifactHandle => artifact !== undefined)
-    const decisionHolds = uniqueDecisionHolds(
-      decisionArtifacts.flatMap((artifact) => decisionHoldForArtifact(input, artifact, decisionArtifacts)),
-    )
+    const missingRequiredDecisionHolds = yield* requiredDecisionHolds(db, input)
+    const decisionHolds = uniqueDecisionHolds([
+      ...decisionArtifacts.flatMap((artifact) => decisionHoldForArtifact(input, artifact, decisionArtifacts)),
+      ...missingRequiredDecisionHolds,
+    ])
     return {
       issueRef: input.issueRef.trim(),
       title: input.title,
@@ -447,6 +480,28 @@ function readIssueDecisionArtifactRows(db: Database.Interface["db"], input: Issu
       .filter((artifact) => isDecisionArtifactType(artifact.type))
       .filter((artifact) => decisionForArtifact(artifact))
     return primary
+  })
+}
+
+function requiredDecisionHolds(db: Database.Interface["db"], input: IssueRoutingInput) {
+  return Effect.gen(function* () {
+    const rows = yield* Effect.all(
+      (input.requiredDecisionArtifactIDs ?? []).map((artifactID) => readDecisionArtifactRow(db, input.accountID, artifactID)),
+    )
+    return rows.flatMap((row, index) => {
+      if (row && isDecisionArtifactType(row.type) && decisionForArtifact(row)) return []
+      const artifactID = input.requiredDecisionArtifactIDs?.[index]
+      if (!artifactID) return []
+      return [
+        {
+          issueRef: input.issueRef.trim(),
+          gateID: input.gateID ?? null,
+          artifactID,
+          status: "pending" as const,
+          summary: "Required decision artifact was not found or is not decision-routable.",
+        },
+      ]
+    })
   })
 }
 
