@@ -7,4 +7,5 @@
 - Thermo gate passed after parent cleanup: scheduler logic isolated in `packages/core/src/lightbulb/scheduler.ts`; `packages/core/src/lightbulb.ts` is 999 lines, below the 1k guard.
 - PR opened: https://github.com/heyimcarlos/lightbulb/pull/53 at `e1055ecac1c6124632bab0860265a1334cf21da8`.
 - Evidence attached under `.lightbulb/evidence/pr-53/`.
-- Posted exact `@codex review`; merge is blocked until current-head review resolves.
+- Posted exact `@codex review`; Codex returned a current-head usage-limit blocker.
+- Local Hermes review fallback found no unresolved findings; mergeability was clean and checks were absent, so PR #53 was squash-merged as `99a736ada44c741e79b0a412f290ca1f6c447363`.

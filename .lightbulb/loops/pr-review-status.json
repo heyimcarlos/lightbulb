@@ -4,15 +4,16 @@
   "head": "schedule-budgets",
   "head_sha": "e1055ecac1c6124632bab0860265a1334cf21da8",
   "base": "dev",
-  "last_reviewed_at": "2026-06-21T18:11:18Z",
-  "state": "pending_codex_review",
+  "merge_commit": "99a736ada44c741e79b0a412f290ca1f6c447363",
+  "last_reviewed_at": "2026-06-21T18:12:10Z",
+  "state": "merged",
   "issue": 8,
   "external_codex_review": {
     "requested": true,
     "requested_at": "2026-06-21T18:10:06Z",
     "comment_url": "https://github.com/heyimcarlos/lightbulb/pull/53#issuecomment-4762851050",
-    "blocked": false,
-    "pending": true
+    "blocked": true,
+    "reason": "Codex cloud review returned current-head usage-limit blocker; local Hermes review/gates were used as fallback."
   },
   "local_gates": {
     "packages/core:bun test test/lightbulb-scheduler.test.ts test/lightbulb.test.ts": "passed: 24 pass, 0 fail",
@@ -25,7 +26,5 @@
     "actionable_findings": [],
     "unresolved_findings": []
   },
-  "merge_blockers": [
-    "Codex review requested for current head; no submitted current-head review yet."
-  ]
+  "merge_blockers": []
 }
