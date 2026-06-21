@@ -82,15 +82,11 @@ function createOrAdopt(
           const existing = yield* tx.select().from(LightbulbGoalTable).where(eq(LightbulbGoalTable.id, input.goalID)).get()
           if (existing) return { goal: existing, adopted: true }
         }
-        if (input.sourceRef) {
+        if (input.accountID && input.sourceRef) {
           const existing = yield* tx
             .select()
             .from(LightbulbGoalTable)
-            .where(
-              input.accountID
-                ? and(eq(LightbulbGoalTable.account_id, input.accountID), eq(LightbulbGoalTable.source_ref, input.sourceRef))
-                : eq(LightbulbGoalTable.source_ref, input.sourceRef),
-            )
+            .where(and(eq(LightbulbGoalTable.account_id, input.accountID), eq(LightbulbGoalTable.source_ref, input.sourceRef)))
             .get()
           if (existing) return { goal: existing, adopted: true }
         }

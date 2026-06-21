@@ -138,9 +138,9 @@ describe("Lightbulb", () => {
             objective: "This should adopt the existing goal.",
             sourceRef: "github:heyimcarlos/lightbulb/issues/16",
           })
-          const byGlobalSource = yield* lightbulb.createOrAdoptGoal({
-            title: "Duplicate source goal without account ID",
-            objective: "This should adopt the existing account graph.",
+          const sameSourceWithoutAccount = yield* lightbulb.createOrAdoptGoal({
+            title: "Same source goal without account ID",
+            objective: "This must not adopt across account boundaries.",
             sourceRef: "github:heyimcarlos/lightbulb/issues/16",
           })
           const byID = yield* lightbulb.createOrAdoptGoal({
@@ -151,18 +151,21 @@ describe("Lightbulb", () => {
             sourceRef: "github:heyimcarlos/lightbulb/issues/16#retry",
           })
           const graph = yield* lightbulb.readAccountGraph(first.goal.account_id)
+          const isolatedGraph = yield* lightbulb.readAccountGraph(sameSourceWithoutAccount.goal.account_id)
 
           expect(first.adopted).toBe(false)
           expect(bySource.adopted).toBe(true)
-          expect(byGlobalSource.adopted).toBe(true)
+          expect(sameSourceWithoutAccount.adopted).toBe(false)
           expect(byID.adopted).toBe(true)
-          expect([first.goal.id, bySource.goal.id, byGlobalSource.goal.id, byID.goal.id]).toEqual([
-            first.goal.id,
+          expect([first.goal.id, bySource.goal.id, byID.goal.id]).toEqual([
             first.goal.id,
             first.goal.id,
             first.goal.id,
           ])
+          expect(sameSourceWithoutAccount.goal.id).not.toBe(first.goal.id)
+          expect(sameSourceWithoutAccount.goal.account_id).not.toBe(first.goal.account_id)
           expect(graph?.goals.map((goal) => goal.id)).toEqual([first.goal.id])
+          expect(isolatedGraph?.goals.map((goal) => goal.id)).toEqual([sameSourceWithoutAccount.goal.id])
           expect(graph?.loops).toEqual([])
           expect(graph?.runs).toEqual([])
         }).pipe(Effect.provide(layer(tmp.path))),
