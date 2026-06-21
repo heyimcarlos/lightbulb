@@ -1,17 +1,16 @@
 import { Effect } from "effect"
 import { cmd } from "./cmd"
-import { effectCmd } from "../effect-cmd"
+import { effectCmd, fail } from "../effect-cmd"
 
 export { extractResponseText, formatPromptTooLargeError, parseGitHubRemote } from "./github.shared"
 
 export const GithubInstallCommand = effectCmd({
   command: "install",
   describe: "unsupported in Lightbulb",
+  instance: false,
   handler: () =>
-    Effect.die(
-      new Error(
-        "The inherited OpenCode GitHub agent installer is disabled in Lightbulb until a Lightbulb-native GitHub Action, app, and trigger vocabulary exist.",
-      ),
+    fail(
+      "The inherited OpenCode GitHub agent installer is disabled in Lightbulb until a Lightbulb-native GitHub Action, app, and trigger vocabulary exist.",
     ),
 })
 
