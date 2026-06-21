@@ -44,6 +44,6 @@ Rules:
 
 <changelog_input>
 
-!`bun script/raw-changelog.ts $ARGUMENTS`
+!`GH_REPO=heyimcarlos/lightbulb bun script/raw-changelog.ts $ARGUMENTS`
 
 </changelog_input>
