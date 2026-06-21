@@ -446,16 +446,7 @@ function readIssueDecisionArtifactRows(db: Database.Interface["db"], input: Issu
     const primary = uniqueArtifacts([...issueArtifacts, ...gateArtifacts, ...requiredArtifacts])
       .filter((artifact) => isDecisionArtifactType(artifact.type))
       .filter((artifact) => decisionForArtifact(artifact))
-    const replacementArtifacts = yield* Effect.all(
-      primary
-        .map((artifact) => decisionForArtifact(artifact)?.supersededByArtifactID)
-        .filter((artifactID): artifactID is Lightbulb.ArtifactID => !!artifactID)
-        .filter((artifactID) => !primary.some((artifact) => artifact.id === artifactID))
-        .map((artifactID) => readDecisionArtifactRow(db, input.accountID, artifactID)),
-    )
-    return uniqueArtifacts([...primary, ...replacementArtifacts])
-      .filter((artifact) => isDecisionArtifactType(artifact.type))
-      .filter((artifact) => decisionForArtifact(artifact))
+    return primary
   })
 }
 

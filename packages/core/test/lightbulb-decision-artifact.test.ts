@@ -226,6 +226,75 @@ describe("Lightbulb decision artifact routing", () => {
     ),
   )
 
+  it.live("keeps superseded replacement decisions scoped to the routed issue", () =>
+    Effect.acquireRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ).pipe(
+      Effect.flatMap((tmp) =>
+        Effect.gen(function* () {
+          const lightbulb = yield* Lightbulb.Service
+          const seeded = yield* lightbulb.seedTracerBullet()
+          yield* Effect.promise(() => Bun.write(path.join(tmp.path, "issue-a.md"), "issue A decision"))
+          yield* Effect.promise(() => Bun.write(path.join(tmp.path, "issue-b.md"), "issue B decision"))
+
+          const oldDecision = yield* lightbulb.registerDecisionArtifact({
+            accountID: seeded.accountID,
+            type: "adr",
+            uri: "issue-a.md",
+            summary: "Issue A decision awaiting an in-scope replacement.",
+            retentionPolicy: { mode: "keep" },
+            baseDirectory: tmp.path,
+            source: {
+              issueRef: "#28",
+            },
+            decision: {
+              status: "pending",
+              owner: "architecture",
+              reviewer: "maintainer",
+            },
+          })
+          const replacement = yield* lightbulb.registerDecisionArtifact({
+            accountID: seeded.accountID,
+            type: "adr",
+            uri: "issue-b.md",
+            summary: "Accepted replacement attached to a different issue.",
+            retentionPolicy: { mode: "keep" },
+            baseDirectory: tmp.path,
+            source: {
+              issueRef: "#29",
+            },
+            decision: {
+              status: "accepted",
+              owner: "architecture",
+              reviewer: "maintainer",
+              supersedesArtifactID: oldDecision.id,
+            },
+          })
+          const classification = yield* lightbulb.classifyIssueRouting({
+            accountID: seeded.accountID,
+            issueRef: "#28",
+            title: "Superseded decision with off-scope replacement",
+            labels: ["ready-for-agent"],
+          })
+
+          expect(classification.status).toBe("held_for_decision")
+          expect(classification.decisionHolds).toEqual([
+            {
+              issueRef: "#28",
+              gateID: null,
+              artifactID: oldDecision.id,
+              status: "superseded",
+              summary: "Issue A decision awaiting an in-scope replacement.",
+            },
+          ])
+          expect(classification.decisionArtifacts.map((artifact) => artifact.id)).toEqual([oldDecision.id])
+          expect(classification.decisionArtifacts[0]?.decision.supersededByArtifactID).toBe(replacement.id)
+        }).pipe(Effect.provide(layer(tmp.path))),
+      ),
+    ),
+  )
+
   it.live("holds rejected decision artifacts out of AFK routing", () =>
     Effect.acquireRelease(
       Effect.promise(() => tmpdir()),
