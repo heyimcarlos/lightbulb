@@ -27,7 +27,8 @@ From `packages/opencode`:
 
 Build gate:
 
-- `bun run build --single --skip-embed-web-ui` — blocked by local tool version guard: script requires Bun `^1.3.14`; cron host has Bun `1.3.12`.
+- `PATH=/tmp/bun-1.3.14/bun-linux-x64:$PATH bun run build --single --skip-embed-web-ui` — passed; smoke test passed for `dist/opencode-linux-x64/bin/opencode --version`.
+- Parent review also materialized the missing `bun.lock` bin entry for `lightbulb` after running Bun 1.3.14.
 
 ## Evidence artifacts
 

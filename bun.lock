@@ -498,6 +498,7 @@
       "version": "1.17.8",
       "bin": {
         "opencode": "./bin/opencode",
+        "lightbulb": "./bin/lightbulb",
       },
       "dependencies": {
         "@actions/core": "1.11.1",
