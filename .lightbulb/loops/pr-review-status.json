@@ -1,38 +1,6 @@
 {
-  "updated_at": "2026-06-21T23:10:54Z",
+  "updated_at": "2026-06-21T23:46:56Z",
   "prs": [
-    {
-      "pr": 54,
-      "url": "https://github.com/heyimcarlos/lightbulb/pull/54",
-      "head": "cleanup-automation",
-      "base": "dev",
-      "head_sha": "7fb6796abcb0ad05e0ff68d3c094fd5776c357c2",
-      "state": "pending_ci",
-      "local_gates": {
-        "git diff --check": "passed after GitHub runner docs fix",
-        "packages/web:bun run build": "passed after GitHub runner docs fix",
-        "packages/opencode:bun test test/cli/lightbulb.test.ts --timeout 30000": "passed: 6 pass, 0 fail",
-        "stale runner-doc grep": "passed: localized cli.mdx pages only mention opencode github run as disabled",
-        "previous package gates": "passed before runner-doc fix: GitHub help/action tests, Lightbulb CLI tests, packages/opencode typecheck, installer smokes, changelog command smokes"
-      },
-      "review_fixes": [
-        "Disabled opencode github install so it cannot open the upstream app or write anomalyco/opencode/github@latest workflows.",
-        "Deleted .github/workflows/publish-vscode.yml so Lightbulb tags/manual dispatch cannot publish the upstream opencode VS Code extension.",
-        "Changed the disabled installer from Effect.die to fail(...) and instance:false so it surfaces as an expected CLI failure even outside a project directory.",
-        "Changed .opencode/command/changelog.md to pass GH_REPO=heyimcarlos/lightbulb into script/raw-changelog.ts.",
-        "Restored blank lines before CLI section dividers in every localized cli.mdx copy so MDX does not parse the disabled-installer note as a Setext heading.",
-        "Resolved all current Codex review threads after fixes were pushed.",
-        "Replaced stale `opencode github run` CLI docs and localized flag tables with disabled-runner guidance after the current-head Codex finding."
-      ],
-      "external_codex_review": {
-        "requested": true,
-        "pending": false,
-        "reason": "Codex connector reported no major issues on current head 7fb6796 after all review threads were resolved."
-      },
-      "blockers": [
-        "GitHub checks are queued/in progress on the latest head."
-      ]
-    },
     {
       "pr": 55,
       "url": "https://github.com/heyimcarlos/lightbulb/pull/55",
@@ -58,7 +26,7 @@
         "reason": "Codex connector reported no major issues on current head 3f49791e8d after evidence refresh."
       },
       "blockers": [
-        "GitHub checks are still queued/pending on the latest head after 10 minutes of gh pr checks --watch --fail-fast."
+        "GitHub checks are still queued/pending on the latest head; no failure logs are available."
       ]
     }
   ]

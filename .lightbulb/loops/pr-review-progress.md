@@ -124,7 +124,14 @@
 ## 2026-06-21T23:10:54Z — PR #55 evidence refresh pushed
 
 - Fixed PR #55 evidence gap: `lightbulb-help.txt` and `lightbulb-dashboard-help.txt` were empty despite being listed in the PR body.
-- Reproduced the Lightbulb CLI smokes, refreshed help/dashboard evidence artifacts, committed `3f49791e8`, pushed `repo-identity`, and requested `@codex review` again.
+- Reproduced the Lightbulb CLI smokes, refreshed help/dashboard evidence artifacts, committed `3f49791e8d`, pushed `repo-identity`, and requested `@codex review` again.
 - Local gates passed: `git diff --check`, Lightbulb CLI smokes, `packages/opencode:bun test test/cli/lightbulb.test.ts --timeout 30000` (5 pass), and `packages/opencode:bun typecheck`.
 - Current-head Codex review cleared with no major issues.
 - Blocked from merge: GitHub checks for PR #55 remain queued/pending after a 10-minute `gh pr checks --watch --fail-fast`.
+
+## 2026-06-21T23:46:56Z — PR #55 still pending CI
+
+- PR #54 is already merged; removed it from active PR-loop status.
+- PR #55 current head `3f49791e8d` is mergeable and current-head Codex review is clean.
+- No inline comments or review threads exist on PR #55.
+- Blocked from merge: GitHub checks are still queued/pending with no failure logs available.
