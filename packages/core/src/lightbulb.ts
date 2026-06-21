@@ -1,5 +1,6 @@
 export * as Lightbulb from "./lightbulb"
 export { ArtifactRegistrationRejected } from "./lightbulb/artifact-registration"
+export { defaultContextBundlePolicy } from "./lightbulb/context-bundle"
 export type {
   DecisionArtifactHandle,
   DecisionArtifactStatus,
@@ -11,6 +12,21 @@ export type {
   TransitionDecisionArtifactInput,
   WorkerDispatchPlan,
 } from "./lightbulb/decision-artifact"
+export type {
+  ContextBundleAssemblyResult,
+  ContextBundleAssemblyServiceInput,
+  ContextBundleDecisionHold,
+  ContextBundleManifest,
+  ContextBundleManifestHandle,
+  ContextBundlePolicy,
+  ContextBundlePolicyHold,
+  ContextBundlePolicyOutcome,
+  ContextBundleSourceExcerpt,
+  ContextBundleSpawnReadyPacket,
+  ContextBundleTaskPacketRequest,
+  ContextBundleVerificationExpectation,
+  ContextBundleWorkItemSummary,
+} from "./lightbulb/context-bundle"
 export * from "./lightbulb/loop-profile"
 
 import { and, asc, eq, or } from "drizzle-orm"
@@ -26,6 +42,7 @@ import {
   registerArtifactInDb,
   registerHarnessArtifactInDb,
 } from "./lightbulb/artifact-registration"
+import { assembleContextBundle, databaseContextBundleStorage } from "./lightbulb/context-bundle"
 import { toDashboard, toGoalRunTree } from "./lightbulb/dashboard"
 import { planGoalRoute as planGoalRouteInDb, readGoalRoute as readGoalRouteFromDb, steerGoalRoute as steerGoalRouteInDb } from "./lightbulb/route"
 import {
@@ -43,6 +60,7 @@ import type {
   TransitionDecisionArtifactInput,
   WorkerDispatchPlan,
 } from "./lightbulb/decision-artifact"
+import type { ContextBundleAssemblyResult, ContextBundleAssemblyServiceInput } from "./lightbulb/context-bundle"
 import {
   LightbulbAccountTable,
   LightbulbArtifactEdgeTable,
@@ -112,6 +130,7 @@ export type ArtifactType =
   | "run_report"
   | "scaffold"
   | "operator_summary"
+  | "context_manifest"
 export type ArtifactStatus = "registered" | "consumed" | "superseded" | "expired"
 export type ArtifactEdgeRelation = "produced_by" | "consumed_by" | "supersedes" | "verifies"
 export type ArtifactProducerKind = "worker" | "harness"
@@ -409,6 +428,9 @@ export interface Interface {
   ) => Effect.Effect<DecisionArtifactHandle, ArtifactRegistrationRejected>
   readonly classifyIssueRouting: (input: IssueRoutingInput) => Effect.Effect<IssueRoutingClassification>
   readonly planWorkerDispatch: (input: { readonly issues: readonly IssueRoutingInput[] }) => Effect.Effect<WorkerDispatchPlan>
+  readonly assembleContextBundle: (
+    input: ContextBundleAssemblyServiceInput,
+  ) => Effect.Effect<ContextBundleAssemblyResult>
   readonly readAccountGraph: (accountID: AccountID) => Effect.Effect<AccountGraph | undefined>
   readonly readDashboard: (accountID: AccountID) => Effect.Effect<Dashboard | undefined>
   readonly readIssueArtifacts: (input: ReadIssueArtifactsInput) => Effect.Effect<ArtifactHandle[]>
@@ -704,6 +726,13 @@ export const layer = Layer.effect(
       }),
       planWorkerDispatch: Effect.fn("Lightbulb.planWorkerDispatch")(function* (input) {
         return yield* planWorkerDispatch(db, input)
+      }),
+      assembleContextBundle: Effect.fn("Lightbulb.assembleContextBundle")(function* (input) {
+        return yield* assembleContextBundle({
+          ...input,
+          now: input.now ?? Date.now(),
+          storage: databaseContextBundleStorage(db),
+        })
       }),
       checkArtifact: Effect.fn("Lightbulb.checkArtifact")(function* (input) {
         return yield* readArtifactHandle(db, {
