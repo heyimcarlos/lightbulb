@@ -382,6 +382,14 @@ describe("Lightbulb loop profile bootstrap", () => {
                   cadenceMs: 0,
                 },
               },
+              {
+                profileID: "bad-budget-status",
+                kind: "implementation",
+                summary: "Invalid budget status.",
+                budget: {
+                  status: "closed" as "open",
+                },
+              },
             ],
             defaultPolicy,
             now,
@@ -394,6 +402,7 @@ describe("Lightbulb loop profile bootstrap", () => {
             ["duplicate", "duplicate_profile_id"],
             ["bad-kind", "invalid_loop_kind"],
             ["bad-cadence", "invalid_cadence"],
+            ["bad-budget-status", "invalid_budget"],
           ])
           expect(graph?.loops).toEqual([])
           expect(graph?.events.filter((event) => event.type === "lightbulb.loop_profile.created")).toEqual([])

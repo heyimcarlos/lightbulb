@@ -504,6 +504,7 @@ function validateProfiles(input: LoopProfileBootstrapInput): readonly ValidatedP
       return invalidProfile(definition, "invalid_cadence")
     }
     if (
+      (budget.status !== "open" && budget.status !== "held") ||
       !Number.isSafeInteger(budget.maxRunsPerDay) ||
       !Number.isSafeInteger(budget.maxTokens) ||
       !Number.isFinite(budget.maxCostUsd) ||
