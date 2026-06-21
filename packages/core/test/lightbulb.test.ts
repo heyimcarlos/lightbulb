@@ -54,7 +54,114 @@ describe("Lightbulb", () => {
     ),
   )
 
-  it.live("registers and consumes artifact handles for parent orchestration without raw logs", () =>
+  it.live("builds a dashboard read model for seeded account work", () =>
+    Effect.acquireRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ).pipe(
+      Effect.flatMap((tmp) =>
+        Effect.gen(function* () {
+          const lightbulb = yield* Lightbulb.Service
+          const seeded = yield* lightbulb.seedTracerBullet({
+            accountName: "Dashboard Account",
+            artifactUri: ".lightbulb/runs/issue-3-dashboard.md",
+            artifactSummary: "Dashboard artifact handle.",
+          })
+          const dashboard = yield* lightbulb.readDashboard(seeded.accountID)
+
+          expect(dashboard?.account).toEqual({
+            id: seeded.accountID,
+            name: "Dashboard Account",
+            status: "active",
+          })
+          expect(dashboard?.goals).toEqual([
+            {
+              id: seeded.goalID,
+              title: "Bootstrap loop harness",
+              status: "open",
+              summary: "Create one durable Lightbulb goal graph.",
+              loops: [
+                {
+                  id: seeded.loopID,
+                  kind: "implementation",
+                  status: "active",
+                  summary: "Implementation loop owns the tracer bullet run.",
+                  runs: [
+                    {
+                      id: seeded.runID,
+                      status: "complete",
+                      reviewStatus: "requested",
+                      debugStatus: "fixed",
+                      gateStatus: "pending",
+                      summary: "Worker produced a durable implementation report artifact.",
+                      workers: [
+                        {
+                          id: seeded.workerID,
+                          role: "bounded implementation worker",
+                          status: "complete",
+                          summary: "Implemented the schema tracer bullet and returned artifact handles.",
+                        },
+                      ],
+                      gates: [
+                        {
+                          id: seeded.gateID,
+                          kind: "review",
+                          status: "pending",
+                          summary: "Parent review is pending against the report artifact.",
+                          artifactID: seeded.artifactID,
+                        },
+                      ],
+                      artifacts: [
+                        {
+                          id: seeded.artifactID,
+                          type: "report",
+                          uri: ".lightbulb/runs/issue-3-dashboard.md",
+                          summary: "Dashboard artifact handle.",
+                          status: "registered",
+                          producerRunID: seeded.runID,
+                          producerWorkerID: seeded.workerID,
+                          lineage: [
+                            {
+                              relation: "produced_by",
+                              runID: seeded.runID,
+                              workerID: seeded.workerID,
+                              summary: "Worker produced this artifact for parent review.",
+                            },
+                          ],
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          ])
+          expect(dashboard?.inbox.taskPackets).toEqual([
+            {
+              id: seeded.taskPacketID,
+              workerID: seeded.workerID,
+              title: "Implement schema tracer bullet",
+              status: "complete",
+            },
+          ])
+          expect(dashboard?.inbox.gates).toEqual([
+            {
+              id: seeded.gateID,
+              kind: "review",
+              status: "pending",
+              summary: "Parent review is pending against the report artifact.",
+              artifactID: seeded.artifactID,
+            },
+          ])
+          expect(dashboard?.artifactHandles.map((artifact) => [artifact.id, artifact.uri])).toEqual([
+            [seeded.artifactID, ".lightbulb/runs/issue-3-dashboard.md"],
+          ])
+        }).pipe(Effect.provide(layer(tmp.path))),
+      ),
+    ),
+  )
+
+  it.live("summarizes artifact handles for parent orchestration without raw logs", () =>
     Effect.acquireRelease(
       Effect.promise(() => tmpdir()),
       (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
