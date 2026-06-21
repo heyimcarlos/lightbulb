@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-06-21T21:18:30Z",
+  "updated_at": "2026-06-21T21:41:02Z",
   "prs": [
     {
       "pr": 54,
@@ -7,7 +7,7 @@
       "head": "cleanup-automation",
       "base": "dev",
       "head_sha": "7fb6796abcb0ad05e0ff68d3c094fd5776c357c2",
-      "state": "pending_ci_and_current_head_codex_review",
+      "state": "pending_ci",
       "local_gates": {
         "git diff --check": "passed after GitHub runner docs fix",
         "packages/web:bun run build": "passed after GitHub runner docs fix",
@@ -26,12 +26,11 @@
       ],
       "external_codex_review": {
         "requested": true,
-        "pending": true,
-        "reason": "Requested @codex review on current head 7fb6796 after resolving the runner-doc review thread."
+        "pending": false,
+        "reason": "Codex connector reported no major issues on current head 7fb6796 after all review threads were resolved."
       },
       "blockers": [
-        "GitHub checks are queued/in progress on the latest head.",
-        "Current-head Codex review is pending."
+        "GitHub checks are queued/in progress on the latest head."
       ]
     },
     {
