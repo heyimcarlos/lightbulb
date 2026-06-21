@@ -1,5 +1,5 @@
 import { Buffer } from "buffer"
-import { and, eq, inArray, or } from "drizzle-orm"
+import { and, asc, eq, inArray, or } from "drizzle-orm"
 import { Effect } from "effect"
 import { fileURLToPath } from "url"
 import type { Database } from "../database/database"
@@ -7,12 +7,16 @@ import { Hash } from "../util/hash"
 import { isAbsolute, join } from "path"
 import { LightbulbArtifactEdgeTable, LightbulbArtifactTable, LightbulbGateTable, LightbulbRunTable } from "./sql"
 import type {
+  AccountID,
+  ArtifactDecisionSummary,
   ArtifactHandle,
   ArtifactID,
   ArtifactIntegritySummary,
   ArtifactRetentionDecision,
   ArtifactRetentionPolicy,
   ArtifactStatus,
+  ArtifactType,
+  DecisionStatus,
   GateStatus,
   RunID,
   RunStatus,
@@ -28,6 +32,54 @@ type ArtifactMetadata = {
   readonly retention?: {
     readonly unresolvedDependencyIDs?: readonly string[]
   }
+  readonly decision?: {
+    readonly title?: string
+    readonly status?: DecisionStatus
+    readonly owner?: string
+    readonly reviewer?: string
+    readonly supersedesArtifactID?: ArtifactID
+    readonly supersededByArtifactID?: ArtifactID
+  }
+}
+
+export function readIssueArtifactsInDb(
+  db: Database.Interface["db"],
+  input: {
+    readonly accountID: AccountID
+    readonly issueRef: string
+    readonly type?: ArtifactType
+  },
+) {
+  return Effect.gen(function* () {
+    const issueRef = input.issueRef.trim()
+    if (!issueRef) return []
+    const artifacts = yield* db
+      .select()
+      .from(LightbulbArtifactTable)
+      .where(
+        input.type
+          ? and(
+              eq(LightbulbArtifactTable.account_id, input.accountID),
+              eq(LightbulbArtifactTable.source_issue_ref, issueRef),
+              eq(LightbulbArtifactTable.type, input.type),
+            )
+          : and(eq(LightbulbArtifactTable.account_id, input.accountID), eq(LightbulbArtifactTable.source_issue_ref, issueRef)),
+      )
+      .orderBy(asc(LightbulbArtifactTable.time_created), asc(LightbulbArtifactTable.id))
+      .all()
+      .pipe(Effect.orDie)
+    const now = Date.now()
+    const handles = yield* Effect.all(
+      artifacts.map((artifact) =>
+        readArtifactHandle(db, {
+          artifactID: artifact.id,
+          now,
+          liveCheck: false,
+        }),
+      ),
+    )
+    return handles.filter((artifact): artifact is ArtifactHandle => artifact !== undefined)
+  })
 }
 
 export function integrityForRegistration(input: {
@@ -149,6 +201,19 @@ export function storedArtifactIntegrity(row: typeof LightbulbArtifactTable.$infe
   }
 }
 
+export function decisionForArtifact(row: typeof LightbulbArtifactTable.$inferSelect): ArtifactDecisionSummary | undefined {
+  const decision = artifactMetadata(row.metadata).decision
+  if (!decision?.status) return
+  return {
+    title: decision.title ?? null,
+    status: decision.status,
+    owner: decision.owner ?? null,
+    reviewer: decision.reviewer ?? null,
+    supersedesArtifactID: decision.supersedesArtifactID ?? null,
+    supersededByArtifactID: decision.supersededByArtifactID ?? null,
+  }
+}
+
 export function retentionDecisionFor(
   row: typeof LightbulbArtifactTable.$inferSelect,
   input: {
@@ -253,6 +318,7 @@ export function toArtifactHandle(
     readonly retentionDecision: ArtifactRetentionDecision
   },
 ): ArtifactHandle {
+  const decision = decisionForArtifact(row)
   return {
     id: row.id,
     type: row.type,
@@ -278,6 +344,7 @@ export function toArtifactHandle(
       workerID: edge.consumer_worker_id ?? null,
       summary: edge.summary,
     })),
+    ...(decision ? { decision } : {}),
   }
 }
 
@@ -348,13 +415,50 @@ function artifactMetadata(metadata: Record<string, unknown> | null | undefined):
     isRecord(metadata.retention) && Array.isArray(metadata.retention.unresolvedDependencyIDs)
       ? metadata.retention.unresolvedDependencyIDs.filter((value): value is string => typeof value === "string")
       : undefined
+  const decision = isRecord(metadata.decision)
+    ? {
+        title:
+          typeof metadata.decision.title === "string" && metadata.decision.title.trim()
+            ? metadata.decision.title.trim()
+            : undefined,
+        status: isDecisionStatus(metadata.decision.status) ? metadata.decision.status : undefined,
+        owner:
+          typeof metadata.decision.owner === "string" && metadata.decision.owner.trim()
+            ? metadata.decision.owner.trim()
+            : undefined,
+        reviewer:
+          typeof metadata.decision.reviewer === "string" && metadata.decision.reviewer.trim()
+            ? metadata.decision.reviewer.trim()
+            : undefined,
+        supersedesArtifactID:
+          typeof metadata.decision.supersedesArtifactID === "string"
+            ? (metadata.decision.supersedesArtifactID as ArtifactID)
+            : undefined,
+        supersededByArtifactID:
+          typeof metadata.decision.supersededByArtifactID === "string"
+            ? (metadata.decision.supersededByArtifactID as ArtifactID)
+            : undefined,
+      }
+    : undefined
 
   return {
     integrity,
     retention: unresolvedDependencyIDs?.length ? { unresolvedDependencyIDs } : undefined,
+    decision,
   }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value)
+}
+
+function isDecisionStatus(value: unknown): value is DecisionStatus {
+  return (
+    value === "draft" ||
+    value === "pending" ||
+    value === "accepted" ||
+    value === "rejected" ||
+    value === "superseded" ||
+    value === "needs-rework"
+  )
 }

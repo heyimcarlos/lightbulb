@@ -104,9 +104,7 @@ export function formatLightbulbDashboard(dashboard: Lightbulb.Dashboard) {
     ...(
       dashboard.artifactHandles.length === 0
         ? ["  no artifacts"]
-        : dashboard.artifactHandles.map(
-            (artifact) => `  handle ${artifact.id} ${artifact.type} [${artifact.status}] ${artifact.uri}`,
-          )
+        : dashboard.artifactHandles.map((artifact) => `  ${formatArtifactHandle(artifact)}`)
     ),
   ].join(EOL)
 }
@@ -133,9 +131,7 @@ function formatLoop(loop: Lightbulb.DashboardLoop) {
             ...(
               run.artifacts.length === 0
                 ? ["          no artifacts"]
-                : run.artifacts.map(
-                    (artifact) => `          handle ${artifact.id} ${artifact.type} [${artifact.status}] ${artifact.uri}`,
-                  )
+                : run.artifacts.map((artifact) => `          ${formatArtifactHandle(artifact)}`)
             ),
           ])
     ),
@@ -154,4 +150,22 @@ function formatInbox(dashboard: Lightbulb.Dashboard) {
 
 function formatGate(gate: Lightbulb.DashboardGate, indent = "          ") {
   return `${indent}gate ${gate.id} ${gate.kind} [${gate.status}] artifact=${gate.artifactID ?? "none"}`
+}
+
+function formatArtifactHandle(artifact: Lightbulb.ArtifactHandle) {
+  const source = formatArtifactSource(artifact)
+  const decision = artifact.decision ? ` decision=${artifact.decision.status}` : ""
+  return `handle ${artifact.id} ${artifact.type} [${artifact.status}]${decision} ${artifact.uri}${source ? ` source=${source}` : ""}`
+}
+
+function formatArtifactSource(artifact: Lightbulb.ArtifactHandle) {
+  return [
+    artifact.source?.issueRef ? `issue:${artifact.source.issueRef}` : undefined,
+    artifact.source?.goalID ? `goal:${artifact.source.goalID}` : undefined,
+    artifact.source?.loopID ? `loop:${artifact.source.loopID}` : undefined,
+    artifact.source?.runID ? `run:${artifact.source.runID}` : undefined,
+    artifact.source?.gateID ? `gate:${artifact.source.gateID}` : undefined,
+  ]
+    .filter((part): part is string => part !== undefined)
+    .join(",")
 }

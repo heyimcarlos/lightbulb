@@ -5,9 +5,11 @@ import { formatLightbulbDashboard } from "../../src/cli/cmd/lightbulb"
 
 describe("lightbulb dashboard display", () => {
   test("renders the seeded account work graph as an operator surface", () => {
+    const goalID = Lightbulb.GoalID.make("lbgoal_demo")
     const runID = Lightbulb.RunID.make("lbrun_demo")
     const workerID = Lightbulb.WorkerID.make("lbworker_demo")
     const artifactID = Lightbulb.ArtifactID.make("lbartifact_demo")
+    const decisionArtifactID = Lightbulb.ArtifactID.make("lbartifact_decision")
     const lineage = [
       {
         relation: "produced_by" as const,
@@ -16,6 +18,17 @@ describe("lightbulb dashboard display", () => {
         summary: "Worker produced this artifact for parent review.",
       },
     ]
+    const integrity = {
+      status: "unchecked" as const,
+      checksum: null,
+      checkedAt: null,
+      uncheckedReason: "fixture artifact content not checked",
+      expectedSizeBytes: null,
+      actualChecksum: null,
+      actualSizeBytes: null,
+    }
+    const retentionPolicy = { mode: "keep" as const }
+    const retentionDecision = "keep" as const
 
     const artifactHandle = {
       id: artifactID,
@@ -50,7 +63,7 @@ describe("lightbulb dashboard display", () => {
         },
         goals: [
           {
-            id: Lightbulb.GoalID.make("lbgoal_demo"),
+            id: goalID,
             title: "Bootstrap loop harness",
             status: "active",
             summary: "Create one durable account control graph.",
@@ -111,7 +124,35 @@ describe("lightbulb dashboard display", () => {
             },
           ],
         },
-        artifactHandles: [artifactHandle],
+        artifactHandles: [
+          artifactHandle,
+          {
+            id: decisionArtifactID,
+            type: "adr",
+            uri: "docs/lightbulb/adr/0005-issue-24-routing.md",
+            summary: "Issue 24 ADR decision artifact.",
+            status: "registered",
+            integrity,
+            retentionPolicy,
+            retentionDecision,
+            producerKind: "harness",
+            producerRunID: null,
+            producerWorkerID: null,
+            source: {
+              issueRef: "#24",
+              goalID,
+            },
+            decision: {
+              title: "Issue 24 ADR decision artifact.",
+              status: "pending",
+              owner: "architecture",
+              reviewer: null,
+              supersedesArtifactID: null,
+              supersededByArtifactID: null,
+            },
+            lineage: [],
+          },
+        ],
       }).replaceAll(EOL, "\n"),
     ).toBe(`Lightbulb Dashboard
 Account Lightbulb Demo [active] lbacc_demo
@@ -135,6 +176,7 @@ Inbox
   gate lbgate_demo review [pending] artifact=lbartifact_demo
 
 Artifact Handles
-  handle lbartifact_demo report [registered] .lightbulb/runs/issue-3-dashboard.md`)
+  handle lbartifact_demo report [registered] .lightbulb/runs/issue-3-dashboard.md
+  handle lbartifact_decision adr [registered] decision=pending docs/lightbulb/adr/0005-issue-24-routing.md source=issue:#24,goal:lbgoal_demo`)
   })
 })

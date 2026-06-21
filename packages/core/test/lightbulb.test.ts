@@ -1134,6 +1134,157 @@ describe("Lightbulb", () => {
     ),
   )
 
+  it.live("routes ADR decision artifacts by source issue", () =>
+    Effect.acquireRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ).pipe(
+      Effect.flatMap((tmp) =>
+        Effect.gen(function* () {
+          const lightbulb = yield* Lightbulb.Service
+          const first = yield* lightbulb.seedTracerBullet()
+          const second = yield* lightbulb.seedTracerBullet()
+          yield* Effect.promise(() =>
+            Bun.write(path.join(tmp.path, "0005-issue-24-routing.md"), "ADR body for issue 24"),
+          )
+          yield* Effect.promise(() => Bun.write(path.join(tmp.path, "issue-24-prd.md"), "PRD body for issue 24"))
+          yield* Effect.promise(() =>
+            Bun.write(path.join(tmp.path, "foreign-issue-24-adr.md"), "Foreign ADR body"),
+          )
+
+          const adr = yield* lightbulb.routeAdrDecisionArtifact({
+            accountID: first.accountID,
+            issueRef: " #24 ",
+            uri: "0005-issue-24-routing.md",
+            summary: "ADR decision artifact for issue 24.",
+            baseDirectory: tmp.path,
+            decisionTitle: "Route ADR decisions as issue artifacts",
+            decisionStatus: "accepted",
+            metadata: {
+              reviewer: "architecture",
+            },
+            source: {
+              goalID: first.goalID,
+              loopID: first.loopID,
+              runID: first.runID,
+              gateID: first.gateID,
+            },
+          })
+          const prd = yield* lightbulb.registerHarnessArtifact({
+            accountID: first.accountID,
+            producerKind: "harness",
+            type: "prd",
+            uri: "issue-24-prd.md",
+            summary: "PRD companion artifact for issue 24.",
+            retentionPolicy: { mode: "keep" },
+            baseDirectory: tmp.path,
+            source: {
+              issueRef: "#24",
+              goalID: first.goalID,
+            },
+          })
+          const foreign = yield* lightbulb.registerHarnessArtifact({
+            accountID: second.accountID,
+            producerKind: "harness",
+            type: "adr",
+            uri: "foreign-issue-24-adr.md",
+            summary: "Foreign account ADR artifact for issue 24.",
+            retentionPolicy: { mode: "keep" },
+            baseDirectory: tmp.path,
+            source: {
+              issueRef: "#24",
+              goalID: second.goalID,
+            },
+          })
+
+          const issueArtifacts = yield* lightbulb.readIssueArtifacts({
+            accountID: first.accountID,
+            issueRef: "#24",
+          })
+          const decisionArtifacts = yield* lightbulb.readIssueArtifacts({
+            accountID: first.accountID,
+            issueRef: " #24 ",
+            type: "adr",
+          })
+          const emptyRoute = yield* lightbulb.readIssueArtifacts({
+            accountID: first.accountID,
+            issueRef: " ",
+          })
+          const summary = yield* lightbulb.parentSummary(first.runID)
+          const dashboard = yield* lightbulb.readDashboard(first.accountID)
+          const graph = yield* lightbulb.readAccountGraph(first.accountID)
+          const storedAdr = graph?.artifacts.find((artifact) => artifact.id === adr.id)
+
+          expect(issueArtifacts).toHaveLength(2)
+          expect(issueArtifacts.find((artifact) => artifact.id === adr.id)?.type).toBe("adr")
+          expect(issueArtifacts.find((artifact) => artifact.id === prd.id)?.type).toBe("prd")
+          expect(issueArtifacts.map((artifact) => artifact.id)).not.toContain(foreign.id)
+          expect(decisionArtifacts).toHaveLength(1)
+          expect(decisionArtifacts[0]).toMatchObject({
+            id: adr.id,
+            type: "adr",
+            uri: "0005-issue-24-routing.md",
+            producerKind: "harness",
+            producerRunID: null,
+            producerWorkerID: null,
+            source: {
+              issueRef: "#24",
+              goalID: first.goalID,
+              loopID: first.loopID,
+              runID: first.runID,
+              gateID: first.gateID,
+            },
+            retentionDecision: "hold-for-gate",
+            integrity: expect.objectContaining({
+              status: "unchecked",
+              checksum: expect.stringMatching(/^sha256:/),
+              uncheckedReason: "live artifact content not checked",
+            }),
+            lineage: [
+              {
+                relation: "produced_by",
+                runID: first.runID,
+                workerID: null,
+                summary: "Harness registered this decision artifact for parent orchestration.",
+              },
+            ],
+            decision: {
+              title: "Route ADR decisions as issue artifacts",
+              status: "accepted",
+              owner: "harness",
+              reviewer: "architecture",
+              supersedesArtifactID: null,
+              supersededByArtifactID: null,
+            },
+          })
+          expect(summary?.artifacts.map((artifact) => artifact.id)).toContain(adr.id)
+          expect(dashboard?.artifactHandles.map((artifact) => artifact.id)).toContain(adr.id)
+          expect(dashboard?.goals[0]?.loops[0]?.runs[0]?.artifacts.map((artifact) => artifact.id)).toContain(adr.id)
+          expect(storedAdr?.metadata).toMatchObject({
+            decision: {
+              title: "Route ADR decisions as issue artifacts",
+              type: "adr",
+              status: "accepted",
+              owner: "harness",
+              reviewer: "architecture",
+              sourceIssueRef: "#24",
+              sourceGateID: first.gateID,
+            },
+            routing: {
+              route: "adr_decision",
+              issueRef: "#24",
+            },
+            reviewer: "architecture",
+          })
+          expect(emptyRoute).toEqual([])
+          expect(JSON.stringify(issueArtifacts)).not.toContain("ADR body for issue 24")
+          expect(JSON.stringify(dashboard)).not.toContain("ADR body for issue 24")
+          expect(JSON.stringify(summary)).not.toContain("ADR body for issue 24")
+        }).pipe(Effect.provide(layer(tmp.path))),
+      ),
+    ),
+  )
+
   it.live("registers a harness-authored run report in parent summaries without embedding contents", () =>
     Effect.acquireRelease(
       Effect.promise(() => tmpdir()),
