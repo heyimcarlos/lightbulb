@@ -1,4 +1,5 @@
-import { foreignKey, index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core"
+import { sql } from "drizzle-orm"
+import { check, foreignKey, index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core"
 import { Timestamps } from "../database/schema.sql"
 import type { Lightbulb } from "../lightbulb"
 
@@ -167,16 +168,19 @@ export const LightbulbArtifactTable = sqliteTable(
       .references(() => LightbulbAccountTable.id, { onDelete: "cascade" }),
     producer_run_id: text()
       .$type<Lightbulb.RunID>()
-      .notNull()
       .references(() => LightbulbRunTable.id, { onDelete: "cascade" }),
     producer_worker_id: text()
       .$type<Lightbulb.WorkerID>()
-      .notNull()
       .references(() => LightbulbWorkerTable.id, { onDelete: "cascade" }),
     task_packet_id: text()
       .$type<Lightbulb.TaskPacketID>()
-      .notNull()
       .references(() => LightbulbTaskPacketTable.id, { onDelete: "cascade" }),
+    producer_kind: text().$type<Lightbulb.ArtifactProducerKind>().notNull(),
+    source_issue_ref: text(),
+    source_goal_id: text().$type<Lightbulb.GoalID>().references(() => LightbulbGoalTable.id, { onDelete: "set null" }),
+    source_loop_id: text().$type<Lightbulb.LoopID>().references(() => LightbulbLoopTable.id, { onDelete: "set null" }),
+    source_run_id: text().$type<Lightbulb.RunID>().references(() => LightbulbRunTable.id, { onDelete: "set null" }),
+    source_gate_id: text().$type<Lightbulb.GateID>(),
     type: text().$type<Lightbulb.ArtifactType>().notNull(),
     uri: text().notNull(),
     checksum: text(),
@@ -191,6 +195,10 @@ export const LightbulbArtifactTable = sqliteTable(
     index("lightbulb_artifact_producer_run_idx").on(table.producer_run_id),
     index("lightbulb_artifact_producer_worker_idx").on(table.producer_worker_id),
     index("lightbulb_artifact_task_packet_idx").on(table.task_packet_id),
+    index("lightbulb_artifact_source_goal_idx").on(table.source_goal_id),
+    index("lightbulb_artifact_source_loop_idx").on(table.source_loop_id),
+    index("lightbulb_artifact_source_run_idx").on(table.source_run_id),
+    index("lightbulb_artifact_source_gate_idx").on(table.source_gate_id),
     uniqueIndex("lightbulb_artifact_account_id_idx").on(table.account_id, table.id),
     foreignKey({
       columns: [table.account_id, table.producer_run_id],
@@ -212,6 +220,20 @@ export const LightbulbArtifactTable = sqliteTable(
       foreignColumns: [LightbulbTaskPacketTable.id, LightbulbTaskPacketTable.worker_id],
       name: "lightbulb_artifact_task_packet_worker_fk",
     }).onDelete("cascade"),
+    check(
+      "lightbulb_artifact_producer_kind_fields",
+      sql`(
+        ${table.producer_kind} = 'harness'
+        AND ${table.producer_run_id} IS NULL
+        AND ${table.producer_worker_id} IS NULL
+        AND ${table.task_packet_id} IS NULL
+      ) OR (
+        ${table.producer_kind} = 'worker'
+        AND ${table.producer_run_id} IS NOT NULL
+        AND ${table.producer_worker_id} IS NOT NULL
+        AND ${table.task_packet_id} IS NOT NULL
+      )`,
+    ),
   ],
 )
 

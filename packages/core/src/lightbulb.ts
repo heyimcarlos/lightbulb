@@ -1,6 +1,8 @@
 export * as Lightbulb from "./lightbulb"
+export { ArtifactRegistrationRejected } from "./lightbulb/artifact-registration"
 
-import { and, asc, eq, inArray } from "drizzle-orm"
+import { Buffer } from "buffer"
+import { and, asc, eq, or } from "drizzle-orm"
 import { Context, Effect, Layer, Schema } from "effect"
 import { Database } from "./database/database"
 import type {
@@ -15,14 +17,19 @@ import { GoalLifecycleService } from "./lightbulb/goal"
 import { withStatics } from "./schema"
 import { Identifier } from "./util/identifier"
 import {
-  checkArtifactIntegrity,
   integrityForRegistration,
-  parseRetentionPolicy,
-  retentionDecisionFor,
+  readArtifactHandle,
   serializeRetentionPolicy,
   statusForRetentionDecision,
-  storedArtifactIntegrity,
 } from "./lightbulb/artifact"
+import {
+  ArtifactRegistrationRejected,
+  MAX_INLINE_ARTIFACT_BYTES,
+  resolveHarnessArtifactSource,
+  resolveWorkerArtifactProducer,
+  validateArtifactRegistrationInput,
+} from "./lightbulb/artifact-registration"
+import { toDashboard, toGoalRunTree } from "./lightbulb/dashboard"
 import {
   LightbulbAccountTable,
   LightbulbArtifactEdgeTable,
@@ -71,9 +78,21 @@ export type DebugStatus = "not_started" | "reproducing" | "isolating" | "fixed" 
 export type GateStatus = "pending" | "running" | "passed" | "failed" | "blocked"
 export type WorkerStatus = "queued" | "running" | "blocked" | "complete" | "failed"
 export type TaskPacketStatus = "ready" | "claimed" | "complete" | "blocked"
-export type ArtifactType = "report" | "plan" | "patch" | "test_result" | "handoff" | "log"
+export type ArtifactType =
+  | "report"
+  | "plan"
+  | "patch"
+  | "test_result"
+  | "handoff"
+  | "log"
+  | "prd"
+  | "adr"
+  | "run_report"
+  | "scaffold"
+  | "operator_summary"
 export type ArtifactStatus = "registered" | "consumed" | "superseded" | "expired"
 export type ArtifactEdgeRelation = "produced_by" | "consumed_by" | "supersedes" | "verifies"
+export type ArtifactProducerKind = "worker" | "harness"
 export type GateKind = "review" | "debug" | "verification"
 export type ArtifactIntegrityStatus = "verified" | "changed" | "missing" | "unchecked"
 export type ArtifactRetentionDecision =
@@ -108,6 +127,14 @@ export type ArtifactLineageEdge = {
   readonly summary: string
 }
 
+export type ArtifactSourceReferences = {
+  readonly issueRef?: string
+  readonly goalID?: GoalID
+  readonly loopID?: LoopID
+  readonly runID?: RunID
+  readonly gateID?: GateID
+}
+
 export type ArtifactHandle = {
   readonly id: ArtifactID
   readonly type: ArtifactType
@@ -117,8 +144,10 @@ export type ArtifactHandle = {
   readonly integrity: ArtifactIntegritySummary
   readonly retentionPolicy: ArtifactRetentionPolicy
   readonly retentionDecision: ArtifactRetentionDecision
-  readonly producerRunID: RunID
-  readonly producerWorkerID: WorkerID
+  readonly producerKind: ArtifactProducerKind
+  readonly producerRunID: RunID | null
+  readonly producerWorkerID: WorkerID | null
+  readonly source: ArtifactSourceReferences
   readonly lineage: ArtifactLineageEdge[]
 }
 
@@ -179,8 +208,28 @@ export type RegisterArtifactInput = {
   readonly summary: string
   readonly retentionPolicy: ArtifactRetentionPolicy
   readonly baseDirectory?: string
+  readonly checksum?: string
+  readonly sizeBytes?: number
   readonly uncheckedReason?: string
   readonly unresolvedDependencyIDs?: readonly string[]
+  readonly metadata?: Record<string, unknown>
+}
+
+export type RegisterHarnessArtifactInput = {
+  readonly artifactID?: ArtifactID
+  readonly accountID: AccountID
+  readonly producerKind: "harness"
+  readonly type: ArtifactType
+  readonly uri?: string
+  readonly inlineContent?: string
+  readonly summary: string
+  readonly retentionPolicy: ArtifactRetentionPolicy
+  readonly baseDirectory?: string
+  readonly checksum?: string
+  readonly sizeBytes?: number
+  readonly uncheckedReason?: string
+  readonly unresolvedDependencyIDs?: readonly string[]
+  readonly source?: ArtifactSourceReferences
   readonly metadata?: Record<string, unknown>
 }
 
@@ -255,7 +304,10 @@ export interface Interface {
     readonly artifactSummary?: string
     readonly rawWorkerLog?: string
   }) => Effect.Effect<SeededGraph>
-  readonly registerArtifact: (input: RegisterArtifactInput) => Effect.Effect<ArtifactHandle>
+  readonly registerArtifact: (input: RegisterArtifactInput) => Effect.Effect<ArtifactHandle, ArtifactRegistrationRejected>
+  readonly registerHarnessArtifact: (
+    input: RegisterHarnessArtifactInput,
+  ) => Effect.Effect<ArtifactHandle, ArtifactRegistrationRejected>
   readonly readAccountGraph: (accountID: AccountID) => Effect.Effect<AccountGraph | undefined>
   readonly readDashboard: (accountID: AccountID) => Effect.Effect<Dashboard | undefined>
   readonly consumeArtifact: (input: {
@@ -403,6 +455,7 @@ export const layer = Layer.effect(
                   producer_run_id: ids.runID,
                   producer_worker_id: ids.workerID,
                   task_packet_id: ids.taskPacketID,
+                  producer_kind: "worker",
                   type: "report",
                   uri: input?.artifactUri ?? ".lightbulb/runs/schema-tracer-bullet.md",
                   checksum: null,
@@ -468,18 +521,16 @@ export const layer = Layer.effect(
       }),
       registerArtifact: Effect.fn("Lightbulb.registerArtifact")(function* (input) {
         const now = Date.now()
-        const run = yield* db
-          .select({ account_id: LightbulbRunTable.account_id })
-          .from(LightbulbRunTable)
-          .where(eq(LightbulbRunTable.id, input.producerRunID))
-          .get()
-          .pipe(Effect.orDie)
-        if (!run) return yield* Effect.die(new Error("Lightbulb run not found"))
+        const rejected = validateArtifactRegistrationInput(input)
+        if (rejected) return yield* Effect.fail(new ArtifactRegistrationRejected({ reason: rejected }))
+        const producer = yield* resolveWorkerArtifactProducer(db, input)
 
         const artifactID = input.artifactID ?? ArtifactID.create()
         const integrity = yield* integrityForRegistration({
           uri: input.uri,
           baseDirectory: input.baseDirectory,
+          checksum: input.checksum,
+          sizeBytes: input.sizeBytes,
           uncheckedReason: input.uncheckedReason,
           now,
         })
@@ -491,10 +542,11 @@ export const layer = Layer.effect(
                 .insert(LightbulbArtifactTable)
                 .values({
                   id: artifactID,
-                  account_id: run.account_id,
+                  account_id: producer.accountID,
                   producer_run_id: input.producerRunID,
                   producer_worker_id: input.producerWorkerID,
                   task_packet_id: input.taskPacketID,
+                  producer_kind: "worker",
                   type: input.type,
                   uri: input.uri,
                   checksum: integrity.checksum,
@@ -513,7 +565,7 @@ export const layer = Layer.effect(
               yield* tx
                 .insert(LightbulbArtifactEdgeTable)
                 .values({
-                  account_id: run.account_id,
+                  account_id: producer.accountID,
                   artifact_id: artifactID,
                   consumer_run_id: input.producerRunID,
                   consumer_worker_id: input.producerWorkerID,
@@ -531,7 +583,107 @@ export const layer = Layer.effect(
           now,
           liveCheck: true,
         })
-        if (!artifact) return yield* Effect.die(new Error("Lightbulb artifact registration failed"))
+        if (!artifact)
+          return yield* Effect.fail(
+            new ArtifactRegistrationRejected({ reason: "artifact registration did not produce a readable handle" }),
+          )
+        return artifact
+      }),
+      registerHarnessArtifact: Effect.fn("Lightbulb.registerHarnessArtifact")(function* (input) {
+        const now = Date.now()
+        if (input.producerKind !== "harness")
+          return yield* Effect.fail(
+            new ArtifactRegistrationRejected({ reason: "harness artifact producer kind must be harness" }),
+          )
+        if (input.inlineContent && Buffer.byteLength(input.inlineContent) > MAX_INLINE_ARTIFACT_BYTES) {
+          return yield* Effect.fail(
+            new ArtifactRegistrationRejected({
+              reason: `inline artifact content exceeds ${MAX_INLINE_ARTIFACT_BYTES} bytes; register a file or URI handle`,
+            }),
+          )
+        }
+        if (input.inlineContent)
+          return yield* Effect.fail(
+            new ArtifactRegistrationRejected({
+              reason: "inline artifact content is not accepted; register a file or URI handle",
+            }),
+          )
+        const rejected = validateArtifactRegistrationInput({ ...input, uri: input.uri ?? "" })
+        if (rejected) return yield* Effect.fail(new ArtifactRegistrationRejected({ reason: rejected }))
+
+        const source = yield* resolveHarnessArtifactSource(db, {
+          accountID: input.accountID,
+          source: input.source,
+        })
+        const artifactID = input.artifactID ?? ArtifactID.create()
+        const integrity = yield* integrityForRegistration({
+          uri: input.uri ?? "",
+          baseDirectory: input.baseDirectory,
+          checksum: input.checksum,
+          sizeBytes: input.sizeBytes,
+          uncheckedReason: input.uncheckedReason,
+          now,
+        })
+
+        yield* db
+          .transaction((tx) =>
+            Effect.gen(function* () {
+              yield* tx
+                .insert(LightbulbArtifactTable)
+                .values({
+                  id: artifactID,
+                  account_id: input.accountID,
+                  producer_run_id: null,
+                  producer_worker_id: null,
+                  task_packet_id: null,
+                  producer_kind: "harness",
+                  source_issue_ref: source.issueRef,
+                  source_goal_id: source.goalID,
+                  source_loop_id: source.loopID,
+                  source_run_id: source.runID,
+                  source_gate_id: source.gateID,
+                  type: input.type,
+                  uri: input.uri ?? "",
+                  checksum: integrity.checksum,
+                  status: "registered",
+                  summary: input.summary,
+                  metadata: {
+                    ...input.metadata,
+                    integrity: integrity.metadata,
+                    ...(input.unresolvedDependencyIDs?.length
+                      ? { retention: { unresolvedDependencyIDs: input.unresolvedDependencyIDs } }
+                      : {}),
+                  },
+                  retention_policy: serializeRetentionPolicy(input.retentionPolicy),
+                })
+                .run()
+              if (source.runID) {
+                yield* tx
+                  .insert(LightbulbArtifactEdgeTable)
+                  .values({
+                    account_id: input.accountID,
+                    artifact_id: artifactID,
+                    consumer_run_id: source.runID,
+                    consumer_worker_id: null,
+                    relation: "produced_by",
+                    summary: "Harness registered this artifact for parent orchestration.",
+                  })
+                  .run()
+              }
+            }),
+          )
+          .pipe(Effect.orDie)
+
+        const artifact = yield* readArtifactHandle(db, {
+          artifactID,
+          baseDirectory: input.baseDirectory,
+          now,
+          liveCheck: true,
+        })
+        if (!artifact)
+          return yield* Effect.fail(
+            new ArtifactRegistrationRejected({ reason: "artifact registration did not produce a readable handle" }),
+          )
         return artifact
       }),
       checkArtifact: Effect.fn("Lightbulb.checkArtifact")(function* (input) {
@@ -623,7 +775,12 @@ export const layer = Layer.effect(
         const artifacts = yield* db
           .select()
           .from(LightbulbArtifactTable)
-          .where(eq(LightbulbArtifactTable.producer_run_id, runID))
+          .where(
+            or(
+              eq(LightbulbArtifactTable.producer_run_id, runID),
+              and(eq(LightbulbArtifactTable.source_run_id, runID), eq(LightbulbArtifactTable.account_id, run.account_id)),
+            ),
+          )
           .orderBy(asc(LightbulbArtifactTable.time_created))
           .all()
           .pipe(Effect.orDie)
@@ -634,7 +791,12 @@ export const layer = Layer.effect(
             LightbulbArtifactTable,
             eq(LightbulbArtifactEdgeTable.artifact_id, LightbulbArtifactTable.id),
           )
-          .where(eq(LightbulbArtifactTable.producer_run_id, runID))
+          .where(
+            or(
+              eq(LightbulbArtifactTable.producer_run_id, runID),
+              and(eq(LightbulbArtifactTable.source_run_id, runID), eq(LightbulbArtifactTable.account_id, run.account_id)),
+            ),
+          )
           .orderBy(asc(LightbulbArtifactEdgeTable.time_created))
           .all()
           .pipe(Effect.orDie)
@@ -760,238 +922,3 @@ function readAccountGraphFromDb(db: Database.Interface["db"], accountID: Account
   })
 }
 
-function isTerminalGoalStatus(status: GoalStatus) {
-  return status === "completed" || status === "cancelled" || status === "stopped"
-}
-
-function toGoalRunTree(graph: AccountGraph, goal: GoalLifecycle): GoalRunTree {
-  const loops = graph.loops.filter((loop) => loop.goal_id === goal.id)
-  const loopIDs = new Set(loops.map((loop) => loop.id))
-  const runs = graph.runs.filter((run) => loopIDs.has(run.loop_id))
-  const runIDs = new Set(runs.map((run) => run.id))
-  const workers = graph.workers.filter((worker) => runIDs.has(worker.run_id))
-  const workerIDs = new Set(workers.map((worker) => worker.id))
-  const artifacts = graph.artifacts.filter((artifact) => runIDs.has(artifact.producer_run_id))
-  const goalGraph = {
-    ...graph,
-    runs,
-    gates: graph.gates.filter((gate) => runIDs.has(gate.run_id)),
-    artifactEdges: graph.artifactEdges.filter((edge) => runIDs.has(edge.consumer_run_id)),
-  }
-
-  return {
-    goal: toGoalSummary(goal),
-    loops: loops.map((loop) => toDashboardLoop(goalGraph, loop, runs)),
-    taskPackets: graph.taskPackets
-      .filter((packet) => workerIDs.has(packet.worker_id))
-      .map((packet) => ({
-        id: packet.id,
-        workerID: packet.worker_id,
-        title: packet.title,
-        status: packet.status,
-      })),
-    gates: goalGraph.gates.map(toDashboardGate),
-    artifactHandles: artifacts.map((artifact) => toGraphArtifactHandle(artifact, goalGraph, graph)),
-  }
-}
-
-function toGoalSummary(goal: GoalLifecycle): GoalSummary {
-  return {
-    id: goal.id,
-    title: goal.title,
-    objective: goal.objective,
-    sourceRef: goal.source_ref,
-    ownerID: goal.owner_id,
-    status: goal.status,
-    summary: goal.summary,
-    holdReason: goal.hold_reason,
-    completionReason: goal.completion_reason,
-    completedAt: goal.completed_at,
-    timeCreated: goal.time_created,
-    timeUpdated: goal.time_updated,
-  }
-}
-
-function toDashboard(graph: AccountGraph): Dashboard {
-  return {
-    account: {
-      id: graph.account.id,
-      name: graph.account.name,
-      status: graph.account.status,
-    },
-    goals: graph.goals.map((goal) => ({
-      id: goal.id,
-      title: goal.title,
-      status: goal.status,
-      summary: goal.summary,
-      loops: graph.loops.filter((loop) => loop.goal_id === goal.id).map((loop) => toDashboardLoop(graph, loop)),
-    })),
-    inbox: {
-      taskPackets: graph.taskPackets.map((packet) => ({
-        id: packet.id,
-        workerID: packet.worker_id,
-        title: packet.title,
-        status: packet.status,
-      })),
-      gates: graph.gates
-        .filter((gate) => gate.status === "pending" || gate.status === "blocked")
-        .map(toDashboardGate),
-    },
-    artifactHandles: graph.artifacts.map((artifact) => toGraphArtifactHandle(artifact, graph)),
-  }
-}
-
-function toDashboardLoop(
-  graph: AccountGraph,
-  loop: typeof LightbulbLoopTable.$inferSelect,
-  runs: readonly (typeof LightbulbRunTable.$inferSelect)[] = graph.runs,
-): DashboardLoop {
-  return {
-    id: loop.id,
-    kind: loop.kind,
-    status: loop.status,
-    summary: loop.summary,
-    runs: runs.filter((run) => run.loop_id === loop.id).map((run) => toDashboardRun(graph, run)),
-  }
-}
-
-function toDashboardRun(graph: AccountGraph, run: typeof LightbulbRunTable.$inferSelect): DashboardRun {
-  return {
-    id: run.id,
-    status: run.status,
-    reviewStatus: run.review_status,
-    debugStatus: run.debug_status,
-    gateStatus: run.gate_status,
-    summary: run.summary,
-    workers: graph.workers
-      .filter((worker) => worker.run_id === run.id)
-      .map((worker) => ({
-        id: worker.id,
-        role: worker.role,
-        status: worker.status,
-        summary: worker.summary,
-      })),
-    gates: graph.gates.filter((gate) => gate.run_id === run.id).map(toDashboardGate),
-    artifacts: graph.artifacts
-      .filter((artifact) => artifact.producer_run_id === run.id)
-      .map((artifact) => toGraphArtifactHandle(artifact, graph)),
-  }
-}
-
-function toDashboardGate(row: typeof LightbulbGateTable.$inferSelect): DashboardGate {
-  return {
-    id: row.id,
-    kind: row.kind,
-    status: row.status,
-    summary: row.summary,
-    artifactID: row.artifact_id,
-  }
-}
-
-function toGraphArtifactHandle(
-  row: typeof LightbulbArtifactTable.$inferSelect,
-  graph: AccountGraph,
-  retentionGraph = graph,
-) {
-  const edges = graph.artifactEdges.filter((edge) => edge.artifact_id === row.id)
-  const retentionEdges = retentionGraph.artifactEdges.filter((edge) => edge.artifact_id === row.id)
-  return toArtifactHandle(row, edges, {
-    integrity: storedArtifactIntegrity(row),
-    retentionDecision: retentionDecisionFor(row, {
-      consumerRuns: retentionGraph.runs.filter((run) => retentionEdges.some((edge) => edge.consumer_run_id === run.id)),
-      gates: retentionGraph.gates.filter((gate) => gate.account_id === row.account_id && gate.artifact_id === row.id),
-      now: Date.now(),
-      producerRun: retentionGraph.runs.find((run) => run.id === row.producer_run_id),
-    }),
-  })
-}
-
-function readArtifactHandle(
-  db: Database.Interface["db"],
-  input: {
-    readonly artifactID: ArtifactID
-    readonly baseDirectory?: string
-    readonly now: number
-    readonly liveCheck: boolean
-  },
-) {
-  return Effect.gen(function* () {
-    const artifact = yield* db
-      .select()
-      .from(LightbulbArtifactTable)
-      .where(eq(LightbulbArtifactTable.id, input.artifactID))
-      .get()
-      .pipe(Effect.orDie)
-    if (!artifact) return
-
-    const gates = yield* db
-      .select()
-      .from(LightbulbGateTable)
-      .where(and(eq(LightbulbGateTable.account_id, artifact.account_id), eq(LightbulbGateTable.artifact_id, artifact.id)))
-      .all()
-      .pipe(Effect.orDie)
-    const producerRun = yield* db
-      .select()
-      .from(LightbulbRunTable)
-      .where(eq(LightbulbRunTable.id, artifact.producer_run_id))
-      .get()
-      .pipe(Effect.orDie)
-    const edges = yield* db
-      .select()
-      .from(LightbulbArtifactEdgeTable)
-      .where(eq(LightbulbArtifactEdgeTable.artifact_id, artifact.id))
-      .all()
-      .pipe(Effect.orDie)
-    const consumerRunIDs = [...new Set(edges.map((edge) => edge.consumer_run_id))]
-    const consumerRuns = consumerRunIDs.length
-      ? yield* db
-          .select()
-          .from(LightbulbRunTable)
-          .where(inArray(LightbulbRunTable.id, consumerRunIDs))
-          .all()
-          .pipe(Effect.orDie)
-      : []
-
-    const integrity = input.liveCheck
-      ? yield* checkArtifactIntegrity(artifact, input.baseDirectory, input.now)
-      : storedArtifactIntegrity(artifact)
-
-    return toArtifactHandle(artifact, edges, {
-      integrity,
-      retentionDecision: retentionDecisionFor(artifact, {
-        consumerRuns,
-        gates,
-        now: input.now,
-        producerRun,
-      }),
-    })
-  })
-}
-
-function toArtifactHandle(
-  row: typeof LightbulbArtifactTable.$inferSelect,
-  edges: readonly (typeof LightbulbArtifactEdgeTable.$inferSelect)[] = [],
-  input?: {
-    readonly integrity: ArtifactIntegritySummary
-    readonly retentionDecision: ArtifactRetentionDecision
-  },
-): ArtifactHandle {
-  return {
-    id: row.id,
-    type: row.type,
-    uri: row.uri,
-    summary: row.summary,
-    status: row.status,
-    integrity: input?.integrity ?? storedArtifactIntegrity(row),
-    retentionPolicy: parseRetentionPolicy(row.retention_policy),
-    retentionDecision: input?.retentionDecision ?? "keep",
-    producerRunID: row.producer_run_id,
-    producerWorkerID: row.producer_worker_id,
-    lineage: edges.map((edge) => ({
-      relation: edge.relation,
-      runID: edge.consumer_run_id,
-      workerID: edge.consumer_worker_id ?? null,
-      summary: edge.summary,
-    })),
-  }
-}
