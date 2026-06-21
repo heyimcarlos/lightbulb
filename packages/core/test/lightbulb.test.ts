@@ -725,6 +725,44 @@ describe("Lightbulb", () => {
     ),
   )
 
+  it.live("keeps parent summaries scoped to source-run account boundaries", () =>
+    Effect.acquireRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ).pipe(
+      Effect.flatMap((tmp) =>
+        Effect.gen(function* () {
+          const lightbulb = yield* Lightbulb.Service
+          const first = yield* lightbulb.seedTracerBullet()
+          const second = yield* lightbulb.seedTracerBullet()
+          const database = yield* Database.Service
+          const artifactID = Lightbulb.ArtifactID.create()
+          yield* database.db
+            .insert(LightbulbArtifactTable)
+            .values({
+              id: artifactID,
+              account_id: second.accountID,
+              producer_run_id: null,
+              producer_worker_id: null,
+              task_packet_id: null,
+              producer_kind: "harness",
+              source_run_id: first.runID,
+              type: "run_report",
+              uri: "artifact://issue-23/foreign-source-run",
+              checksum: null,
+              status: "registered",
+              summary: "Foreign account artifact must not appear in this run summary.",
+              retention_policy: "keep",
+            })
+            .run()
+          const summary = yield* lightbulb.parentSummary(first.runID)
+
+          expect(summary?.artifacts.map((artifact) => artifact.id)).not.toContain(artifactID)
+        }).pipe(Effect.provide(layer(tmp.path))),
+      ),
+    ),
+  )
+
   it.live("rejects invalid harness artifact handles and lineage with deterministic reasons", () =>
     Effect.acquireRelease(
       Effect.promise(() => tmpdir()),
@@ -852,6 +890,21 @@ describe("Lightbulb", () => {
               },
             })
             .pipe(Effect.exit)
+          const wrongLoopGate = yield* lightbulb
+            .registerHarnessArtifact({
+              accountID: first.accountID,
+              producerKind: "harness",
+              type: "plan",
+              uri: "artifact://issue-23/wrong-loop-gate",
+              summary: "Same-account gate from another loop should be rejected.",
+              retentionPolicy: { mode: "keep" },
+              uncheckedReason: "external URI not fetched by test",
+              source: {
+                loopID: first.loopID,
+                gateID: otherGateID,
+              },
+            })
+            .pipe(Effect.exit)
 
           expect(Exit.isFailure(missingHandle) ? Cause.pretty(missingHandle.cause) : "").toContain(
             "artifact handle uri is required",
@@ -870,6 +923,9 @@ describe("Lightbulb", () => {
           )
           expect(Exit.isFailure(wrongGoalGate) ? Cause.pretty(wrongGoalGate.cause) : "").toContain(
             "artifact source gate does not belong to source goal",
+          )
+          expect(Exit.isFailure(wrongLoopGate) ? Cause.pretty(wrongLoopGate.cause) : "").toContain(
+            "artifact source gate does not belong to source loop",
           )
         }).pipe(Effect.provide(layer(tmp.path))),
       ),

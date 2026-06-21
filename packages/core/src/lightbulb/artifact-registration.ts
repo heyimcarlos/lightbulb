@@ -222,9 +222,9 @@ export function resolveHarnessArtifactSource(
       return yield* Effect.fail(
         new ArtifactRegistrationRejected({ reason: "artifact source gate does not belong to source run" }),
       )
-    const gateRunLoop = goal && gate && !run
+    const gateRunLoop = gate && !run && (goal || loop)
       ? yield* db
-          .select({ goal_id: LightbulbLoopTable.goal_id })
+          .select({ id: LightbulbLoopTable.id, goal_id: LightbulbLoopTable.goal_id })
           .from(LightbulbRunTable)
           .innerJoin(LightbulbLoopTable, eq(LightbulbRunTable.loop_id, LightbulbLoopTable.id))
           .where(eq(LightbulbRunTable.id, gate.run_id))
@@ -234,6 +234,10 @@ export function resolveHarnessArtifactSource(
     if (goal && gateRunLoop && gateRunLoop.goal_id !== goal.id)
       return yield* Effect.fail(
         new ArtifactRegistrationRejected({ reason: "artifact source gate does not belong to source goal" }),
+      )
+    if (loop && gateRunLoop && gateRunLoop.id !== loop.id)
+      return yield* Effect.fail(
+        new ArtifactRegistrationRejected({ reason: "artifact source gate does not belong to source loop" }),
       )
 
     return {

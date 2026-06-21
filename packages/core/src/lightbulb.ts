@@ -2,7 +2,7 @@ export * as Lightbulb from "./lightbulb"
 export { ArtifactRegistrationRejected } from "./lightbulb/artifact-registration"
 
 import { Buffer } from "buffer"
-import { asc, eq, or } from "drizzle-orm"
+import { and, asc, eq, or } from "drizzle-orm"
 import { Context, Effect, Layer, Schema } from "effect"
 import { Database } from "./database/database"
 import { withStatics } from "./schema"
@@ -735,7 +735,12 @@ export const layer = Layer.effect(
         const artifacts = yield* db
           .select()
           .from(LightbulbArtifactTable)
-          .where(or(eq(LightbulbArtifactTable.producer_run_id, runID), eq(LightbulbArtifactTable.source_run_id, runID)))
+          .where(
+            or(
+              eq(LightbulbArtifactTable.producer_run_id, runID),
+              and(eq(LightbulbArtifactTable.source_run_id, runID), eq(LightbulbArtifactTable.account_id, run.account_id)),
+            ),
+          )
           .orderBy(asc(LightbulbArtifactTable.time_created))
           .all()
           .pipe(Effect.orDie)
@@ -746,7 +751,12 @@ export const layer = Layer.effect(
             LightbulbArtifactTable,
             eq(LightbulbArtifactEdgeTable.artifact_id, LightbulbArtifactTable.id),
           )
-          .where(or(eq(LightbulbArtifactTable.producer_run_id, runID), eq(LightbulbArtifactTable.source_run_id, runID)))
+          .where(
+            or(
+              eq(LightbulbArtifactTable.producer_run_id, runID),
+              and(eq(LightbulbArtifactTable.source_run_id, runID), eq(LightbulbArtifactTable.account_id, run.account_id)),
+            ),
+          )
           .orderBy(asc(LightbulbArtifactEdgeTable.time_created))
           .all()
           .pipe(Effect.orDie)
