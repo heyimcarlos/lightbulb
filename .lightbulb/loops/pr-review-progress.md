@@ -29,3 +29,11 @@
   - `git diff --check` — passed.
 - No inline review comments or unresolved review threads. Merge state clean; no GitHub status checks reported.
 - Squash-merged PR #40 into `dev` as `7042c1f53688dc206e7205aea3fe09e0ced1c4bf` and verified the same gates on fetched `origin/dev`.
+
+## 2026-06-21T16:29:29Z — PR #49 opened for issue #5
+
+- Recovered and integrated issue #5 context/gate policy onto current `origin/dev` as `context-policy`.
+- Parent thermo review moved policy persistence to `packages/core/src/lightbulb/policy.ts`; `packages/core/src/lightbulb.ts` is 991 lines.
+- Evidence packet committed under `.lightbulb/evidence/pr-pending-context-policy/`.
+- Local gates passed: focused policy tests, full Lightbulb tests, `bun typecheck`, migration check, and `git diff --check`.
+- Opened PR #49 and requested `@codex review`; connector returned current-head usage-limit blocker. No checks reported.

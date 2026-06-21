@@ -1,30 +1,34 @@
 {
-  "pr": 40,
-  "url": "https://github.com/heyimcarlos/lightbulb/pull/40",
-  "head": "adapt-agents",
+  "pr": 49,
+  "url": "https://github.com/heyimcarlos/lightbulb/pull/49",
+  "head": "context-policy",
   "base": "dev",
-  "head_sha": "bcca63e2037569d063274704f93907fac07c6a1d",
-  "merge_commit": "7042c1f53688dc206e7205aea3fe09e0ced1c4bf",
-  "last_reviewed_at": "2026-06-21T15:57:47Z",
-  "state": "merged_post_merge_verified",
+  "head_sha": "fd077271ad79fbe2341dce6eb4db20e54e35ee81",
+  "last_reviewed_at": "2026-06-21T16:29:29Z",
+  "state": "open_pending_external_review",
   "external_codex_review": {
     "requested": true,
     "blocked": true,
     "reason": "Codex connector returned usage-limit blocker for current-head review after @codex review."
   },
   "local_gates": {
-    "packages/opencode:bun test test/config/config.test.ts --timeout 30000": "passed: 94 pass, 0 fail",
-    "packages/opencode:bun typecheck": "passed",
-    "agent list smoke": "passed: all six new agents listed as subagents",
-    "git diff --check": "passed"
+    "packages/core:bun test test/lightbulb-policy.test.ts --timeout 30000": "passed: 5 pass, 0 fail",
+    "packages/core:bun test test/lightbulb-policy.test.ts test/lightbulb.test.ts --timeout 30000": "passed: 27 pass, 0 fail",
+    "packages/core:bun typecheck": "passed",
+    "packages/core:bun run script/migration.ts --check": "passed: no schema changes",
+    "git diff --check": "passed",
+    "thermo file-size guard": "passed: lightbulb.ts 991 lines, policy.ts 217 lines"
   },
   "local_review": {
     "actionable_findings": [],
     "unresolved_findings": []
   },
   "evidence": {
-    "deck": ".lightbulb/evidence/pr-40/deck.html",
-    "terminal_visual": ".lightbulb/evidence/pr-40/screenshots/agent-list.svg",
-    "verification": ".lightbulb/evidence/pr-40/verification.md"
-  }
+    "deck": ".lightbulb/evidence/pr-pending-context-policy/deck.html",
+    "terminal_visual": ".lightbulb/evidence/pr-pending-context-policy/screenshots/verification.svg",
+    "verification": ".lightbulb/evidence/pr-pending-context-policy/verification.md"
+  },
+  "blockers": [
+    "External Codex review unavailable due current-head usage limit response; no GitHub checks reported yet."
+  ]
 }
