@@ -2,7 +2,7 @@ import { afterEach, describe, expect } from "bun:test"
 import path from "path"
 import fs from "fs/promises"
 import { fileURLToPath, pathToFileURL } from "url"
-import { Effect, Layer, Result, Schema } from "effect"
+import { Effect, Exit, Layer, Result, Schema } from "effect"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { ToolRegistry } from "@/tool/registry"
 import { Tool } from "@/tool/tool"
@@ -125,6 +125,90 @@ describe("tool.registry", () => {
       expect(yield* Effect.promise(() => Bun.file(screenshot).text())).toBe("png")
       expect(asked).toEqual([expect.objectContaining({ permission: "browser", patterns: ["local:screenshot"] })])
     }),
+  )
+
+  it.instance("does not spawn browser CLI processes after cancellation", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const bin = path.join(test.directory, "bin")
+      yield* Effect.promise(() => fs.mkdir(bin, { recursive: true }))
+      const agentBrowser = path.join(bin, "agent-browser")
+      const spawned = path.join(test.directory, "spawned")
+      yield* Effect.promise(() => Bun.write(agentBrowser, `#!/usr/bin/env bash\nprintf spawned > ${JSON.stringify(spawned)}\n`))
+      yield* Effect.promise(() => fs.chmod(agentBrowser, 0o755))
+      const previousPath = process.env.PATH
+      process.env.PATH = `${bin}:${previousPath ?? ""}`
+
+      const registry = yield* ToolRegistry.Service
+      const loaded = (yield* registry.all()).find((tool) => tool.id === "browser")
+      if (!loaded) throw new Error("browser tool was not loaded")
+      const agents = yield* Agent.Service
+      const abort = new AbortController()
+      abort.abort()
+      const result = yield* loaded
+        .execute(
+          { provider: "local", action: "snapshot" },
+          {
+            sessionID: SessionID.make("ses_browser_cancelled"),
+            messageID: MessageID.make("msg_browser_cancelled"),
+            agent: (yield* agents.defaultInfo()).name,
+            abort: abort.signal,
+            messages: [],
+            metadata: () => Effect.void,
+            ask: () => Effect.void,
+          } satisfies Tool.Context,
+        )
+        .pipe(Effect.exit)
+      process.env.PATH = previousPath
+
+      expect(Exit.isFailure(result)).toBe(true)
+      expect(yield* Effect.promise(() => Bun.file(spawned).exists())).toBe(false)
+    }),
+  )
+
+  it.instance("redacts nested Firecrawl session secrets", () =>
+    Effect.acquireUseRelease(
+      Effect.sync(() => globalThis.fetch),
+      (originalFetch) =>
+        Effect.gen(function* () {
+          globalThis.fetch = (() =>
+            Promise.resolve(
+              new Response(
+                JSON.stringify({
+                  sessions: [
+                    {
+                      id: "fc-session",
+                      cdpUrl: "wss://browser.firecrawl.dev/cdp/fc-session?token=secret",
+                      nested: { apiKey: "fc-secret", headers: ["Authorization: Bearer nestedsecret"] },
+                    },
+                  ],
+                }),
+                { headers: { "content-type": "application/json" } },
+              ),
+            )) as unknown as typeof fetch
+          const registry = yield* ToolRegistry.Service
+          const loaded = (yield* registry.all()).find((tool) => tool.id === "browser")
+          if (!loaded) throw new Error("browser tool was not loaded")
+          const agents = yield* Agent.Service
+          const result = yield* loaded.execute(
+            { provider: "firecrawl", action: "sessions", apiKey: "fc-secret" },
+            {
+              sessionID: SessionID.make("ses_browser_firecrawl"),
+              messageID: MessageID.make("msg_browser_firecrawl"),
+              agent: (yield* agents.defaultInfo()).name,
+              abort: new AbortController().signal,
+              messages: [],
+              metadata: () => Effect.void,
+              ask: () => Effect.void,
+            } satisfies Tool.Context,
+          )
+          globalThis.fetch = originalFetch
+
+          expect(result.output).toContain("[REDACTED]")
+          expect(result.output).not.toContain("secret")
+        }),
+      (originalFetch) => Effect.sync(() => void (globalThis.fetch = originalFetch)),
+    ),
   )
 
   it.instance("hides task background parameter unless experimental background subagents are enabled", () =>

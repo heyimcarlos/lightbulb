@@ -59,7 +59,7 @@ export const BrowserTool = Tool.define(
           if (params.provider === "firecrawl") return yield* firecrawl(params)
           const command = params.provider === "steel" ? "steel" : "agent-browser"
           const args = params.provider === "steel" ? steelCommand(params) : localCommand(params)
-          return yield* runCli(params, command, args)
+          return yield* runCli(params, command, args, ctx.abort)
         }).pipe(Effect.orDie),
     }
   }),
@@ -138,12 +138,15 @@ function parseSteelOutput(output: string) {
   )
 }
 
-function runCli(input: Parameters, command: string, args: string[]): Effect.Effect<Tool.ExecuteResult, Error> {
+function runCli(input: Parameters, command: string, args: string[], signal: AbortSignal): Effect.Effect<Tool.ExecuteResult, Error> {
   return Effect.tryPromise({
     try: async () => {
+      if (signal.aborted) throw new Error(`browser ${input.action} cancelled`)
       const artifactPath = input.action === "screenshot" ? args.find((arg) => arg.endsWith(".png")) : undefined
       if (artifactPath) await fs.mkdir(path.dirname(artifactPath), { recursive: true })
       const proc = Bun.spawn([command, ...args], { stdout: "pipe", stderr: "pipe", env: process.env })
+      const abort = () => proc.kill()
+      signal.addEventListener("abort", abort, { once: true })
       const timeoutMs = (input.timeout ?? DEFAULT_TIMEOUT_SECONDS) * 1000
       let timedOut = false
       const timeout = setTimeout(() => {
@@ -154,7 +157,11 @@ function runCli(input: Parameters, command: string, args: string[]): Effect.Effe
         proc.exited,
         new Response(proc.stdout).text(),
         new Response(proc.stderr).text(),
-      ]).finally(() => clearTimeout(timeout))
+      ]).finally(() => {
+        clearTimeout(timeout)
+        signal.removeEventListener("abort", abort)
+      })
+      if (signal.aborted) throw new Error(`browser ${input.action} cancelled`)
       if (timedOut) throw new Error(`browser ${input.action} timed out`)
       const raw = stderr.length ? `${stdout}\nstderr:\n${stderr}` : stdout
       const output = redact(raw).trim()
@@ -236,7 +243,7 @@ function firecrawlRequest(apiUrl: string, endpoint: string, apiKey: string, init
       const text = await response.text()
       const body = text ? JSON.parse(text) : {}
       if (!response.ok) throw new Error(`Firecrawl ${response.status}: ${redact(text)}`)
-      return redactSecrets(body)
+      return redactSecrets(body) as Record<string, unknown>
     },
     catch: (error) => (error instanceof Error ? error : new Error("Firecrawl request failed")),
   })
@@ -273,15 +280,15 @@ function firecrawlOutput(input: Parameters, response: Record<string, unknown>, o
   }
 }
 
-function redactSecrets(input: unknown): Record<string, unknown> {
-  if (!input || typeof input !== "object" || Array.isArray(input)) return {}
+function redactSecrets(input: unknown): unknown {
+  if (Array.isArray(input)) return input.map(redactSecrets)
+  if (!input || typeof input !== "object") return typeof input === "string" ? redact(input) : input
   return Object.fromEntries(
-    Object.entries(input).map(([key, value]) =>
-      key.toLowerCase().includes("token") || key.toLowerCase().includes("apikey")
-        ? [key, "[REDACTED]"]
-        : typeof value === "string"
-          ? [key, redact(value)]
-          : [key, value],
-    ),
+    Object.entries(input).map(([key, value]) => [
+      key,
+      key.toLowerCase().includes("token") || key.toLowerCase().includes("apikey") || key.toLowerCase() === "key"
+        ? "[REDACTED]"
+        : redactSecrets(value),
+    ]),
   )
 }

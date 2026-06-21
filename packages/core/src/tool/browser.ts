@@ -251,7 +251,7 @@ function firecrawlRequest(apiUrl: string, endpoint: string, apiKey: string, init
       const text = await response.text()
       const body = text ? JSON.parse(text) : {}
       if (!response.ok) throw new Error(`Firecrawl ${response.status}: ${redact(text)}`)
-      return redactSecrets(body)
+      return redactSecrets(body) as Record<string, unknown>
     },
     catch: (error) => (error instanceof Error ? error : new Error("Firecrawl request failed")),
   })
@@ -278,15 +278,15 @@ function firecrawlSessionOutput(input: Input, response: Record<string, unknown>,
   }
 }
 
-function redactSecrets(input: unknown): Record<string, unknown> {
-  if (!input || typeof input !== "object" || Array.isArray(input)) return {}
+function redactSecrets(input: unknown): unknown {
+  if (Array.isArray(input)) return input.map(redactSecrets)
+  if (!input || typeof input !== "object") return typeof input === "string" ? redact(input) : input
   return Object.fromEntries(
-    Object.entries(input).map(([key, value]) =>
-      key.toLowerCase().includes("token") || key.toLowerCase().includes("apikey")
-        ? [key, "[REDACTED]"]
-        : typeof value === "string"
-          ? [key, redact(value)]
-          : [key, value],
-    ),
+    Object.entries(input).map(([key, value]) => [
+      key,
+      key.toLowerCase().includes("token") || key.toLowerCase().includes("apikey") || key.toLowerCase() === "key"
+        ? "[REDACTED]"
+        : redactSecrets(value),
+    ]),
   )
 }

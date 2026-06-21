@@ -115,4 +115,36 @@ describe("BrowserTool", () => {
       (originalFetch) => Effect.sync(() => void (globalThis.fetch = originalFetch)),
     ),
   )
+
+  it.effect("redacts nested Firecrawl session secrets", () =>
+    Effect.acquireUseRelease(
+      Effect.sync(() => globalThis.fetch),
+      (originalFetch) =>
+        Effect.gen(function* () {
+          reset()
+          globalThis.fetch = (() =>
+            Promise.resolve(
+              new Response(
+                JSON.stringify({
+                  sessions: [
+                    {
+                      id: "fc-session",
+                      cdpUrl: "wss://browser.firecrawl.dev/cdp/fc-session?token=secret",
+                      nested: { apiKey: "fc-secret", headers: ["Authorization: Bearer nestedsecret"] },
+                    },
+                  ],
+                }),
+                { headers: { "content-type": "application/json" } },
+              ),
+            )) as unknown as typeof fetch
+          const registry = yield* ToolRegistry.Service
+          const result = yield* executeTool(registry, call({ provider: "firecrawl", action: "sessions", apiKey: "fc-secret" }))
+          globalThis.fetch = originalFetch
+
+          expect(result.value).toContain("[REDACTED]")
+          expect(result.value).not.toContain("secret")
+        }),
+      (originalFetch) => Effect.sync(() => void (globalThis.fetch = originalFetch)),
+    ),
+  )
 })
