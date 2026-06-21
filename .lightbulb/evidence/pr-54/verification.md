@@ -28,8 +28,11 @@ From the repository root:
 - Deleted-path reference scan for `script/beta.ts`, `script/stats.ts`, `script/github/close-issues.ts`, and `script/github/close-prs.ts` — no live references outside the inventory.
 - `bun script/raw-changelog.ts --help` — passed and documents required `GH_REPO`.
 - `bun script/raw-changelog.ts` without `GH_REPO` — exited 1 with the expected guard message.
+- Review follow-up: removed the inherited GitHub Action install docs/tips, replaced GitHub docs pages with a disabled-in-Lightbulb note, and disabled `script/release` after `publish.yml` deletion.
+- Review follow-up gates: `git diff --check`, `packages/opencode bun test test/cli/help/help-snapshots.test.ts test/cli/github-action.test.ts test/cli/lightbulb.test.ts --timeout 30000` (23 pass), `packages/opencode bun typecheck`, and `packages/tui bun typecheck` — passed.
+- `packages/web bun astro check` synced content but remains blocked by pre-existing share/session type errors in `src/components/Share.tsx`, `src/components/share/part.tsx`, and `src/pages/s/[id].astro`; the new docs pages parsed before diagnostics.
 
-Package-local typecheck was not required; this slice deletes root workflow/script/action surfaces and only smoke-checks the retained root TypeScript script.
+Package-local typecheck is required for the retained opencode CLI command and TUI tip removal. The docs change is covered by Astro content sync plus `git diff --check` because the package-wide Astro diagnostics are unrelated existing type-contract drift.
 
 ## Evidence artifacts
 
