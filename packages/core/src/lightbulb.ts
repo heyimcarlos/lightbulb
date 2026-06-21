@@ -5,16 +5,22 @@ import { Buffer } from "buffer"
 import { and, asc, eq, or } from "drizzle-orm"
 import { Context, Effect, Layer, Schema } from "effect"
 import { Database } from "./database/database"
+import type {
+  CreateGoalInput,
+  CreateGoalResult,
+  GoalLifecycle,
+  GoalRunTree,
+  GoalSummary,
+  UpdateGoalStatusInput,
+} from "./lightbulb/goal"
+import { GoalLifecycleService } from "./lightbulb/goal"
 import { withStatics } from "./schema"
 import { Identifier } from "./util/identifier"
 import {
   integrityForRegistration,
   readArtifactHandle,
-  retentionDecisionFor,
   serializeRetentionPolicy,
   statusForRetentionDecision,
-  storedArtifactIntegrity,
-  toArtifactHandle,
 } from "./lightbulb/artifact"
 import {
   ArtifactRegistrationRejected,
@@ -23,6 +29,7 @@ import {
   resolveWorkerArtifactProducer,
   validateArtifactRegistrationInput,
 } from "./lightbulb/artifact-registration"
+import { toDashboard, toGoalRunTree } from "./lightbulb/dashboard"
 import {
   LightbulbAccountTable,
   LightbulbArtifactEdgeTable,
@@ -62,7 +69,7 @@ export const EventID = prefixedID("lbevent", "Lightbulb.EventID")
 export type EventID = typeof EventID.Type
 
 export type AccountStatus = "active" | "paused" | "archived"
-export type GoalStatus = "open" | "blocked" | "verified" | "cancelled"
+export type GoalStatus = "active" | "held" | "completed" | "cancelled" | "stopped"
 export type LoopKind = "discovery" | "implementation" | "debug" | "review" | "integration"
 export type LoopStatus = "active" | "idle" | "blocked" | "complete"
 export type RunStatus = "queued" | "running" | "blocked" | "complete" | "failed"
@@ -110,6 +117,8 @@ export type ArtifactIntegritySummary = {
   readonly actualChecksum: string | null
   readonly actualSizeBytes: number | null
 }
+
+export type { CreateGoalInput, CreateGoalResult, GoalLifecycle, GoalRunTree, GoalSummary, UpdateGoalStatusInput } from "./lightbulb/goal"
 
 export type ArtifactLineageEdge = {
   readonly relation: ArtifactEdgeRelation
@@ -285,6 +294,10 @@ export type DashboardGate = {
 }
 
 export interface Interface {
+  readonly createOrAdoptGoal: (input: CreateGoalInput) => Effect.Effect<CreateGoalResult>
+  readonly readGoal: (goalID: GoalID) => Effect.Effect<GoalLifecycle | undefined>
+  readonly updateGoalStatus: (input: UpdateGoalStatusInput) => Effect.Effect<GoalLifecycle>
+  readonly readGoalRunTree: (goalID: GoalID) => Effect.Effect<GoalRunTree | undefined>
   readonly seedTracerBullet: (input?: {
     readonly accountName?: string
     readonly artifactUri?: string
@@ -324,6 +337,31 @@ export const layer = Layer.effect(
     const { db } = yield* Database.Service
 
     return Service.of({
+      createOrAdoptGoal: Effect.fn("Lightbulb.createOrAdoptGoal")(function* (input) {
+        return yield* GoalLifecycleService.createOrAdopt(db, input, {
+          account: AccountID.create,
+          goal: GoalID.create,
+          event: EventID.create,
+        })
+      }),
+      readGoal: Effect.fn("Lightbulb.readGoal")(function* (goalID) {
+        return yield* GoalLifecycleService.read(db, goalID)
+      }),
+      updateGoalStatus: Effect.fn("Lightbulb.updateGoalStatus")(function* (input) {
+        return yield* GoalLifecycleService.updateStatus(db, input, { event: EventID.create })
+      }),
+      readGoalRunTree: Effect.fn("Lightbulb.readGoalRunTree")(function* (goalID) {
+        const goal = yield* db
+          .select()
+          .from(LightbulbGoalTable)
+          .where(eq(LightbulbGoalTable.id, goalID))
+          .get()
+          .pipe(Effect.orDie)
+        if (!goal) return
+        const graph = yield* readAccountGraphFromDb(db, goal.account_id)
+        if (!graph) return
+        return toGoalRunTree(graph, goal)
+      }),
       seedTracerBullet: Effect.fn("Lightbulb.seedTracerBullet")(function* (input) {
         const now = Date.now()
         const ids = {
@@ -354,7 +392,9 @@ export const layer = Layer.effect(
                   id: ids.goalID,
                   account_id: ids.accountID,
                   title: "Bootstrap loop harness",
-                  status: "open",
+                  objective: "Create one durable Lightbulb goal graph.",
+                  source_ref: "lightbulb:bootstrap-tracer-bullet",
+                  status: "active",
                   summary: "Create one durable Lightbulb goal graph.",
                 })
                 .run()
@@ -879,90 +919,5 @@ function readAccountGraphFromDb(db: Database.Interface["db"], accountID: Account
         .all()
         .pipe(Effect.orDie),
     }
-  })
-}
-
-function toDashboard(graph: AccountGraph): Dashboard {
-  return {
-    account: {
-      id: graph.account.id,
-      name: graph.account.name,
-      status: graph.account.status,
-    },
-    goals: graph.goals.map((goal) => ({
-      id: goal.id,
-      title: goal.title,
-      status: goal.status,
-      summary: goal.summary,
-      loops: graph.loops
-        .filter((loop) => loop.goal_id === goal.id)
-        .map((loop) => ({
-          id: loop.id,
-          kind: loop.kind,
-          status: loop.status,
-          summary: loop.summary,
-          runs: graph.runs
-            .filter((run) => run.loop_id === loop.id)
-            .map((run) => ({
-              id: run.id,
-              status: run.status,
-              reviewStatus: run.review_status,
-              debugStatus: run.debug_status,
-              gateStatus: run.gate_status,
-              summary: run.summary,
-              workers: graph.workers
-                .filter((worker) => worker.run_id === run.id)
-                .map((worker) => ({
-                  id: worker.id,
-                  role: worker.role,
-                  status: worker.status,
-                  summary: worker.summary,
-                })),
-              gates: graph.gates.filter((gate) => gate.run_id === run.id).map(toDashboardGate),
-              artifacts: graph.artifacts
-                .filter((artifact) => artifact.producer_run_id === run.id || artifact.source_run_id === run.id)
-                .map((artifact) => toGraphArtifactHandle(artifact, graph)),
-            })),
-        })),
-    })),
-    inbox: {
-      taskPackets: graph.taskPackets.map((packet) => ({
-        id: packet.id,
-        workerID: packet.worker_id,
-        title: packet.title,
-        status: packet.status,
-      })),
-      gates: graph.gates
-        .filter((gate) => gate.status === "pending" || gate.status === "blocked")
-        .map(toDashboardGate),
-    },
-    artifactHandles: graph.artifacts.map((artifact) => toGraphArtifactHandle(artifact, graph)),
-  }
-}
-
-function toDashboardGate(row: typeof LightbulbGateTable.$inferSelect): DashboardGate {
-  return {
-    id: row.id,
-    kind: row.kind,
-    status: row.status,
-    summary: row.summary,
-    artifactID: row.artifact_id,
-  }
-}
-
-function toGraphArtifactHandle(row: typeof LightbulbArtifactTable.$inferSelect, graph: AccountGraph) {
-  const edges = graph.artifactEdges.filter((edge) => edge.artifact_id === row.id)
-  return toArtifactHandle(row, edges, {
-    integrity: storedArtifactIntegrity(row),
-    retentionDecision: retentionDecisionFor(row, {
-      consumerRuns: graph.runs.filter(
-        (run) => edges.some((edge) => edge.consumer_run_id === run.id) || run.id === row.source_run_id,
-      ),
-      gates: graph.gates.filter(
-        (gate) => gate.account_id === row.account_id && (gate.artifact_id === row.id || gate.id === row.source_gate_id),
-      ),
-      now: Date.now(),
-      producerRun: graph.runs.find((run) => run.id === row.producer_run_id),
-    }),
   })
 }

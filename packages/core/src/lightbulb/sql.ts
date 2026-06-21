@@ -20,12 +20,21 @@ export const LightbulbGoalTable = sqliteTable(
       .notNull()
       .references(() => LightbulbAccountTable.id, { onDelete: "cascade" }),
     title: text().notNull(),
+    objective: text().notNull().default(""),
+    source_ref: text(),
+    owner_id: text(),
     status: text().$type<Lightbulb.GoalStatus>().notNull(),
     summary: text().notNull(),
+    hold_reason: text(),
+    completion_reason: text(),
+    completed_at: integer(),
     metadata: text({ mode: "json" }).$type<Record<string, unknown>>(),
     ...Timestamps,
   },
-  (table) => [index("lightbulb_goal_account_idx").on(table.account_id)],
+  (table) => [
+    index("lightbulb_goal_account_idx").on(table.account_id),
+    uniqueIndex("lightbulb_goal_account_source_ref_idx").on(table.account_id, table.source_ref),
+  ],
 )
 
 export const LightbulbLoopTable = sqliteTable(

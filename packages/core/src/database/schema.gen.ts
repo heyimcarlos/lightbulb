@@ -196,8 +196,14 @@ export default {
           \`id\` text PRIMARY KEY,
           \`account_id\` text NOT NULL,
           \`title\` text NOT NULL,
+          \`objective\` text DEFAULT '' NOT NULL,
+          \`source_ref\` text,
+          \`owner_id\` text,
           \`status\` text NOT NULL,
           \`summary\` text NOT NULL,
+          \`hold_reason\` text,
+          \`completion_reason\` text,
+          \`completed_at\` integer,
           \`metadata\` text,
           \`time_created\` integer NOT NULL,
           \`time_updated\` integer NOT NULL,
@@ -442,6 +448,7 @@ export default {
       yield* tx.run(`CREATE INDEX \`lightbulb_gate_account_idx\` ON \`lightbulb_gate\` (\`account_id\`);`)
       yield* tx.run(`CREATE INDEX \`lightbulb_gate_run_idx\` ON \`lightbulb_gate\` (\`run_id\`);`)
       yield* tx.run(`CREATE INDEX \`lightbulb_goal_account_idx\` ON \`lightbulb_goal\` (\`account_id\`);`)
+      yield* tx.run(`CREATE UNIQUE INDEX \`lightbulb_goal_account_source_ref_idx\` ON \`lightbulb_goal\` (\`account_id\`,\`source_ref\`);`)
       yield* tx.run(`CREATE INDEX \`lightbulb_loop_account_idx\` ON \`lightbulb_loop\` (\`account_id\`);`)
       yield* tx.run(`CREATE INDEX \`lightbulb_loop_goal_idx\` ON \`lightbulb_loop\` (\`goal_id\`);`)
       yield* tx.run(`CREATE UNIQUE INDEX \`lightbulb_loop_account_id_idx\` ON \`lightbulb_loop\` (\`account_id\`,\`id\`);`)

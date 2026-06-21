@@ -4,7 +4,9 @@ import { rm } from "fs/promises"
 import { eq } from "drizzle-orm"
 import { Cause, Effect, Exit, Layer } from "effect"
 import { Lightbulb } from "@opencode-ai/core/lightbulb"
+import { GoalLifecycleService } from "@opencode-ai/core/lightbulb/goal"
 import {
+  LightbulbAccountTable,
   LightbulbArtifactEdgeTable,
   LightbulbArtifactTable,
   LightbulbGateTable,
@@ -38,18 +40,27 @@ describe("Lightbulb", () => {
           const graph = yield* lightbulb.readAccountGraph(seeded.accountID)
 
           expect(graph?.account.name).toBe("Test Account")
-          expect(graph?.goals.map((goal) => goal.id)).toEqual([seeded.goalID])
-          expect(graph?.loops.map((loop) => [loop.id, loop.goal_id])).toEqual([[seeded.loopID, seeded.goalID]])
-          expect(graph?.runs.map((run) => [run.id, run.loop_id, run.review_status, run.debug_status, run.gate_status])).toEqual([
-            [seeded.runID, seeded.loopID, "requested", "fixed", "pending"],
+          expect(graph?.goals.map((goal) => [goal.id, goal.objective, goal.source_ref, goal.status])).toEqual([
+            [seeded.goalID, "Create one durable Lightbulb goal graph.", "lightbulb:bootstrap-tracer-bullet", "active"],
           ])
+          expect(graph?.loops.map((loop) => [loop.id, loop.goal_id])).toEqual([[seeded.loopID, seeded.goalID]])
+          expect(
+            graph?.runs.map((run) => [run.id, run.loop_id, run.review_status, run.debug_status, run.gate_status]),
+          ).toEqual([[seeded.runID, seeded.loopID, "requested", "fixed", "pending"]])
           expect(graph?.workers.map((worker) => [worker.id, worker.run_id, worker.status])).toEqual([
             [seeded.workerID, seeded.runID, "complete"],
           ])
           expect(graph?.taskPackets.map((packet) => [packet.id, packet.worker_id, packet.status])).toEqual([
             [seeded.taskPacketID, seeded.workerID, "complete"],
           ])
-          expect(graph?.artifacts.map((artifact) => [artifact.id, artifact.uri, artifact.producer_worker_id, artifact.task_packet_id])).toEqual([
+          expect(
+            graph?.artifacts.map((artifact) => [
+              artifact.id,
+              artifact.uri,
+              artifact.producer_worker_id,
+              artifact.task_packet_id,
+            ]),
+          ).toEqual([
             [seeded.artifactID, ".lightbulb/runs/issue-2-schema-codex.md", seeded.workerID, seeded.taskPacketID],
           ])
           expect(graph?.artifacts[0]?.checksum).toBe(null)
@@ -64,6 +75,216 @@ describe("Lightbulb", () => {
           expect(graph?.events.map((event) => [event.aggregate_type, event.aggregate_id, event.type])).toEqual([
             ["run", seeded.runID, "lightbulb.tracer.seeded"],
           ])
+        }).pipe(Effect.provide(layer(tmp.path))),
+      ),
+    ),
+  )
+
+  it.live("creates and reads back a durable goal lifecycle", () =>
+    Effect.acquireRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ).pipe(
+      Effect.flatMap((tmp) =>
+        Effect.gen(function* () {
+          const lightbulb = yield* Lightbulb.Service
+          const created = yield* lightbulb.createOrAdoptGoal({
+            accountName: "Lifecycle Account",
+            title: "Durable goal lifecycle",
+            objective: "Prove goals can be created outside seeded fixtures.",
+            sourceRef: "github:heyimcarlos/lightbulb/issues/16",
+            ownerID: "account:carlos",
+            summary: "Goal lifecycle slice.",
+          })
+          const readback = yield* lightbulb.readGoal(created.goal.id)
+          const graph = yield* lightbulb.readAccountGraph(created.goal.account_id)
+
+          expect(created.adopted).toBe(false)
+          expect(readback).toMatchObject({
+            id: created.goal.id,
+            account_id: created.goal.account_id,
+            title: "Durable goal lifecycle",
+            objective: "Prove goals can be created outside seeded fixtures.",
+            source_ref: "github:heyimcarlos/lightbulb/issues/16",
+            owner_id: "account:carlos",
+            status: "active",
+            summary: "Goal lifecycle slice.",
+            hold_reason: null,
+            completion_reason: null,
+            completed_at: null,
+          })
+          expect(typeof readback?.time_created).toBe("number")
+          expect(typeof readback?.time_updated).toBe("number")
+          expect(graph?.account.name).toBe("Lifecycle Account")
+          expect(graph?.goals.map((goal) => goal.id)).toEqual([created.goal.id])
+        }).pipe(Effect.provide(layer(tmp.path))),
+      ),
+    ),
+  )
+
+  it.live("adopts an existing goal by source reference or goal ID", () =>
+    Effect.acquireRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ).pipe(
+      Effect.flatMap((tmp) =>
+        Effect.gen(function* () {
+          const lightbulb = yield* Lightbulb.Service
+          const first = yield* lightbulb.createOrAdoptGoal({
+            accountName: "Adoption Account",
+            title: "Original goal",
+            objective: "Create the first durable goal row.",
+            sourceRef: "github:heyimcarlos/lightbulb/issues/16",
+          })
+          const bySource = yield* lightbulb.createOrAdoptGoal({
+            accountID: first.goal.account_id,
+            title: "Duplicate source goal",
+            objective: "This should adopt the existing goal.",
+            sourceRef: "github:heyimcarlos/lightbulb/issues/16",
+          })
+          const sameSourceWithoutAccount = yield* lightbulb.createOrAdoptGoal({
+            title: "Same source goal without account ID",
+            objective: "This must not adopt across account boundaries.",
+            sourceRef: "github:heyimcarlos/lightbulb/issues/16",
+          })
+          const byID = yield* lightbulb.createOrAdoptGoal({
+            accountID: first.goal.account_id,
+            goalID: first.goal.id,
+            title: "Duplicate ID goal",
+            objective: "This should also adopt the existing goal.",
+            sourceRef: "github:heyimcarlos/lightbulb/issues/16#retry",
+          })
+          const mismatchedID = yield* lightbulb
+            .createOrAdoptGoal({
+              accountID: sameSourceWithoutAccount.goal.account_id,
+              goalID: first.goal.id,
+              title: "Mismatched ID goal",
+              objective: "This must not adopt across account boundaries.",
+            })
+            .pipe(Effect.exit)
+          const graph = yield* lightbulb.readAccountGraph(first.goal.account_id)
+          const isolatedGraph = yield* lightbulb.readAccountGraph(sameSourceWithoutAccount.goal.account_id)
+
+          expect(first.adopted).toBe(false)
+          expect(bySource.adopted).toBe(true)
+          expect(sameSourceWithoutAccount.adopted).toBe(false)
+          expect(byID.adopted).toBe(true)
+          expect(Exit.isFailure(mismatchedID)).toBe(true)
+          expect([first.goal.id, bySource.goal.id, byID.goal.id]).toEqual([
+            first.goal.id,
+            first.goal.id,
+            first.goal.id,
+          ])
+          expect(sameSourceWithoutAccount.goal.id).not.toBe(first.goal.id)
+          expect(sameSourceWithoutAccount.goal.account_id).not.toBe(first.goal.account_id)
+          expect(graph?.goals.map((goal) => goal.id)).toEqual([first.goal.id])
+          expect(isolatedGraph?.goals.map((goal) => goal.id)).toEqual([sameSourceWithoutAccount.goal.id])
+          expect(graph?.loops).toEqual([])
+          expect(graph?.runs).toEqual([])
+        }).pipe(Effect.provide(layer(tmp.path))),
+      ),
+    ),
+  )
+
+  it.live("does not commit a generated account when goal insert conflict adopts an existing goal", () =>
+    Effect.acquireRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ).pipe(
+      Effect.flatMap((tmp) =>
+        Effect.gen(function* () {
+          const lightbulb = yield* Lightbulb.Service
+          const database = yield* Database.Service
+          const orphanAccountID = "lbacc_orphan" as Lightbulb.AccountID
+          const first = yield* lightbulb.createOrAdoptGoal({
+            title: "Original raced goal",
+            objective: "Create the winner row before a deterministic conflict.",
+          })
+          const adopted = yield* GoalLifecycleService.createOrAdopt(
+            database.db,
+            {
+              title: "Losing raced goal",
+              objective: "This conflict should adopt without persisting its generated account.",
+            },
+            {
+              account: () => orphanAccountID,
+              goal: () => first.goal.id,
+              event: Lightbulb.EventID.create,
+            },
+          )
+          const orphan = yield* database.db
+            .select()
+            .from(LightbulbAccountTable)
+            .where(eq(LightbulbAccountTable.id, orphanAccountID))
+            .get()
+            .pipe(Effect.orDie)
+
+          expect(adopted.adopted).toBe(true)
+          expect(adopted.goal.id).toBe(first.goal.id)
+          expect(orphan).toBeUndefined()
+        }).pipe(Effect.provide(layer(tmp.path))),
+      ),
+    ),
+  )
+
+  it.live("transitions a goal status with completion reason", () =>
+    Effect.acquireRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ).pipe(
+      Effect.flatMap((tmp) =>
+        Effect.gen(function* () {
+          const lightbulb = yield* Lightbulb.Service
+          const created = yield* lightbulb.createOrAdoptGoal({
+            accountName: "Transition Account",
+            title: "Complete goal",
+            objective: "Move a goal to a terminal status without a model call.",
+          })
+          const completed = yield* lightbulb.updateGoalStatus({
+            goalID: created.goal.id,
+            status: "completed",
+            reason: "Parent review accepted the worker report.",
+          })
+          const active = yield* lightbulb.updateGoalStatus({
+            goalID: created.goal.id,
+            status: "active",
+          })
+
+          expect(completed.status).toBe("completed")
+          expect(completed.completion_reason).toBe("Parent review accepted the worker report.")
+          expect(completed.hold_reason).toBe(null)
+          expect(typeof completed.completed_at).toBe("number")
+          expect(active.status).toBe("active")
+          expect(active.completion_reason).toBe(null)
+          expect(active.completed_at).toBe(null)
+        }).pipe(Effect.provide(layer(tmp.path))),
+      ),
+    ),
+  )
+
+  it.live("records a held goal reason", () =>
+    Effect.acquireRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ).pipe(
+      Effect.flatMap((tmp) =>
+        Effect.gen(function* () {
+          const lightbulb = yield* Lightbulb.Service
+          const created = yield* lightbulb.createOrAdoptGoal({
+            accountName: "Hold Account",
+            title: "Held goal",
+            objective: "Capture a hold reason before a future run resumes work.",
+          })
+          const held = yield* lightbulb.updateGoalStatus({
+            goalID: created.goal.id,
+            status: "held",
+            reason: "Waiting for maintainer approval.",
+          })
+
+          expect(held.status).toBe("held")
+          expect(held.hold_reason).toBe("Waiting for maintainer approval.")
+          expect(held.completion_reason).toBe(null)
+          expect(held.completed_at).toBe(null)
         }).pipe(Effect.provide(layer(tmp.path))),
       ),
     ),
@@ -93,7 +314,7 @@ describe("Lightbulb", () => {
             {
               id: seeded.goalID,
               title: "Bootstrap loop harness",
-              status: "open",
+              status: "active",
               summary: "Create one durable Lightbulb goal graph.",
               loops: [
                 {
@@ -180,6 +401,183 @@ describe("Lightbulb", () => {
           expect(dashboard?.artifactHandles.map((artifact) => [artifact.id, artifact.uri])).toEqual([
             [seeded.artifactID, ".lightbulb/runs/issue-3-dashboard.md"],
           ])
+        }).pipe(Effect.provide(layer(tmp.path))),
+      ),
+    ),
+  )
+
+  it.live("reads a goal-rooted run tree with bounded summaries", () =>
+    Effect.acquireRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ).pipe(
+      Effect.flatMap((tmp) =>
+        Effect.gen(function* () {
+          const lightbulb = yield* Lightbulb.Service
+          const seeded = yield* lightbulb.seedTracerBullet({
+            accountName: "Run Tree Account",
+            artifactUri: ".lightbulb/runs/issue-16-goal-lifecycle.md",
+            artifactSummary: "Goal lifecycle worker report.",
+          })
+          yield* lightbulb.createOrAdoptGoal({
+            accountID: seeded.accountID,
+            title: "Unrelated goal",
+            objective: "This goal should stay out of the seeded run tree.",
+            sourceRef: "github:heyimcarlos/lightbulb/issues/unrelated",
+          })
+          const database = yield* Database.Service
+          const unrelatedGoal = yield* database.db
+            .select()
+            .from(LightbulbGoalTable)
+            .where(eq(LightbulbGoalTable.source_ref, "github:heyimcarlos/lightbulb/issues/unrelated"))
+            .get()
+            .pipe(Effect.orDie)
+          if (!unrelatedGoal) return yield* Effect.die(new Error("Unrelated goal was not created"))
+          const unrelatedLoopID = Lightbulb.LoopID.create()
+          const unrelatedRunID = Lightbulb.RunID.create()
+          const now = Date.now()
+          yield* database.db
+            .insert(LightbulbLoopTable)
+            .values({
+              id: unrelatedLoopID,
+              account_id: seeded.accountID,
+              goal_id: unrelatedGoal.id,
+              kind: "review",
+              status: "active",
+              summary: "Unrelated goal loop should stay outside the seeded run tree.",
+            })
+            .run()
+            .pipe(Effect.orDie)
+          yield* database.db
+            .insert(LightbulbRunTable)
+            .values({
+              id: unrelatedRunID,
+              account_id: seeded.accountID,
+              loop_id: unrelatedLoopID,
+              status: "running",
+              review_status: "approved",
+              debug_status: "fixed",
+              gate_status: "passed",
+              summary: "Unrelated run consumed a seeded artifact.",
+              started_at: now,
+              completed_at: now,
+            })
+            .run()
+            .pipe(Effect.orDie)
+          yield* lightbulb.consumeArtifact({
+            artifactID: seeded.artifactID,
+            consumerRunID: unrelatedRunID,
+            summary: "Unrelated goal consumed this artifact later.",
+          })
+          yield* database.db
+            .update(LightbulbGateTable)
+            .set({ status: "passed" })
+            .where(eq(LightbulbGateTable.id, seeded.gateID))
+            .run()
+            .pipe(Effect.orDie)
+          yield* database.db
+            .update(LightbulbArtifactTable)
+            .set({ retention_policy: "expire_at:100" })
+            .where(eq(LightbulbArtifactTable.id, seeded.artifactID))
+            .run()
+            .pipe(Effect.orDie)
+          const goalSourceArtifact = yield* lightbulb.registerHarnessArtifact({
+            accountID: seeded.accountID,
+            producerKind: "harness",
+            type: "prd",
+            uri: "artifact://issue-16/goal-prd",
+            summary: "Goal source PRD handle.",
+            uncheckedReason: "external URI not fetched by test",
+            retentionPolicy: { mode: "keep" },
+            source: {
+              goalID: seeded.goalID,
+            },
+          })
+          const runSourceArtifact = yield* lightbulb.registerHarnessArtifact({
+            accountID: seeded.accountID,
+            producerKind: "harness",
+            type: "run_report",
+            uri: "artifact://issue-16/source-run-report",
+            summary: "Source run report handle.",
+            uncheckedReason: "external URI not fetched by test",
+            retentionPolicy: { mode: "keep" },
+            source: {
+              runID: seeded.runID,
+            },
+          })
+          const consumedArtifact = yield* lightbulb.registerHarnessArtifact({
+            accountID: seeded.accountID,
+            producerKind: "harness",
+            type: "plan",
+            uri: "artifact://issue-16/consumed-plan",
+            summary: "Consumed input artifact handle.",
+            uncheckedReason: "external URI not fetched by test",
+            retentionPolicy: { mode: "keep" },
+          })
+          yield* lightbulb.consumeArtifact({
+            artifactID: consumedArtifact.id,
+            consumerRunID: seeded.runID,
+            summary: "Goal run consumed this input plan.",
+          })
+          const tree = yield* lightbulb.readGoalRunTree(seeded.goalID)
+
+          expect(tree?.goal).toMatchObject({
+            id: seeded.goalID,
+            title: "Bootstrap loop harness",
+            objective: "Create one durable Lightbulb goal graph.",
+            sourceRef: "lightbulb:bootstrap-tracer-bullet",
+            status: "active",
+          })
+          expect(tree?.loops.map((loop) => [loop.id, loop.kind, loop.status])).toEqual([
+            [seeded.loopID, "implementation", "active"],
+          ])
+          expect(tree?.loops[0]?.runs.map((run) => [run.id, run.status, run.gateStatus])).toEqual([
+            [seeded.runID, "complete", "pending"],
+          ])
+          expect(tree?.loops[0]?.runs[0]?.workers).toEqual([
+            {
+              id: seeded.workerID,
+              role: "bounded implementation worker",
+              status: "complete",
+              summary: "Implemented the schema tracer bullet and returned artifact handles.",
+            },
+          ])
+          expect(tree?.taskPackets).toEqual([
+            {
+              id: seeded.taskPacketID,
+              workerID: seeded.workerID,
+              title: "Implement schema tracer bullet",
+              status: "complete",
+            },
+          ])
+          expect(tree?.gates).toEqual([
+            {
+              id: seeded.gateID,
+              kind: "review",
+              status: "passed",
+              summary: "Parent review is pending against the report artifact.",
+              artifactID: seeded.artifactID,
+            },
+          ])
+          expect(tree?.artifactHandles.map((artifact) => [artifact.id, artifact.uri, artifact.summary])).toEqual([
+            [seeded.artifactID, ".lightbulb/runs/issue-16-goal-lifecycle.md", "Goal lifecycle worker report."],
+            [goalSourceArtifact.id, "artifact://issue-16/goal-prd", "Goal source PRD handle."],
+            [runSourceArtifact.id, "artifact://issue-16/source-run-report", "Source run report handle."],
+            [consumedArtifact.id, "artifact://issue-16/consumed-plan", "Consumed input artifact handle."],
+          ])
+          expect(tree?.artifactHandles.find((artifact) => artifact.id === seeded.artifactID)?.retentionDecision).toBe(
+            "hold-for-active-run",
+          )
+          expect(tree?.loops[0]?.runs[0]?.artifacts.find((artifact) => artifact.id === seeded.artifactID)?.retentionDecision).toBe(
+            "hold-for-active-run",
+          )
+          expect(tree?.artifactHandles.find((artifact) => artifact.id === seeded.artifactID)?.lineage.map((edge) => edge.summary)).toEqual([
+            "Worker produced this artifact for parent review.",
+          ])
+          expect(tree?.artifactHandles.find((artifact) => artifact.id === consumedArtifact.id)?.lineage.map((edge) => edge.summary)).toEqual([
+            "Goal run consumed this input plan.",
+          ])
+          expect(JSON.stringify(tree)).not.toContain("Unrelated goal")
         }).pipe(Effect.provide(layer(tmp.path))),
       ),
     ),
@@ -829,7 +1227,8 @@ describe("Lightbulb", () => {
             id: otherGoalID,
             account_id: first.accountID,
             title: "Same-account unrelated goal",
-            status: "open",
+            objective: "Keep same-account source validation scoped to the supplied goal.",
+            status: "active",
             summary: "This goal must not be mixed with the first goal's sources.",
           })
           yield* database.db.insert(LightbulbLoopTable).values({
