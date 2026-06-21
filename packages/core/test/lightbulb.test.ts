@@ -4,7 +4,9 @@ import { rm } from "fs/promises"
 import { eq } from "drizzle-orm"
 import { Cause, Effect, Exit, Layer } from "effect"
 import { Lightbulb } from "@opencode-ai/core/lightbulb"
+import { GoalLifecycleService } from "@opencode-ai/core/lightbulb/goal"
 import {
+  LightbulbAccountTable,
   LightbulbArtifactEdgeTable,
   LightbulbArtifactTable,
   LightbulbGateTable,
@@ -179,6 +181,47 @@ describe("Lightbulb", () => {
           expect(isolatedGraph?.goals.map((goal) => goal.id)).toEqual([sameSourceWithoutAccount.goal.id])
           expect(graph?.loops).toEqual([])
           expect(graph?.runs).toEqual([])
+        }).pipe(Effect.provide(layer(tmp.path))),
+      ),
+    ),
+  )
+
+  it.live("does not commit a generated account when goal insert conflict adopts an existing goal", () =>
+    Effect.acquireRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ).pipe(
+      Effect.flatMap((tmp) =>
+        Effect.gen(function* () {
+          const lightbulb = yield* Lightbulb.Service
+          const database = yield* Database.Service
+          const orphanAccountID = "lbacc_orphan" as Lightbulb.AccountID
+          const first = yield* lightbulb.createOrAdoptGoal({
+            title: "Original raced goal",
+            objective: "Create the winner row before a deterministic conflict.",
+          })
+          const adopted = yield* GoalLifecycleService.createOrAdopt(
+            database.db,
+            {
+              title: "Losing raced goal",
+              objective: "This conflict should adopt without persisting its generated account.",
+            },
+            {
+              account: () => orphanAccountID,
+              goal: () => first.goal.id,
+              event: Lightbulb.EventID.create,
+            },
+          )
+          const orphan = yield* database.db
+            .select()
+            .from(LightbulbAccountTable)
+            .where(eq(LightbulbAccountTable.id, orphanAccountID))
+            .get()
+            .pipe(Effect.orDie)
+
+          expect(adopted.adopted).toBe(true)
+          expect(adopted.goal.id).toBe(first.goal.id)
+          expect(orphan).toBeUndefined()
         }).pipe(Effect.provide(layer(tmp.path))),
       ),
     ),

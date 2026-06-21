@@ -136,6 +136,9 @@ function createOrAdopt(
             .run()
           return { goal: inserted, adopted: false }
         }
+        if (!input.accountID) {
+          yield* tx.delete(LightbulbAccountTable).where(eq(LightbulbAccountTable.id, accountID)).run()
+        }
         const existingByID = yield* tx.select().from(LightbulbGoalTable).where(eq(LightbulbGoalTable.id, goalID)).get()
         if (existingByID && input.accountID && existingByID.account_id !== input.accountID) {
           return yield* Effect.die(new Error("Lightbulb goal belongs to a different account"))
