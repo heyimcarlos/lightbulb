@@ -51,6 +51,7 @@ const ARTIFACT_TYPES = [
   "run_report",
   "scaffold",
   "operator_summary",
+  "context_manifest",
 ] as const
 const MAX_ARTIFACT_SUMMARY_LENGTH = 600
 
