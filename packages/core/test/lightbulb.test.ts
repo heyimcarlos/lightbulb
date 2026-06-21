@@ -784,6 +784,7 @@ describe("Lightbulb", () => {
               kind: "review",
               status: "pending",
               summary: "Parent review is pending against the report artifact.",
+              blockedReason: null,
               artifactID: seeded.artifactID,
             },
           ])
