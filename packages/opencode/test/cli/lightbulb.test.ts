@@ -63,6 +63,18 @@ describe("lightbulb CLI entrypoint", () => {
       }),
     60_000,
   )
+
+  cliIt.live(
+    "fails fast for the inherited GitHub runner",
+    ({ opencode }) =>
+      Effect.gen(function* () {
+        const result = yield* opencode.spawn(["github", "run"])
+
+        opencode.expectExit(result, 1, "opencode github run")
+        expect(result.stderr).toContain("The inherited OpenCode GitHub runner is disabled in Lightbulb")
+      }),
+    60_000,
+  )
 })
 
 describe("lightbulb dashboard display", () => {
@@ -135,6 +147,11 @@ describe("lightbulb dashboard display", () => {
                 kind: "implementation",
                 status: "active",
                 summary: "Implementation loop owns the active tracer run.",
+                profileID: null,
+                schedule: null,
+                budget: null,
+                scheduleClassification: "not_due",
+                scheduleReason: "schedule_not_configured",
                 runs: [
                   {
                     id: runID,

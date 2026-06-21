@@ -22,7 +22,7 @@ type Diff = {
   message: string
 }
 
-const repo = process.env.GH_REPO ?? "anomalyco/opencode"
+const repo = process.env.GH_REPO
 const bot = ["actions-user", "github-actions[bot]", "opencode", "opencode-agent[bot]"]
 const team = [
   ...(await Bun.file(new URL("../.github/TEAM_MEMBERS", import.meta.url))
@@ -50,8 +50,14 @@ function ref(input: string) {
   return input
 }
 
+function requireRepo() {
+  if (repo) return repo
+  console.error("GH_REPO is required so changelog generation cannot accidentally target upstream OpenCode.")
+  process.exit(1)
+}
+
 async function latest() {
-  const data = await $`gh api "/repos/${repo}/releases?per_page=100"`.json()
+  const data = await $`gh api "/repos/${requireRepo()}/releases?per_page=100"`.json()
   const release = (data as Release[]).find((item) => !item.draft)
   if (!release) throw new Error("No releases found")
   return release.tag_name.replace(/^v/, "")
@@ -59,6 +65,7 @@ async function latest() {
 
 async function diff(base: string, head: string) {
   const list: Diff[] = []
+  const repo = requireRepo()
   for (let page = 1; ; page++) {
     const text =
       await $`gh api "/repos/${repo}/compare/${base}...${head}?per_page=100&page=${page}" --jq '.commits[] | {sha: .sha, login: .author.login, message: .commit.message}'`.text()
@@ -171,7 +178,7 @@ async function contributors(from: string, to: string) {
 
 async function published(to: string) {
   if (to === "HEAD") return
-  const body = await $`gh release view ${ref(to)} --repo ${repo} --json body --jq .body`.text().catch(() => "")
+  const body = await $`gh release view ${ref(to)} --repo ${requireRepo()} --json body --jq .body`.text().catch(() => "")
   if (!body) return
 
   const lines = body.split(/\r?\n/)
@@ -268,10 +275,13 @@ Options:
   -t, --to <ref>         Ending ref (default: HEAD)
   -h, --help             Show this help message
 
+Environment:
+  GH_REPO               Required owner/repo target for GitHub release and compare API calls
+
 Examples:
-  bun script/raw-changelog.ts
-  bun script/raw-changelog.ts --from 1.0.200
-  bun script/raw-changelog.ts -f 1.0.200 -t 1.0.205
+  GH_REPO=heyimcarlos/lightbulb bun script/raw-changelog.ts
+  GH_REPO=heyimcarlos/lightbulb bun script/raw-changelog.ts --from 1.0.200
+  GH_REPO=heyimcarlos/lightbulb bun script/raw-changelog.ts -f 1.0.200 -t 1.0.205
 `)
     process.exit(0)
   }

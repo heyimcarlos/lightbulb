@@ -171,30 +171,25 @@ opencode github [command]
 
 #### install
 
-Instale o agente do GitHub em seu repositório.
+The inherited GitHub installer is disabled in Lightbulb.
 
 ```bash
-opencode github install
+opencode github install # disabled in Lightbulb
 ```
 
-Isso configura o fluxo de trabalho necessário do GitHub Actions e o guia pelo processo de configuração. [Saiba mais](/docs/github).
+Lightbulb needs a native action, app, and trigger vocabulary before this command can provide setup steps. [Learn more](/docs/github).
 
 ---
 
 #### run
 
-Execute o agente do GitHub. Isso é tipicamente usado em GitHub Actions.
+The inherited GitHub runner is disabled in Lightbulb.
 
 ```bash
-opencode github run
+opencode github run # disabled in Lightbulb
 ```
 
-##### Opções
-
-| Flag                                  | Descrição                                        |
-| ------------------------------------- | ------------------------------------------------ |
-| <nobr><code>{"--event"}</code></nobr> | Evento simulado do GitHub para executar o agente |
-| <nobr><code>{"--token"}</code></nobr> | Token de acesso pessoal do GitHub                |
+Lightbulb needs a native action, app, and trigger vocabulary before this command can run repository automation. [Learn more](/docs/github).
 
 ---
 

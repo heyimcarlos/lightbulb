@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
 
-BUMP_TYPE=${1:-patch}
-
-gh workflow run publish.yml -f bump="$BUMP_TYPE"
+echo "The inherited OpenCode release helper is disabled in Lightbulb because publish.yml was removed."
+echo "Design and verify a Lightbulb-native release workflow before re-enabling this command."
+exit 1

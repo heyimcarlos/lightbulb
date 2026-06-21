@@ -171,30 +171,25 @@ opencode github [command]
 
 #### install
 
-在您的儲存庫中安裝 GitHub 代理。
+The inherited GitHub installer is disabled in Lightbulb.
 
 ```bash
-opencode github install
+opencode github install # disabled in Lightbulb
 ```
 
-此指令會設定必要的 GitHub Actions 工作流程並引導您完成設定過程。[了解更多](/docs/github)。
+Lightbulb needs a native action, app, and trigger vocabulary before this command can provide setup steps. [Learn more](/docs/github).
 
 ---
 
 #### run
 
-執行 GitHub 代理。通常在 GitHub Actions 中使用。
+The inherited GitHub runner is disabled in Lightbulb.
 
 ```bash
-opencode github run
+opencode github run # disabled in Lightbulb
 ```
 
-##### 旗標
-
-| 旗標                                  | 說明                           |
-| ------------------------------------- | ------------------------------ |
-| <nobr><code>{"--event"}</code></nobr> | 用於執行代理的 GitHub 模擬事件 |
-| <nobr><code>{"--token"}</code></nobr> | GitHub 個人存取權杖            |
+Lightbulb needs a native action, app, and trigger vocabulary before this command can run repository automation. [Learn more](/docs/github).
 
 ---
 
