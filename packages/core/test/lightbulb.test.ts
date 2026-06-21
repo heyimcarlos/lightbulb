@@ -2,7 +2,7 @@ import path from "path"
 import { describe, expect } from "bun:test"
 import { Effect, Exit, Layer } from "effect"
 import { Lightbulb } from "@opencode-ai/core/lightbulb"
-import { LightbulbArtifactTable } from "@opencode-ai/core/lightbulb/sql"
+import { LightbulbArtifactEdgeTable, LightbulbArtifactTable } from "@opencode-ai/core/lightbulb/sql"
 import { Database } from "@opencode-ai/core/database/database"
 import { tmpdir } from "./fixture/tmpdir"
 import { it } from "./lib/effect"
@@ -135,6 +135,46 @@ describe("Lightbulb", () => {
             .pipe(Effect.exit)
 
           expect(Exit.isFailure(rejected)).toBe(true)
+        }).pipe(Effect.provide(layer(tmp.path))),
+      ),
+    ),
+  )
+
+  it.live("rejects cross-account artifact consumption", () =>
+    Effect.acquireRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ).pipe(
+      Effect.flatMap((tmp) =>
+        Effect.gen(function* () {
+          const lightbulb = yield* Lightbulb.Service
+          const first = yield* lightbulb.seedTracerBullet()
+          const second = yield* lightbulb.seedTracerBullet()
+          const serviceRejected = yield* lightbulb
+            .consumeArtifact({
+              artifactID: first.artifactID,
+              consumerRunID: second.runID,
+              consumerWorkerID: second.workerID,
+              summary: "A different account must not consume this artifact.",
+            })
+            .pipe(Effect.exit)
+
+          const database = yield* Database.Service
+          const directRejected = yield* database.db
+            .insert(LightbulbArtifactEdgeTable)
+            .values({
+              account_id: first.accountID,
+              artifact_id: first.artifactID,
+              consumer_run_id: second.runID,
+              consumer_worker_id: second.workerID,
+              relation: "consumed_by",
+              summary: "A direct insert must also respect account boundaries.",
+            })
+            .run()
+            .pipe(Effect.exit)
+
+          expect(Exit.isFailure(serviceRejected)).toBe(true)
+          expect(Exit.isFailure(directRejected)).toBe(true)
         }).pipe(Effect.provide(layer(tmp.path))),
       ),
     ),

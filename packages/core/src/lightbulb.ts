@@ -242,6 +242,7 @@ export const layer = Layer.effect(
               yield* tx
                 .insert(LightbulbArtifactEdgeTable)
                 .values({
+                  account_id: ids.accountID,
                   artifact_id: ids.artifactID,
                   consumer_run_id: ids.runID,
                   consumer_worker_id: ids.workerID,
@@ -367,9 +368,16 @@ export const layer = Layer.effect(
         yield* db
           .transaction((tx) =>
             Effect.gen(function* () {
+              const artifact = yield* tx
+                .select({ account_id: LightbulbArtifactTable.account_id })
+                .from(LightbulbArtifactTable)
+                .where(eq(LightbulbArtifactTable.id, input.artifactID))
+                .get()
+              if (!artifact) return yield* Effect.die(new Error("Lightbulb artifact not found"))
               yield* tx
                 .insert(LightbulbArtifactEdgeTable)
                 .values({
+                  account_id: artifact.account_id,
                   artifact_id: input.artifactID,
                   consumer_run_id: input.consumerRunID,
                   consumer_worker_id: input.consumerWorkerID,

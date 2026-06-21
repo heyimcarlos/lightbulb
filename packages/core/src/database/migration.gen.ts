@@ -38,5 +38,6 @@ export const migrations = (
     import("./migration/20260611192811_lush_chimera"),
     import("./migration/20260612174303_project_dir_strategy"),
     import("./migration/20260621023940_lightbulb_schema"),
+    import("./migration/20260621032253_lightbulb_artifact_edge_account"),
   ])
 ).map((module) => module.default) satisfies DatabaseMigration.Migration[]

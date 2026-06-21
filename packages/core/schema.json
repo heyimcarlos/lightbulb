@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "39e1b18a-da19-4f14-98f6-6c8fa1f21ce9",
+  "id": "9c219ff5-f62d-4e3e-bb82-2a8813574ba8",
   "prevIds": [
-    "169a0f0f-d58f-479f-b024-fa1c7b9a09db"
+    "39e1b18a-da19-4f14-98f6-6c8fa1f21ce9"
   ],
   "ddl": [
     {
@@ -641,6 +641,16 @@
       "name": "time_updated",
       "entityType": "columns",
       "table": "lightbulb_account"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "account_id",
+      "entityType": "columns",
+      "table": "lightbulb_artifact_edge"
     },
     {
       "type": "text",
@@ -2519,6 +2529,21 @@
     },
     {
       "columns": [
+        "account_id"
+      ],
+      "tableTo": "lightbulb_account",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_lightbulb_artifact_edge_account_id_lightbulb_account_id_fk",
+      "entityType": "fks",
+      "table": "lightbulb_artifact_edge"
+    },
+    {
+      "columns": [
         "artifact_id"
       ],
       "tableTo": "lightbulb_artifact",
@@ -2549,18 +2574,52 @@
     },
     {
       "columns": [
-        "consumer_worker_id",
-        "consumer_run_id"
+        "account_id",
+        "artifact_id"
       ],
-      "tableTo": "lightbulb_worker",
+      "tableTo": "lightbulb_artifact",
       "columnsTo": [
-        "id",
-        "run_id"
+        "account_id",
+        "id"
       ],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": true,
-      "name": "lightbulb_artifact_edge_consumer_worker_run_fk",
+      "name": "lightbulb_artifact_edge_account_artifact_fk",
+      "entityType": "fks",
+      "table": "lightbulb_artifact_edge"
+    },
+    {
+      "columns": [
+        "account_id",
+        "consumer_run_id"
+      ],
+      "tableTo": "lightbulb_run",
+      "columnsTo": [
+        "account_id",
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": true,
+      "name": "lightbulb_artifact_edge_account_consumer_run_fk",
+      "entityType": "fks",
+      "table": "lightbulb_artifact_edge"
+    },
+    {
+      "columns": [
+        "account_id",
+        "consumer_worker_id"
+      ],
+      "tableTo": "lightbulb_worker",
+      "columnsTo": [
+        "account_id",
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": true,
+      "name": "lightbulb_artifact_edge_account_consumer_worker_fk",
       "entityType": "fks",
       "table": "lightbulb_artifact_edge"
     },
@@ -3117,6 +3176,7 @@
     },
     {
       "columns": [
+        "account_id",
         "artifact_id",
         "consumer_run_id",
         "relation"
@@ -3414,6 +3474,20 @@
     {
       "columns": [
         {
+          "value": "account_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "lightbulb_artifact_edge_account_idx",
+      "entityType": "indexes",
+      "table": "lightbulb_artifact_edge"
+    },
+    {
+      "columns": [
+        {
           "value": "consumer_run_id",
           "isExpression": false
         }
@@ -3478,6 +3552,24 @@
       "where": null,
       "origin": "manual",
       "name": "lightbulb_artifact_task_packet_idx",
+      "entityType": "indexes",
+      "table": "lightbulb_artifact"
+    },
+    {
+      "columns": [
+        {
+          "value": "account_id",
+          "isExpression": false
+        },
+        {
+          "value": "id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "lightbulb_artifact_account_id_idx",
       "entityType": "indexes",
       "table": "lightbulb_artifact"
     },

@@ -98,16 +98,20 @@ export default {
       `)
       yield* tx.run(`
         CREATE TABLE \`lightbulb_artifact_edge\` (
+          \`account_id\` text NOT NULL,
           \`artifact_id\` text NOT NULL,
           \`consumer_run_id\` text NOT NULL,
           \`consumer_worker_id\` text,
           \`relation\` text NOT NULL,
           \`summary\` text NOT NULL,
           \`time_created\` integer NOT NULL,
-          CONSTRAINT \`lightbulb_artifact_edge_pk\` PRIMARY KEY(\`artifact_id\`, \`consumer_run_id\`, \`relation\`),
+          CONSTRAINT \`lightbulb_artifact_edge_pk\` PRIMARY KEY(\`account_id\`, \`artifact_id\`, \`consumer_run_id\`, \`relation\`),
+          CONSTRAINT \`fk_lightbulb_artifact_edge_account_id_lightbulb_account_id_fk\` FOREIGN KEY (\`account_id\`) REFERENCES \`lightbulb_account\`(\`id\`) ON DELETE CASCADE,
           CONSTRAINT \`fk_lightbulb_artifact_edge_artifact_id_lightbulb_artifact_id_fk\` FOREIGN KEY (\`artifact_id\`) REFERENCES \`lightbulb_artifact\`(\`id\`) ON DELETE CASCADE,
           CONSTRAINT \`fk_lightbulb_artifact_edge_consumer_run_id_lightbulb_run_id_fk\` FOREIGN KEY (\`consumer_run_id\`) REFERENCES \`lightbulb_run\`(\`id\`) ON DELETE CASCADE,
-          CONSTRAINT \`lightbulb_artifact_edge_consumer_worker_run_fk\` FOREIGN KEY (\`consumer_worker_id\`,\`consumer_run_id\`) REFERENCES \`lightbulb_worker\`(\`id\`,\`run_id\`) ON DELETE CASCADE
+          CONSTRAINT \`lightbulb_artifact_edge_account_artifact_fk\` FOREIGN KEY (\`account_id\`,\`artifact_id\`) REFERENCES \`lightbulb_artifact\`(\`account_id\`,\`id\`) ON DELETE CASCADE,
+          CONSTRAINT \`lightbulb_artifact_edge_account_consumer_run_fk\` FOREIGN KEY (\`account_id\`,\`consumer_run_id\`) REFERENCES \`lightbulb_run\`(\`account_id\`,\`id\`) ON DELETE CASCADE,
+          CONSTRAINT \`lightbulb_artifact_edge_account_consumer_worker_fk\` FOREIGN KEY (\`account_id\`,\`consumer_worker_id\`) REFERENCES \`lightbulb_worker\`(\`account_id\`,\`id\`) ON DELETE CASCADE
         );
       `)
       yield* tx.run(`
@@ -402,11 +406,13 @@ export default {
       `)
       yield* tx.run(`CREATE UNIQUE INDEX \`event_aggregate_seq_idx\` ON \`event\` (\`aggregate_id\`,\`seq\`);`)
       yield* tx.run(`CREATE INDEX \`event_aggregate_type_seq_idx\` ON \`event\` (\`aggregate_id\`,\`type\`,\`seq\`);`)
+      yield* tx.run(`CREATE INDEX \`lightbulb_artifact_edge_account_idx\` ON \`lightbulb_artifact_edge\` (\`account_id\`);`)
       yield* tx.run(`CREATE INDEX \`lightbulb_artifact_edge_consumer_run_idx\` ON \`lightbulb_artifact_edge\` (\`consumer_run_id\`);`)
       yield* tx.run(`CREATE INDEX \`lightbulb_artifact_account_idx\` ON \`lightbulb_artifact\` (\`account_id\`);`)
       yield* tx.run(`CREATE INDEX \`lightbulb_artifact_producer_run_idx\` ON \`lightbulb_artifact\` (\`producer_run_id\`);`)
       yield* tx.run(`CREATE INDEX \`lightbulb_artifact_producer_worker_idx\` ON \`lightbulb_artifact\` (\`producer_worker_id\`);`)
       yield* tx.run(`CREATE INDEX \`lightbulb_artifact_task_packet_idx\` ON \`lightbulb_artifact\` (\`task_packet_id\`);`)
+      yield* tx.run(`CREATE UNIQUE INDEX \`lightbulb_artifact_account_id_idx\` ON \`lightbulb_artifact\` (\`account_id\`,\`id\`);`)
       yield* tx.run(`CREATE INDEX \`lightbulb_event_account_idx\` ON \`lightbulb_event\` (\`account_id\`);`)
       yield* tx.run(`CREATE INDEX \`lightbulb_event_aggregate_idx\` ON \`lightbulb_event\` (\`aggregate_type\`,\`aggregate_id\`,\`time_created\`);`)
       yield* tx.run(`CREATE INDEX \`lightbulb_gate_account_idx\` ON \`lightbulb_gate\` (\`account_id\`);`)

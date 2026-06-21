@@ -182,6 +182,7 @@ export const LightbulbArtifactTable = sqliteTable(
     index("lightbulb_artifact_producer_run_idx").on(table.producer_run_id),
     index("lightbulb_artifact_producer_worker_idx").on(table.producer_worker_id),
     index("lightbulb_artifact_task_packet_idx").on(table.task_packet_id),
+    uniqueIndex("lightbulb_artifact_account_id_idx").on(table.account_id, table.id),
     foreignKey({
       columns: [table.account_id, table.producer_run_id],
       foreignColumns: [LightbulbRunTable.account_id, LightbulbRunTable.id],
@@ -208,6 +209,10 @@ export const LightbulbArtifactTable = sqliteTable(
 export const LightbulbArtifactEdgeTable = sqliteTable(
   "lightbulb_artifact_edge",
   {
+    account_id: text()
+      .$type<Lightbulb.AccountID>()
+      .notNull()
+      .references(() => LightbulbAccountTable.id, { onDelete: "cascade" }),
     artifact_id: text()
       .$type<Lightbulb.ArtifactID>()
       .notNull()
@@ -224,12 +229,23 @@ export const LightbulbArtifactEdgeTable = sqliteTable(
       .$default(() => Date.now()),
   },
   (table) => [
-    primaryKey({ columns: [table.artifact_id, table.consumer_run_id, table.relation] }),
+    primaryKey({ columns: [table.account_id, table.artifact_id, table.consumer_run_id, table.relation] }),
+    index("lightbulb_artifact_edge_account_idx").on(table.account_id),
     index("lightbulb_artifact_edge_consumer_run_idx").on(table.consumer_run_id),
     foreignKey({
-      columns: [table.consumer_worker_id, table.consumer_run_id],
-      foreignColumns: [LightbulbWorkerTable.id, LightbulbWorkerTable.run_id],
-      name: "lightbulb_artifact_edge_consumer_worker_run_fk",
+      columns: [table.account_id, table.artifact_id],
+      foreignColumns: [LightbulbArtifactTable.account_id, LightbulbArtifactTable.id],
+      name: "lightbulb_artifact_edge_account_artifact_fk",
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [table.account_id, table.consumer_run_id],
+      foreignColumns: [LightbulbRunTable.account_id, LightbulbRunTable.id],
+      name: "lightbulb_artifact_edge_account_consumer_run_fk",
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [table.account_id, table.consumer_worker_id],
+      foreignColumns: [LightbulbWorkerTable.account_id, LightbulbWorkerTable.id],
+      name: "lightbulb_artifact_edge_account_consumer_worker_fk",
     }).onDelete("cascade"),
   ],
 )
