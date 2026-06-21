@@ -4,8 +4,8 @@
   "head": "context-policy",
   "base": "dev",
   "head_sha": "fd077271ad79fbe2341dce6eb4db20e54e35ee81",
-  "last_reviewed_at": "2026-06-21T16:29:29Z",
-  "state": "open_pending_external_review",
+  "last_reviewed_at": "2026-06-21T16:31:18Z",
+  "state": "merged_post_merge_verified",
   "external_codex_review": {
     "requested": true,
     "blocked": true,
@@ -28,7 +28,6 @@
     "terminal_visual": ".lightbulb/evidence/pr-pending-context-policy/screenshots/verification.svg",
     "verification": ".lightbulb/evidence/pr-pending-context-policy/verification.md"
   },
-  "blockers": [
-    "External Codex review unavailable due current-head usage limit response; no GitHub checks reported yet."
-  ]
+  "blockers": [],
+  "merge_commit": "77275a774d38c204ac01cb3c8dac5c1baf55c263"
 }

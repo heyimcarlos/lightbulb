@@ -37,3 +37,9 @@
 - Evidence packet committed under `.lightbulb/evidence/pr-pending-context-policy/`.
 - Local gates passed: focused policy tests, full Lightbulb tests, `bun typecheck`, migration check, and `git diff --check`.
 - Opened PR #49 and requested `@codex review`; connector returned current-head usage-limit blocker. No checks reported.
+
+## 2026-06-21T16:31:18Z — PR #49 merged and post-merge verified
+
+- Squash-merged PR #49 into `dev` as `77275a774d38c204ac01cb3c8dac5c1baf55c263`.
+- Post-merge verification on fetched `origin/dev`: Lightbulb tests (27 pass), `bun typecheck`, migration check, `git diff --check`, and file-size guard.
+- Closed issue #5 and reconciled labels to `agent-reviewed` + `agent-integrated`.
