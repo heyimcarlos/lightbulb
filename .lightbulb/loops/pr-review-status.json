@@ -1,0 +1,26 @@
+{
+  "pr": 7,
+  "url": "https://github.com/heyimcarlos/lightbulb/pull/7",
+  "head": "lightbulb-orchestration",
+  "base": "dev",
+  "last_reviewed_at": "2026-06-21T03:24:14Z",
+  "state": "fixing_review_findings",
+  "external_codex_review": {
+    "requested": true,
+    "blocked": true,
+    "reason": "Codex connector reports that a Codex environment must be configured for heyimcarlos/lightbulb."
+  },
+  "local_gates": {
+    "packages/core:bun run script/migration.ts --check": "passed",
+    "packages/core:bun typecheck": "passed",
+    "packages/core:bun test test/lightbulb.test.ts test/database-migration.test.ts": "passed: 19 pass, 0 fail",
+    "git diff --check": "passed",
+    "pre-push hook": "blocked by local Bun 1.3.12 versus repo packageManager ^1.3.14 after required gates passed; push uses HUSKY=0 for this tool-version guard only"
+  },
+  "local_review": {
+    "actionable_findings": [
+      "Cross-account artifact consumption was not guarded at the DB boundary. Fixed with account-scoped artifact-edge keys and regression coverage."
+    ],
+    "unresolved_findings": []
+  }
+}

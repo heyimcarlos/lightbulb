@@ -1,0 +1,466 @@
+export * as Lightbulb from "./lightbulb"
+
+import { asc, eq } from "drizzle-orm"
+import { Context, Effect, Layer, Schema } from "effect"
+import { Database } from "./database/database"
+import { withStatics } from "./schema"
+import { Identifier } from "./util/identifier"
+import {
+  LightbulbAccountTable,
+  LightbulbArtifactEdgeTable,
+  LightbulbArtifactTable,
+  LightbulbEventTable,
+  LightbulbGateTable,
+  LightbulbGoalTable,
+  LightbulbLoopTable,
+  LightbulbRunTable,
+  LightbulbTaskPacketTable,
+  LightbulbWorkerTable,
+} from "./lightbulb/sql"
+
+const prefixedID = <const Prefix extends string>(prefix: Prefix, brand: string) =>
+  Schema.String.check(Schema.isStartsWith(`${prefix}_`)).pipe(
+    Schema.brand(brand),
+    withStatics((schema) => ({ create: () => schema.make(`${prefix}_${Identifier.ascending()}`) })),
+  )
+
+export const AccountID = prefixedID("lbacc", "Lightbulb.AccountID")
+export type AccountID = typeof AccountID.Type
+export const GoalID = prefixedID("lbgoal", "Lightbulb.GoalID")
+export type GoalID = typeof GoalID.Type
+export const LoopID = prefixedID("lbloop", "Lightbulb.LoopID")
+export type LoopID = typeof LoopID.Type
+export const RunID = prefixedID("lbrun", "Lightbulb.RunID")
+export type RunID = typeof RunID.Type
+export const WorkerID = prefixedID("lbworker", "Lightbulb.WorkerID")
+export type WorkerID = typeof WorkerID.Type
+export const TaskPacketID = prefixedID("lbpacket", "Lightbulb.TaskPacketID")
+export type TaskPacketID = typeof TaskPacketID.Type
+export const ArtifactID = prefixedID("lbartifact", "Lightbulb.ArtifactID")
+export type ArtifactID = typeof ArtifactID.Type
+export const GateID = prefixedID("lbgate", "Lightbulb.GateID")
+export type GateID = typeof GateID.Type
+export const EventID = prefixedID("lbevent", "Lightbulb.EventID")
+export type EventID = typeof EventID.Type
+
+export type AccountStatus = "active" | "paused" | "archived"
+export type GoalStatus = "open" | "blocked" | "verified" | "cancelled"
+export type LoopKind = "discovery" | "implementation" | "debug" | "review" | "integration"
+export type LoopStatus = "active" | "idle" | "blocked" | "complete"
+export type RunStatus = "queued" | "running" | "blocked" | "complete" | "failed"
+export type ReviewStatus = "not_requested" | "requested" | "changes_requested" | "approved"
+export type DebugStatus = "not_started" | "reproducing" | "isolating" | "fixed" | "blocked"
+export type GateStatus = "pending" | "running" | "passed" | "failed" | "blocked"
+export type WorkerStatus = "queued" | "running" | "blocked" | "complete" | "failed"
+export type TaskPacketStatus = "ready" | "claimed" | "complete" | "blocked"
+export type ArtifactType = "report" | "plan" | "patch" | "test_result" | "handoff" | "log"
+export type ArtifactStatus = "registered" | "consumed" | "superseded" | "expired"
+export type ArtifactEdgeRelation = "produced_by" | "consumed_by" | "supersedes" | "verifies"
+export type GateKind = "review" | "debug" | "verification"
+
+export type ArtifactHandle = {
+  readonly id: ArtifactID
+  readonly type: ArtifactType
+  readonly uri: string
+  readonly summary: string
+  readonly status: ArtifactStatus
+  readonly producerRunID: RunID
+  readonly producerWorkerID: WorkerID
+}
+
+export type AccountGraph = {
+  readonly account: typeof LightbulbAccountTable.$inferSelect
+  readonly goals: (typeof LightbulbGoalTable.$inferSelect)[]
+  readonly loops: (typeof LightbulbLoopTable.$inferSelect)[]
+  readonly runs: (typeof LightbulbRunTable.$inferSelect)[]
+  readonly workers: (typeof LightbulbWorkerTable.$inferSelect)[]
+  readonly taskPackets: (typeof LightbulbTaskPacketTable.$inferSelect)[]
+  readonly artifacts: (typeof LightbulbArtifactTable.$inferSelect)[]
+  readonly artifactEdges: (typeof LightbulbArtifactEdgeTable.$inferSelect)[]
+  readonly gates: (typeof LightbulbGateTable.$inferSelect)[]
+  readonly events: (typeof LightbulbEventTable.$inferSelect)[]
+}
+
+export type SeededGraph = {
+  readonly accountID: AccountID
+  readonly goalID: GoalID
+  readonly loopID: LoopID
+  readonly runID: RunID
+  readonly workerID: WorkerID
+  readonly taskPacketID: TaskPacketID
+  readonly artifactID: ArtifactID
+  readonly gateID: GateID
+}
+
+export type ParentSummary = {
+  readonly runID: RunID
+  readonly status: RunStatus
+  readonly reviewStatus: ReviewStatus
+  readonly debugStatus: DebugStatus
+  readonly gateStatus: GateStatus
+  readonly summary: string
+  readonly workers: {
+    readonly id: WorkerID
+    readonly role: string
+    readonly status: WorkerStatus
+    readonly summary: string
+  }[]
+  readonly gates: {
+    readonly id: GateID
+    readonly kind: GateKind
+    readonly status: GateStatus
+    readonly summary: string
+    readonly artifactID: ArtifactID | null
+  }[]
+  readonly artifacts: ArtifactHandle[]
+}
+
+export interface Interface {
+  readonly seedTracerBullet: (input?: {
+    readonly accountName?: string
+    readonly artifactUri?: string
+    readonly artifactSummary?: string
+    readonly rawWorkerLog?: string
+  }) => Effect.Effect<SeededGraph>
+  readonly readAccountGraph: (accountID: AccountID) => Effect.Effect<AccountGraph | undefined>
+  readonly consumeArtifact: (input: {
+    readonly artifactID: ArtifactID
+    readonly consumerRunID: RunID
+    readonly consumerWorkerID?: WorkerID
+    readonly summary: string
+  }) => Effect.Effect<void>
+  readonly parentSummary: (runID: RunID) => Effect.Effect<ParentSummary | undefined>
+}
+
+export class Service extends Context.Service<Service, Interface>()("@opencode/Lightbulb") {}
+
+export const layer = Layer.effect(
+  Service,
+  Effect.gen(function* () {
+    const { db } = yield* Database.Service
+
+    return Service.of({
+      seedTracerBullet: Effect.fn("Lightbulb.seedTracerBullet")(function* (input) {
+        const now = Date.now()
+        const ids = {
+          accountID: AccountID.create(),
+          goalID: GoalID.create(),
+          loopID: LoopID.create(),
+          runID: RunID.create(),
+          workerID: WorkerID.create(),
+          taskPacketID: TaskPacketID.create(),
+          artifactID: ArtifactID.create(),
+          gateID: GateID.create(),
+        }
+        yield* db
+          .transaction((tx) =>
+            Effect.gen(function* () {
+              yield* tx
+                .insert(LightbulbAccountTable)
+                .values({
+                  id: ids.accountID,
+                  name: input?.accountName ?? "Lightbulb Bootstrap",
+                  status: "active",
+                  metadata: { tracer: true },
+                })
+                .run()
+              yield* tx
+                .insert(LightbulbGoalTable)
+                .values({
+                  id: ids.goalID,
+                  account_id: ids.accountID,
+                  title: "Bootstrap loop harness",
+                  status: "open",
+                  summary: "Create one durable Lightbulb goal graph.",
+                })
+                .run()
+              yield* tx
+                .insert(LightbulbLoopTable)
+                .values({
+                  id: ids.loopID,
+                  account_id: ids.accountID,
+                  goal_id: ids.goalID,
+                  kind: "implementation",
+                  status: "active",
+                  summary: "Implementation loop owns the tracer bullet run.",
+                })
+                .run()
+              yield* tx
+                .insert(LightbulbRunTable)
+                .values({
+                  id: ids.runID,
+                  account_id: ids.accountID,
+                  loop_id: ids.loopID,
+                  status: "complete",
+                  review_status: "requested",
+                  debug_status: "fixed",
+                  gate_status: "pending",
+                  summary: "Worker produced a durable implementation report artifact.",
+                  started_at: now,
+                  completed_at: now,
+                })
+                .run()
+              yield* tx
+                .insert(LightbulbWorkerTable)
+                .values({
+                  id: ids.workerID,
+                  account_id: ids.accountID,
+                  run_id: ids.runID,
+                  role: "bounded implementation worker",
+                  status: "complete",
+                  summary: "Implemented the schema tracer bullet and returned artifact handles.",
+                  metadata: input?.rawWorkerLog ? { raw_log_omitted: true } : undefined,
+                })
+                .run()
+              yield* tx
+                .insert(LightbulbTaskPacketTable)
+                .values({
+                  id: ids.taskPacketID,
+                  account_id: ids.accountID,
+                  worker_id: ids.workerID,
+                  title: "Implement schema tracer bullet",
+                  status: "complete",
+                  instructions: "Create and verify one account goal to artifact graph.",
+                })
+                .run()
+              yield* tx
+                .insert(LightbulbArtifactTable)
+                .values({
+                  id: ids.artifactID,
+                  account_id: ids.accountID,
+                  producer_run_id: ids.runID,
+                  producer_worker_id: ids.workerID,
+                  task_packet_id: ids.taskPacketID,
+                  type: "report",
+                  uri: input?.artifactUri ?? ".lightbulb/runs/schema-tracer-bullet.md",
+                  checksum: null,
+                  status: "registered",
+                  summary: input?.artifactSummary ?? "Concise worker report for parent orchestration.",
+                  retention_policy: "keep",
+                })
+                .run()
+              yield* tx
+                .insert(LightbulbArtifactEdgeTable)
+                .values({
+                  account_id: ids.accountID,
+                  artifact_id: ids.artifactID,
+                  consumer_run_id: ids.runID,
+                  consumer_worker_id: ids.workerID,
+                  relation: "produced_by",
+                  summary: "Worker produced this artifact for parent review.",
+                })
+                .run()
+              yield* tx
+                .insert(LightbulbGateTable)
+                .values({
+                  id: ids.gateID,
+                  account_id: ids.accountID,
+                  run_id: ids.runID,
+                  kind: "review",
+                  status: "pending",
+                  summary: "Parent review is pending against the report artifact.",
+                  artifact_id: ids.artifactID,
+                })
+                .run()
+              yield* tx
+                .insert(LightbulbEventTable)
+                .values({
+                  id: EventID.create(),
+                  account_id: ids.accountID,
+                  aggregate_type: "run",
+                  aggregate_id: ids.runID,
+                  type: "lightbulb.tracer.seeded",
+                  summary: "Seeded one Lightbulb account graph.",
+                  data: { artifact_id: ids.artifactID },
+                  time_created: now,
+                })
+                .run()
+            }),
+          )
+          .pipe(Effect.orDie)
+        return ids
+      }),
+      readAccountGraph: Effect.fn("Lightbulb.readAccountGraph")(function* (accountID) {
+        const account = yield* db
+          .select()
+          .from(LightbulbAccountTable)
+          .where(eq(LightbulbAccountTable.id, accountID))
+          .get()
+          .pipe(Effect.orDie)
+        if (!account) return
+        return {
+          account,
+          goals: yield* db
+            .select()
+            .from(LightbulbGoalTable)
+            .where(eq(LightbulbGoalTable.account_id, accountID))
+            .orderBy(asc(LightbulbGoalTable.time_created))
+            .all()
+            .pipe(Effect.orDie),
+          loops: yield* db
+            .select()
+            .from(LightbulbLoopTable)
+            .where(eq(LightbulbLoopTable.account_id, accountID))
+            .orderBy(asc(LightbulbLoopTable.time_created))
+            .all()
+            .pipe(Effect.orDie),
+          runs: yield* db
+            .select()
+            .from(LightbulbRunTable)
+            .where(eq(LightbulbRunTable.account_id, accountID))
+            .orderBy(asc(LightbulbRunTable.time_created))
+            .all()
+            .pipe(Effect.orDie),
+          workers: yield* db
+            .select()
+            .from(LightbulbWorkerTable)
+            .where(eq(LightbulbWorkerTable.account_id, accountID))
+            .orderBy(asc(LightbulbWorkerTable.time_created))
+            .all()
+            .pipe(Effect.orDie),
+          taskPackets: yield* db
+            .select()
+            .from(LightbulbTaskPacketTable)
+            .where(eq(LightbulbTaskPacketTable.account_id, accountID))
+            .orderBy(asc(LightbulbTaskPacketTable.time_created))
+            .all()
+            .pipe(Effect.orDie),
+          artifacts: yield* db
+            .select()
+            .from(LightbulbArtifactTable)
+            .where(eq(LightbulbArtifactTable.account_id, accountID))
+            .orderBy(asc(LightbulbArtifactTable.time_created))
+            .all()
+            .pipe(Effect.orDie),
+          artifactEdges: yield* db
+            .select()
+            .from(LightbulbArtifactEdgeTable)
+            .innerJoin(
+              LightbulbArtifactTable,
+              eq(LightbulbArtifactEdgeTable.artifact_id, LightbulbArtifactTable.id),
+            )
+            .where(eq(LightbulbArtifactTable.account_id, accountID))
+            .orderBy(asc(LightbulbArtifactEdgeTable.time_created))
+            .all()
+            .pipe(Effect.orDie)
+            .pipe(
+              Effect.map((rows) =>
+                rows.map((row) => row.lightbulb_artifact_edge),
+              ),
+            ),
+          gates: yield* db
+            .select()
+            .from(LightbulbGateTable)
+            .where(eq(LightbulbGateTable.account_id, accountID))
+            .orderBy(asc(LightbulbGateTable.time_created))
+            .all()
+            .pipe(Effect.orDie),
+          events: yield* db
+            .select()
+            .from(LightbulbEventTable)
+            .where(eq(LightbulbEventTable.account_id, accountID))
+            .orderBy(asc(LightbulbEventTable.time_created))
+            .all()
+            .pipe(Effect.orDie),
+        }
+      }),
+      consumeArtifact: Effect.fn("Lightbulb.consumeArtifact")(function* (input) {
+        yield* db
+          .transaction((tx) =>
+            Effect.gen(function* () {
+              const artifact = yield* tx
+                .select({ account_id: LightbulbArtifactTable.account_id })
+                .from(LightbulbArtifactTable)
+                .where(eq(LightbulbArtifactTable.id, input.artifactID))
+                .get()
+              if (!artifact) return yield* Effect.die(new Error("Lightbulb artifact not found"))
+              yield* tx
+                .insert(LightbulbArtifactEdgeTable)
+                .values({
+                  account_id: artifact.account_id,
+                  artifact_id: input.artifactID,
+                  consumer_run_id: input.consumerRunID,
+                  consumer_worker_id: input.consumerWorkerID,
+                  relation: "consumed_by",
+                  summary: input.summary,
+                })
+                .run()
+              yield* tx
+                .update(LightbulbArtifactTable)
+                .set({ status: "consumed" })
+                .where(eq(LightbulbArtifactTable.id, input.artifactID))
+                .run()
+            }),
+          )
+          .pipe(Effect.orDie)
+      }),
+      parentSummary: Effect.fn("Lightbulb.parentSummary")(function* (runID) {
+        const run = yield* db
+          .select()
+          .from(LightbulbRunTable)
+          .where(eq(LightbulbRunTable.id, runID))
+          .get()
+          .pipe(Effect.orDie)
+        if (!run) return
+        const workers = yield* db
+          .select()
+          .from(LightbulbWorkerTable)
+          .where(eq(LightbulbWorkerTable.run_id, runID))
+          .orderBy(asc(LightbulbWorkerTable.time_created))
+          .all()
+          .pipe(Effect.orDie)
+        const gates = yield* db
+          .select()
+          .from(LightbulbGateTable)
+          .where(eq(LightbulbGateTable.run_id, runID))
+          .orderBy(asc(LightbulbGateTable.time_created))
+          .all()
+          .pipe(Effect.orDie)
+        const artifacts = yield* db
+          .select()
+          .from(LightbulbArtifactTable)
+          .where(eq(LightbulbArtifactTable.producer_run_id, runID))
+          .orderBy(asc(LightbulbArtifactTable.time_created))
+          .all()
+          .pipe(Effect.orDie)
+
+        return {
+          runID: run.id,
+          status: run.status,
+          reviewStatus: run.review_status,
+          debugStatus: run.debug_status,
+          gateStatus: run.gate_status,
+          summary: run.summary,
+          workers: workers.map((worker) => ({
+            id: worker.id,
+            role: worker.role,
+            status: worker.status,
+            summary: worker.summary,
+          })),
+          gates: gates.map((gate) => ({
+            id: gate.id,
+            kind: gate.kind,
+            status: gate.status,
+            summary: gate.summary,
+            artifactID: gate.artifact_id,
+          })),
+          artifacts: artifacts.map(toArtifactHandle),
+        }
+      }),
+    })
+  }),
+)
+
+export const defaultLayer = layer.pipe(Layer.provide(Database.defaultLayer))
+
+function toArtifactHandle(row: typeof LightbulbArtifactTable.$inferSelect): ArtifactHandle {
+  return {
+    id: row.id,
+    type: row.type,
+    uri: row.uri,
+    summary: row.summary,
+    status: row.status,
+    producerRunID: row.producer_run_id,
+    producerWorkerID: row.producer_worker_id,
+  }
+}
