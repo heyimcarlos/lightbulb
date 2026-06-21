@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lightbulb Browser Tool Registry Proof</title>
+  <style>
+    :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif; background:#090b10; color:#f4f7fb; }
+    body { margin:0; min-height:100vh; display:grid; place-items:center; background:radial-gradient(circle at top left,#213a8f 0,#090b10 44%,#05060a 100%); }
+    main { width:min(1180px,92vw); display:grid; gap:24px; }
+    .card { border:1px solid rgba(255,255,255,.14); background:rgba(9,12,20,.78); border-radius:28px; padding:32px; box-shadow:0 30px 90px rgba(0,0,0,.45); }
+    h1 { margin:0 0 12px; font-size:54px; line-height:1; letter-spacing:-.04em; }
+    h2 { margin:0 0 16px; font-size:26px; color:#9cc7ff; }
+    p, li { font-size:24px; line-height:1.38; color:#d8e3f0; }
+    ul { margin:0; padding-left:28px; }
+    code { background:#121826; border:1px solid rgba(255,255,255,.12); color:#c8f7c5; border-radius:8px; padding:2px 8px; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+    .pass { color:#9cf6b2; font-weight:700; }
+    .warn { color:#ffd166; font-weight:700; }
+    .small { font-size:18px; color:#9aa9bb; }
+    pre { white-space:pre-wrap; font-size:18px; line-height:1.35; color:#d8e3f0; background:#07101d; border:1px solid rgba(255,255,255,.12); border-radius:18px; padding:18px; margin:0; }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="card">
+      <h1>Browser tool connected end-to-end</h1>
+      <p>Fixed the registry gap: OpenCode now exposes <code>browser</code>, so the existing Lightbulb/browser UI has a real backend tool ID instead of the old <code>Tool: Unavailable</code> registry miss.</p>
+    </section>
+    <section class="grid">
+      <div class="card">
+        <h2>Implementation</h2>
+        <ul>
+          <li>Added <code>packages/opencode/src/tool/browser.ts</code></li>
+          <li>Bridged it into <code>ToolRegistry</code></li>
+          <li>Supports local <code>agent-browser</code>, Firecrawl Interact, Steel CLI</li>
+          <li>Returns live URLs, CDP URLs, and screenshot artifacts as evidence</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h2>Verification</h2>
+        <ul>
+          <li class="pass">opencode registry tests: 14 pass</li>
+          <li class="pass">opencode dashboard test: pass</li>
+          <li class="pass">opencode typecheck: pass</li>
+          <li class="pass">core browser tests: 3 pass</li>
+          <li class="pass">app browser-data tests: 3 pass</li>
+        </ul>
+      </div>
+    </section>
+    <section class="card">
+      <h2>Non-hidden evidence</h2>
+      <pre>bun test test/tool/registry.test.ts
+→ browser appears in registry.ids()
+→ browser execute calls agent-browser screenshot
+→ screenshot artifact path is recorded
+
+bun typecheck
+→ packages/opencode, packages/core, packages/app all pass</pre>
+      <p class="small">Generated for .lightbulb/evidence/pr-36 using the ai-video-production screen-recording path.</p>
+    </section>
+  </main>
+</body>
+</html>
