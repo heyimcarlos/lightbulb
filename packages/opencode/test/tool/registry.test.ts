@@ -127,6 +127,80 @@ describe("tool.registry", () => {
     }),
   )
 
+  it.instance("runs browser CLI relative to the active instance directory", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const bin = path.join(test.directory, "bin")
+      yield* Effect.promise(() => fs.mkdir(bin, { recursive: true }))
+      const agentBrowser = path.join(bin, "agent-browser")
+      yield* Effect.promise(() =>
+        Bun.write(
+          agentBrowser,
+          '#!/usr/bin/env bash\nset -euo pipefail\nprintf "%s" "$PWD" > cwd.txt\nif [ "${1:-}" = "screenshot" ]; then printf png > "$2"; fi\n',
+        ),
+      )
+      yield* Effect.promise(() => fs.chmod(agentBrowser, 0o755))
+      const previousPath = process.env.PATH
+      process.env.PATH = `${bin}:${previousPath ?? ""}`
+
+      const registry = yield* ToolRegistry.Service
+      const loaded = (yield* registry.all()).find((tool) => tool.id === "browser")
+      if (!loaded) throw new Error("browser tool was not loaded")
+      const agents = yield* Agent.Service
+      const result = yield* loaded.execute(
+        { provider: "local", action: "screenshot", path: "relative-shot.png" },
+        {
+          sessionID: SessionID.make("ses_browser_cwd"),
+          messageID: MessageID.make("msg_browser_cwd"),
+          agent: (yield* agents.defaultInfo()).name,
+          abort: new AbortController().signal,
+          messages: [],
+          metadata: () => Effect.void,
+          ask: () => Effect.void,
+        } satisfies Tool.Context,
+      )
+      process.env.PATH = previousPath
+
+      expect(yield* Effect.promise(() => Bun.file(path.join(test.directory, "cwd.txt")).text())).toBe(test.directory)
+      expect(yield* Effect.promise(() => Bun.file(path.join(test.directory, "relative-shot.png")).text())).toBe("png")
+      expect(result.output).toContain(`Artifact: ${path.join(test.directory, "relative-shot.png")}`)
+    }),
+  )
+
+  it.instance("caps browser CLI output before returning it", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const bin = path.join(test.directory, "bin")
+      yield* Effect.promise(() => fs.mkdir(bin, { recursive: true }))
+      const agentBrowser = path.join(bin, "agent-browser")
+      yield* Effect.promise(() => Bun.write(agentBrowser, '#!/usr/bin/env bash\nhead -c 700000 /dev/zero | tr "\\0" a\n'))
+      yield* Effect.promise(() => fs.chmod(agentBrowser, 0o755))
+      const previousPath = process.env.PATH
+      process.env.PATH = `${bin}:${previousPath ?? ""}`
+
+      const registry = yield* ToolRegistry.Service
+      const loaded = (yield* registry.all()).find((tool) => tool.id === "browser")
+      if (!loaded) throw new Error("browser tool was not loaded")
+      const agents = yield* Agent.Service
+      const result = yield* loaded.execute(
+        { provider: "local", action: "snapshot" },
+        {
+          sessionID: SessionID.make("ses_browser_cap"),
+          messageID: MessageID.make("msg_browser_cap"),
+          agent: (yield* agents.defaultInfo()).name,
+          abort: new AbortController().signal,
+          messages: [],
+          metadata: () => Effect.void,
+          ask: () => Effect.void,
+        } satisfies Tool.Context,
+      )
+      process.env.PATH = previousPath
+
+      expect(Buffer.byteLength(result.output, "utf8")).toBeLessThan(530000)
+      expect(result.output).toContain("bytes truncated")
+    }),
+  )
+
   it.instance("does not spawn browser CLI processes after cancellation", () =>
     Effect.gen(function* () {
       const test = yield* TestInstance

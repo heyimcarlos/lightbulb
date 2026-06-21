@@ -1,6 +1,7 @@
 import { Effect, Schema } from "effect"
 import fs from "fs/promises"
 import path from "path"
+import { InstanceState } from "@/effect/instance-state"
 import * as Tool from "./tool"
 
 export const name = "browser"
@@ -57,9 +58,10 @@ export const BrowserTool = Tool.define(
             metadata: safeMetadata(params),
           })
           if (params.provider === "firecrawl") return yield* firecrawl(params)
+          const instance = yield* InstanceState.context
           const command = params.provider === "steel" ? "steel" : "agent-browser"
           const args = params.provider === "steel" ? steelCommand(params) : localCommand(params)
-          return yield* runCli(params, command, args, ctx.abort)
+          return yield* runCli(params, command, args, ctx.abort, instance.directory)
         }).pipe(Effect.orDie),
     }
   }),
@@ -138,13 +140,21 @@ function parseSteelOutput(output: string) {
   )
 }
 
-function runCli(input: Parameters, command: string, args: string[], signal: AbortSignal): Effect.Effect<Tool.ExecuteResult, Error> {
+function runCli(
+  input: Parameters,
+  command: string,
+  args: string[],
+  signal: AbortSignal,
+  cwd: string,
+): Effect.Effect<Tool.ExecuteResult, Error> {
   return Effect.tryPromise({
     try: async () => {
       if (signal.aborted) throw new Error(`browser ${input.action} cancelled`)
       const artifactPath = input.action === "screenshot" ? args.find((arg) => arg.endsWith(".png")) : undefined
-      if (artifactPath) await fs.mkdir(path.dirname(artifactPath), { recursive: true })
-      const proc = Bun.spawn([command, ...args], { stdout: "pipe", stderr: "pipe", env: process.env })
+      const resolvedArtifactPath = artifactPath ? path.resolve(cwd, artifactPath) : undefined
+      const commandArgs = resolvedArtifactPath ? args.map((arg) => (arg === artifactPath ? resolvedArtifactPath : arg)) : args
+      if (resolvedArtifactPath) await fs.mkdir(path.dirname(resolvedArtifactPath), { recursive: true })
+      const proc = Bun.spawn([command, ...commandArgs], { stdout: "pipe", stderr: "pipe", env: process.env, cwd })
       const abort = () => proc.kill()
       signal.addEventListener("abort", abort, { once: true })
       const timeoutMs = (input.timeout ?? DEFAULT_TIMEOUT_SECONDS) * 1000
@@ -155,8 +165,8 @@ function runCli(input: Parameters, command: string, args: string[], signal: Abor
       }, timeoutMs)
       const [exitCode, stdout, stderr] = await Promise.all([
         proc.exited,
-        new Response(proc.stdout).text(),
-        new Response(proc.stderr).text(),
+        readBounded(proc.stdout, MAX_OUTPUT_BYTES),
+        readBounded(proc.stderr, MAX_OUTPUT_BYTES),
       ]).finally(() => {
         clearTimeout(timeout)
         signal.removeEventListener("abort", abort)
@@ -170,7 +180,7 @@ function runCli(input: Parameters, command: string, args: string[], signal: Abor
         output || `(no ${command} output)`,
         steel.live_url ? `Live view: ${steel.live_url}` : undefined,
         steel.connect_url ? `CDP: ${steel.connect_url}` : undefined,
-        artifactPath ? `Artifact: ${artifactPath}` : undefined,
+        resolvedArtifactPath ? `Artifact: ${resolvedArtifactPath}` : undefined,
       ].filter((line): line is string => line !== undefined)
 
       if (exitCode !== 0) lines.push(`Exit code: ${exitCode}`)
@@ -186,12 +196,37 @@ function runCli(input: Parameters, command: string, args: string[], signal: Abor
           ...(steel.id ? { sessionID: steel.id } : {}),
           ...(steel.live_url ? { liveViewUrl: steel.live_url } : {}),
           ...(steel.connect_url ? { cdpUrl: steel.connect_url } : {}),
-          ...(artifactPath ? { artifactPath } : {}),
+          ...(resolvedArtifactPath ? { artifactPath: resolvedArtifactPath } : {}),
         },
       }
     },
     catch: (error) => (error instanceof Error ? error : new Error(`Unable to run ${command}: ${String(error)}`)),
   })
+}
+
+function readBounded(stream: ReadableStream<Uint8Array>, maxBytes: number) {
+  let bytes = 0
+  let truncated = false
+  return new Response(
+    stream.pipeThrough(
+      new TransformStream<Uint8Array, Uint8Array>({
+        transform(chunk, controller) {
+          const remaining = maxBytes - bytes
+          if (remaining <= 0) {
+            truncated = true
+            return
+          }
+          const next = chunk.byteLength > remaining ? chunk.slice(0, remaining) : chunk
+          bytes += next.byteLength
+          if (next.byteLength < chunk.byteLength) truncated = true
+          controller.enqueue(next)
+        },
+        flush(controller) {
+          if (truncated) controller.enqueue(new TextEncoder().encode(`\n...output truncated to ${maxBytes} bytes...`))
+        },
+      }),
+    ),
+  ).text()
 }
 
 function firecrawl(input: Parameters): Effect.Effect<Tool.ExecuteResult, Error> {
