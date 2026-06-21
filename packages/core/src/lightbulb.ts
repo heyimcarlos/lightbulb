@@ -1,6 +1,7 @@
 export * as Lightbulb from "./lightbulb"
 export { ArtifactRegistrationRejected } from "./lightbulb/artifact-registration"
 export { defaultContextBundlePolicy } from "./lightbulb/context-bundle"
+export * from "./lightbulb/policy"
 export type {
   DecisionArtifactHandle,
   DecisionArtifactStatus,
@@ -44,6 +45,7 @@ import {
 } from "./lightbulb/artifact-registration"
 import { assembleContextBundle, databaseContextBundleStorage } from "./lightbulb/context-bundle"
 import { toDashboard, toGoalRunTree } from "./lightbulb/dashboard"
+import { applyGatePolicyInDb, gateBlockedReason, type GatePolicyInput, type GatePolicyTransition } from "./lightbulb/policy"
 import { planGoalRoute as planGoalRouteInDb, readGoalRoute as readGoalRouteFromDb, steerGoalRoute as steerGoalRouteInDb } from "./lightbulb/route"
 import {
   classifyIssueRouting,
@@ -134,7 +136,7 @@ export type ArtifactType =
 export type ArtifactStatus = "registered" | "consumed" | "superseded" | "expired"
 export type ArtifactEdgeRelation = "produced_by" | "consumed_by" | "supersedes" | "verifies"
 export type ArtifactProducerKind = "worker" | "harness"
-export type GateKind = "review" | "debug" | "verification"
+export type GateKind = "review" | "debug" | "verification" | "policy"
 export type ArtifactIntegrityStatus = "verified" | "changed" | "missing" | "unchecked"
 export type RouteStatus = "active" | "rerouting" | "arrived" | "blocked" | "cancelled"
 export type RouteStopKind = "discovery" | "implementation" | "debug" | "review" | "integration" | "verification" | "decision" | "cleanup"
@@ -270,6 +272,7 @@ export type ParentSummary = {
     readonly kind: GateKind
     readonly status: GateStatus
     readonly summary: string
+    readonly blockedReason: string | null
     readonly artifactID: ArtifactID | null
   }[]
   readonly artifacts: ArtifactHandle[]
@@ -431,6 +434,13 @@ export interface Interface {
   readonly assembleContextBundle: (
     input: ContextBundleAssemblyServiceInput,
   ) => Effect.Effect<ContextBundleAssemblyResult>
+  readonly applyGatePolicy: (input: {
+    readonly runID: RunID
+    readonly workerID?: WorkerID
+    readonly artifactID?: ArtifactID
+    readonly policy: GatePolicyInput["thresholds"]
+    readonly state: GatePolicyInput["state"]
+  }) => Effect.Effect<GatePolicyTransition | undefined>
   readonly readAccountGraph: (accountID: AccountID) => Effect.Effect<AccountGraph | undefined>
   readonly readDashboard: (accountID: AccountID) => Effect.Effect<Dashboard | undefined>
   readonly readIssueArtifacts: (input: ReadIssueArtifactsInput) => Effect.Effect<ArtifactHandle[]>
@@ -734,6 +744,9 @@ export const layer = Layer.effect(
           storage: databaseContextBundleStorage(db),
         })
       }),
+      applyGatePolicy: Effect.fn("Lightbulb.applyGatePolicy")(function* (input) {
+        return yield* applyGatePolicyInDb(db, input, GateID.create)
+      }),
       checkArtifact: Effect.fn("Lightbulb.checkArtifact")(function* (input) {
         return yield* readArtifactHandle(db, {
           artifactID: input.artifactID,
@@ -861,6 +874,7 @@ export const layer = Layer.effect(
             kind: gate.kind,
             status: gate.status,
             summary: gate.summary,
+            blockedReason: gateBlockedReason(gate),
             artifactID: gate.artifact_id,
           })),
           artifacts: artifactHandles.filter((artifact): artifact is ArtifactHandle => artifact !== undefined),
