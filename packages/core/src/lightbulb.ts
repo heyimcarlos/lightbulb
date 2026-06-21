@@ -11,18 +11,12 @@ export type {
   TransitionDecisionArtifactInput,
   WorkerDispatchPlan,
 } from "./lightbulb/decision-artifact"
+export * from "./lightbulb/loop-profile"
 
 import { and, asc, eq, or } from "drizzle-orm"
 import { Context, Effect, Layer, Schema } from "effect"
 import { Database } from "./database/database"
-import type {
-  CreateGoalInput,
-  CreateGoalResult,
-  GoalLifecycle,
-  GoalRunTree,
-  GoalSummary,
-  UpdateGoalStatusInput,
-} from "./lightbulb/goal"
+import type { CreateGoalInput, CreateGoalResult, GoalLifecycle, GoalRunTree, GoalSummary, UpdateGoalStatusInput } from "./lightbulb/goal"
 import { GoalLifecycleService } from "./lightbulb/goal"
 import { withStatics } from "./schema"
 import { Identifier } from "./util/identifier"
@@ -64,6 +58,7 @@ import {
   LightbulbTaskPacketTable,
   LightbulbWorkerTable,
 } from "./lightbulb/sql"
+import { bootstrapLoopProfiles, databaseLoopProfileStorage, type LoopProfileBootstrapServiceInput, type LoopProfileBootstrapSummary } from "./lightbulb/loop-profile"
 
 const prefixedID = <const Prefix extends string>(prefix: Prefix, brand: string) =>
   Schema.String.check(Schema.isStartsWith(`${prefix}_`)).pipe(
@@ -95,8 +90,8 @@ export const RouteSteerID = prefixedID("lbsteer", "Lightbulb.RouteSteerID"); exp
 
 export type AccountStatus = "active" | "paused" | "archived"
 export type GoalStatus = "active" | "held" | "completed" | "cancelled" | "stopped"
-export type LoopKind = "discovery" | "implementation" | "debug" | "review" | "integration"
-export type LoopStatus = "active" | "idle" | "blocked" | "complete"
+export type LoopKind = "discovery" | "implementation" | "debug" | "review" | "integration" | "status"
+export type LoopStatus = "active" | "idle" | "blocked" | "complete" | "disabled" | "held"
 export type RunStatus = "queued" | "running" | "blocked" | "complete" | "failed"
 export type ReviewStatus = "not_requested" | "requested" | "changes_requested" | "approved"
 export type DebugStatus = "not_started" | "reproducing" | "isolating" | "fixed" | "blocked"
@@ -169,7 +164,6 @@ export type ArtifactIntegritySummary = {
 }
 
 export type { CreateGoalInput, CreateGoalResult, GoalLifecycle, GoalRunTree, GoalSummary, UpdateGoalStatusInput } from "./lightbulb/goal"
-
 export type ArtifactLineageEdge = {
   readonly relation: ArtifactEdgeRelation
   readonly runID: RunID
@@ -387,6 +381,9 @@ export interface Interface {
   readonly createOrAdoptGoal: (input: CreateGoalInput) => Effect.Effect<CreateGoalResult>
   readonly readGoal: (goalID: GoalID) => Effect.Effect<GoalLifecycle | undefined>
   readonly updateGoalStatus: (input: UpdateGoalStatusInput) => Effect.Effect<GoalLifecycle>
+  readonly bootstrapLoopProfiles: (
+    input: LoopProfileBootstrapServiceInput,
+  ) => Effect.Effect<LoopProfileBootstrapSummary>
   readonly readGoalRunTree: (goalID: GoalID) => Effect.Effect<GoalRunTree | undefined>
   readonly seedTracerBullet: (input?: {
     readonly accountName?: string
@@ -454,6 +451,12 @@ export const layer = Layer.effect(
       }),
       updateGoalStatus: Effect.fn("Lightbulb.updateGoalStatus")(function* (input) {
         return yield* GoalLifecycleService.updateStatus(db, input, { event: EventID.create })
+      }),
+      bootstrapLoopProfiles: Effect.fn("Lightbulb.bootstrapLoopProfiles")(function* (input) {
+        return yield* bootstrapLoopProfiles({
+          ...input,
+          storage: databaseLoopProfileStorage(db, { event: EventID.create }),
+        })
       }),
       readGoalRunTree: Effect.fn("Lightbulb.readGoalRunTree")(function* (goalID) {
         const goal = yield* db

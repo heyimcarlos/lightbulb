@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Issue 31 Evidence: Account Loop Profile Bootstrap</title>
+  <style>
+    body { margin: 0; font-family: Inter, ui-sans-serif, system-ui, sans-serif; background: #0b1020; color: #e8eefc; }
+    section { min-height: 100vh; padding: 64px; box-sizing: border-box; display: grid; align-content: center; gap: 24px; border-bottom: 1px solid #22304f; }
+    h1 { font-size: 52px; margin: 0; }
+    h2 { font-size: 40px; margin: 0; color: #93c5fd; }
+    p, li { font-size: 24px; line-height: 1.45; max-width: 1000px; }
+    code { background: #111a33; padding: 4px 8px; border-radius: 8px; color: #bfdbfe; }
+    .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; }
+    .card { background: #111a33; border: 1px solid #2d3f66; border-radius: 18px; padding: 20px; min-height: 140px; }
+    .status { color: #86efac; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <section>
+    <h1>Account loop profile bootstrap</h1>
+    <p>Issue #31 adds a core Lightbulb seam that creates or adopts the standard account loops for a durable goal without launching a live model or worker.</p>
+  </section>
+  <section>
+    <h2>Loop profiles created/adopted</h2>
+    <div class="grid">
+      <div class="card">discovery<br><span class="status">due + budgeted</span></div>
+      <div class="card">implementation<br><span class="status">due + budgeted</span></div>
+      <div class="card">debug<br><span class="status">due + budgeted</span></div>
+      <div class="card">review-integration<br><span class="status">due + budgeted</span></div>
+      <div class="card">status<br><span class="status">due + budgeted</span></div>
+    </div>
+  </section>
+  <section>
+    <h2>Control-plane behavior</h2>
+    <ul>
+      <li>Stable loop IDs are derived from goal ID + profile ID.</li>
+      <li>Bootstrap is idempotent: retry adopts existing profile loops.</li>
+      <li>Disabled, budget-held, missing-goal, custom-policy, and invalid-profile outcomes return bounded reasons.</li>
+      <li>Custom operator schedules are preserved instead of overwritten.</li>
+    </ul>
+  </section>
+  <section>
+    <h2>Verification</h2>
+    <p><code>packages/core</code>: focused loop-profile tests passed, typecheck passed, migration check passed, and <code>git diff --check</code> passed. <code>src/lightbulb.ts</code> is kept below 1k lines after parent thermo review.</p>
+  </section>
+</body>
+</html>
