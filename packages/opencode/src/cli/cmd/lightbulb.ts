@@ -154,7 +154,8 @@ function formatGate(gate: Lightbulb.DashboardGate, indent = "          ") {
 
 function formatArtifactHandle(artifact: Lightbulb.ArtifactHandle) {
   const source = formatArtifactSource(artifact)
-  return `handle ${artifact.id} ${artifact.type} [${artifact.status}] ${artifact.uri}${source ? ` source=${source}` : ""}`
+  const decision = artifact.decision ? ` decision=${artifact.decision.status}` : ""
+  return `handle ${artifact.id} ${artifact.type} [${artifact.status}]${decision} ${artifact.uri}${source ? ` source=${source}` : ""}`
 }
 
 function formatArtifactSource(artifact: Lightbulb.ArtifactHandle) {

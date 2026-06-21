@@ -142,6 +142,14 @@ describe("lightbulb dashboard display", () => {
               issueRef: "#24",
               goalID,
             },
+            decision: {
+              title: "Issue 24 ADR decision artifact.",
+              status: "pending",
+              owner: "architecture",
+              reviewer: null,
+              supersedesArtifactID: null,
+              supersededByArtifactID: null,
+            },
             lineage: [],
           },
         ],
@@ -169,6 +177,6 @@ Inbox
 
 Artifact Handles
   handle lbartifact_demo report [registered] .lightbulb/runs/issue-3-dashboard.md
-  handle lbartifact_decision adr [registered] docs/lightbulb/adr/0005-issue-24-routing.md source=issue:#24,goal:lbgoal_demo`)
+  handle lbartifact_decision adr [registered] decision=pending docs/lightbulb/adr/0005-issue-24-routing.md source=issue:#24,goal:lbgoal_demo`)
   })
 })
