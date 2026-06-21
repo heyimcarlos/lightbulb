@@ -19,3 +19,9 @@ Artifact handles are the parent-facing representation. A handle carries the arti
 - Review/verification loops can consume prior artifacts without rereading huge transcripts.
 - The dashboard can show real work products and their state.
 - Requires artifact storage rules and cleanup policy early, not as a bolt-on.
+
+## Integrity and Retention
+
+Registered artifacts must record either a `sha256:` checksum for local file content or an explicit unchecked reason in artifact metadata. Handle readback can re-check local files and report verified, changed, missing, or unchecked state without embedding artifact contents in parent summaries.
+
+Retention is deterministic data-plane policy, not a model call. The cleanup decision is keep, expire, supersede, hold-for-active-run, hold-for-gate, or hold-for-dependency. Hold decisions win before expiry or supersession, so cleanup must not expire artifacts still required by active runs, pending/running/blocked gates, or unresolved dependency metadata.
