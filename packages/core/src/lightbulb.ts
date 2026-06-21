@@ -3,6 +3,15 @@ export * as Lightbulb from "./lightbulb"
 import { and, asc, eq, inArray } from "drizzle-orm"
 import { Context, Effect, Layer, Schema } from "effect"
 import { Database } from "./database/database"
+import type {
+  CreateGoalInput,
+  CreateGoalResult,
+  GoalLifecycle,
+  GoalRunTree,
+  GoalSummary,
+  UpdateGoalStatusInput,
+} from "./lightbulb/goal"
+import { GoalLifecycleService } from "./lightbulb/goal"
 import { withStatics } from "./schema"
 import { Identifier } from "./util/identifier"
 import {
@@ -53,7 +62,7 @@ export const EventID = prefixedID("lbevent", "Lightbulb.EventID")
 export type EventID = typeof EventID.Type
 
 export type AccountStatus = "active" | "paused" | "archived"
-export type GoalStatus = "open" | "blocked" | "verified" | "cancelled"
+export type GoalStatus = "active" | "held" | "completed" | "cancelled" | "stopped"
 export type LoopKind = "discovery" | "implementation" | "debug" | "review" | "integration"
 export type LoopStatus = "active" | "idle" | "blocked" | "complete"
 export type RunStatus = "queued" | "running" | "blocked" | "complete" | "failed"
@@ -89,6 +98,8 @@ export type ArtifactIntegritySummary = {
   readonly actualChecksum: string | null
   readonly actualSizeBytes: number | null
 }
+
+export type { CreateGoalInput, CreateGoalResult, GoalLifecycle, GoalRunTree, GoalSummary, UpdateGoalStatusInput } from "./lightbulb/goal"
 
 export type ArtifactLineageEdge = {
   readonly relation: ArtifactEdgeRelation
@@ -234,6 +245,10 @@ export type DashboardGate = {
 }
 
 export interface Interface {
+  readonly createOrAdoptGoal: (input: CreateGoalInput) => Effect.Effect<CreateGoalResult>
+  readonly readGoal: (goalID: GoalID) => Effect.Effect<GoalLifecycle | undefined>
+  readonly updateGoalStatus: (input: UpdateGoalStatusInput) => Effect.Effect<GoalLifecycle>
+  readonly readGoalRunTree: (goalID: GoalID) => Effect.Effect<GoalRunTree | undefined>
   readonly seedTracerBullet: (input?: {
     readonly accountName?: string
     readonly artifactUri?: string
@@ -270,6 +285,31 @@ export const layer = Layer.effect(
     const { db } = yield* Database.Service
 
     return Service.of({
+      createOrAdoptGoal: Effect.fn("Lightbulb.createOrAdoptGoal")(function* (input) {
+        return yield* GoalLifecycleService.createOrAdopt(db, input, {
+          account: AccountID.create,
+          goal: GoalID.create,
+          event: EventID.create,
+        })
+      }),
+      readGoal: Effect.fn("Lightbulb.readGoal")(function* (goalID) {
+        return yield* GoalLifecycleService.read(db, goalID)
+      }),
+      updateGoalStatus: Effect.fn("Lightbulb.updateGoalStatus")(function* (input) {
+        return yield* GoalLifecycleService.updateStatus(db, input, { event: EventID.create })
+      }),
+      readGoalRunTree: Effect.fn("Lightbulb.readGoalRunTree")(function* (goalID) {
+        const goal = yield* db
+          .select()
+          .from(LightbulbGoalTable)
+          .where(eq(LightbulbGoalTable.id, goalID))
+          .get()
+          .pipe(Effect.orDie)
+        if (!goal) return
+        const graph = yield* readAccountGraphFromDb(db, goal.account_id)
+        if (!graph) return
+        return toGoalRunTree(graph, goal)
+      }),
       seedTracerBullet: Effect.fn("Lightbulb.seedTracerBullet")(function* (input) {
         const now = Date.now()
         const ids = {
@@ -300,7 +340,9 @@ export const layer = Layer.effect(
                   id: ids.goalID,
                   account_id: ids.accountID,
                   title: "Bootstrap loop harness",
-                  status: "open",
+                  objective: "Create one durable Lightbulb goal graph.",
+                  source_ref: "lightbulb:bootstrap-tracer-bullet",
+                  status: "active",
                   summary: "Create one durable Lightbulb goal graph.",
                 })
                 .run()
@@ -718,6 +760,52 @@ function readAccountGraphFromDb(db: Database.Interface["db"], accountID: Account
   })
 }
 
+function isTerminalGoalStatus(status: GoalStatus) {
+  return status === "completed" || status === "cancelled" || status === "stopped"
+}
+
+function toGoalRunTree(graph: AccountGraph, goal: GoalLifecycle): GoalRunTree {
+  const loops = graph.loops.filter((loop) => loop.goal_id === goal.id)
+  const loopIDs = new Set(loops.map((loop) => loop.id))
+  const runs = graph.runs.filter((run) => loopIDs.has(run.loop_id))
+  const runIDs = new Set(runs.map((run) => run.id))
+  const workers = graph.workers.filter((worker) => runIDs.has(worker.run_id))
+  const workerIDs = new Set(workers.map((worker) => worker.id))
+  const artifacts = graph.artifacts.filter((artifact) => runIDs.has(artifact.producer_run_id))
+
+  return {
+    goal: toGoalSummary(goal),
+    loops: loops.map((loop) => toDashboardLoop(graph, loop, runs)),
+    taskPackets: graph.taskPackets
+      .filter((packet) => workerIDs.has(packet.worker_id))
+      .map((packet) => ({
+        id: packet.id,
+        workerID: packet.worker_id,
+        title: packet.title,
+        status: packet.status,
+      })),
+    gates: graph.gates.filter((gate) => runIDs.has(gate.run_id)).map(toDashboardGate),
+    artifactHandles: artifacts.map((artifact) => toGraphArtifactHandle(artifact, graph)),
+  }
+}
+
+function toGoalSummary(goal: GoalLifecycle): GoalSummary {
+  return {
+    id: goal.id,
+    title: goal.title,
+    objective: goal.objective,
+    sourceRef: goal.source_ref,
+    ownerID: goal.owner_id,
+    status: goal.status,
+    summary: goal.summary,
+    holdReason: goal.hold_reason,
+    completionReason: goal.completion_reason,
+    completedAt: goal.completed_at,
+    timeCreated: goal.time_created,
+    timeUpdated: goal.time_updated,
+  }
+}
+
 function toDashboard(graph: AccountGraph): Dashboard {
   return {
     account: {
@@ -730,36 +818,7 @@ function toDashboard(graph: AccountGraph): Dashboard {
       title: goal.title,
       status: goal.status,
       summary: goal.summary,
-      loops: graph.loops
-        .filter((loop) => loop.goal_id === goal.id)
-        .map((loop) => ({
-          id: loop.id,
-          kind: loop.kind,
-          status: loop.status,
-          summary: loop.summary,
-          runs: graph.runs
-            .filter((run) => run.loop_id === loop.id)
-            .map((run) => ({
-              id: run.id,
-              status: run.status,
-              reviewStatus: run.review_status,
-              debugStatus: run.debug_status,
-              gateStatus: run.gate_status,
-              summary: run.summary,
-              workers: graph.workers
-                .filter((worker) => worker.run_id === run.id)
-                .map((worker) => ({
-                  id: worker.id,
-                  role: worker.role,
-                  status: worker.status,
-                  summary: worker.summary,
-                })),
-              gates: graph.gates.filter((gate) => gate.run_id === run.id).map(toDashboardGate),
-              artifacts: graph.artifacts
-                .filter((artifact) => artifact.producer_run_id === run.id)
-                .map((artifact) => toGraphArtifactHandle(artifact, graph)),
-            })),
-        })),
+      loops: graph.loops.filter((loop) => loop.goal_id === goal.id).map((loop) => toDashboardLoop(graph, loop)),
     })),
     inbox: {
       taskPackets: graph.taskPackets.map((packet) => ({
@@ -773,6 +832,43 @@ function toDashboard(graph: AccountGraph): Dashboard {
         .map(toDashboardGate),
     },
     artifactHandles: graph.artifacts.map((artifact) => toGraphArtifactHandle(artifact, graph)),
+  }
+}
+
+function toDashboardLoop(
+  graph: AccountGraph,
+  loop: typeof LightbulbLoopTable.$inferSelect,
+  runs: readonly (typeof LightbulbRunTable.$inferSelect)[] = graph.runs,
+): DashboardLoop {
+  return {
+    id: loop.id,
+    kind: loop.kind,
+    status: loop.status,
+    summary: loop.summary,
+    runs: runs.filter((run) => run.loop_id === loop.id).map((run) => toDashboardRun(graph, run)),
+  }
+}
+
+function toDashboardRun(graph: AccountGraph, run: typeof LightbulbRunTable.$inferSelect): DashboardRun {
+  return {
+    id: run.id,
+    status: run.status,
+    reviewStatus: run.review_status,
+    debugStatus: run.debug_status,
+    gateStatus: run.gate_status,
+    summary: run.summary,
+    workers: graph.workers
+      .filter((worker) => worker.run_id === run.id)
+      .map((worker) => ({
+        id: worker.id,
+        role: worker.role,
+        status: worker.status,
+        summary: worker.summary,
+      })),
+    gates: graph.gates.filter((gate) => gate.run_id === run.id).map(toDashboardGate),
+    artifacts: graph.artifacts
+      .filter((artifact) => artifact.producer_run_id === run.id)
+      .map((artifact) => toGraphArtifactHandle(artifact, graph)),
   }
 }
 
