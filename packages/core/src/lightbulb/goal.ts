@@ -104,7 +104,7 @@ function createOrAdopt(
           })
           .onConflictDoNothing()
           .run()
-        yield* tx
+        const inserted = yield* tx
           .insert(LightbulbGoalTable)
           .values({
             id: goalID,
@@ -117,23 +117,39 @@ function createOrAdopt(
             summary: input.summary ?? input.objective,
             metadata: input.metadata,
           })
-          .run()
-        yield* tx
-          .insert(LightbulbEventTable)
-          .values({
-            id: ids.event(),
-            account_id: accountID,
-            aggregate_type: "goal",
-            aggregate_id: goalID,
-            type: "lightbulb.goal.created",
-            summary: "Created durable Lightbulb goal.",
-            data: { source_ref: input.sourceRef ?? null, owner_id: input.ownerID ?? null },
-            time_created: Date.now(),
-          })
-          .run()
-        const goal = yield* tx.select().from(LightbulbGoalTable).where(eq(LightbulbGoalTable.id, goalID)).get()
-        if (!goal) return yield* Effect.die(new Error("Lightbulb goal was not created"))
-        return { goal, adopted: false }
+          .onConflictDoNothing()
+          .returning()
+          .get()
+        if (inserted) {
+          yield* tx
+            .insert(LightbulbEventTable)
+            .values({
+              id: ids.event(),
+              account_id: inserted.account_id,
+              aggregate_type: "goal",
+              aggregate_id: inserted.id,
+              type: "lightbulb.goal.created",
+              summary: "Created durable Lightbulb goal.",
+              data: { source_ref: input.sourceRef ?? null, owner_id: input.ownerID ?? null },
+              time_created: Date.now(),
+            })
+            .run()
+          return { goal: inserted, adopted: false }
+        }
+        const existingByID = yield* tx.select().from(LightbulbGoalTable).where(eq(LightbulbGoalTable.id, goalID)).get()
+        if (existingByID && input.accountID && existingByID.account_id !== input.accountID) {
+          return yield* Effect.die(new Error("Lightbulb goal belongs to a different account"))
+        }
+        if (existingByID) return { goal: existingByID, adopted: true }
+        if (input.accountID && input.sourceRef) {
+          const existingBySource = yield* tx
+            .select()
+            .from(LightbulbGoalTable)
+            .where(and(eq(LightbulbGoalTable.account_id, input.accountID), eq(LightbulbGoalTable.source_ref, input.sourceRef)))
+            .get()
+          if (existingBySource) return { goal: existingBySource, adopted: true }
+        }
+        return yield* Effect.die(new Error("Lightbulb goal was not created or adopted"))
       }),
     )
     .pipe(Effect.orDie)
