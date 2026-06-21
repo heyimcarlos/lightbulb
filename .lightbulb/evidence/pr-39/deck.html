@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>PR #39 Review Ledger Evidence</title>
+    <style>
+      body {
+        margin: 0;
+        background: #0b1020;
+        color: #e5edff;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      main {
+        display: grid;
+        min-height: 100vh;
+        place-items: center;
+        padding: 48px;
+      }
+      section {
+        width: min(980px, 100%);
+        border: 1px solid #2c385f;
+        border-radius: 28px;
+        background: linear-gradient(135deg, #111a33, #151f3f 60%, #1f2937);
+        box-shadow: 0 30px 90px rgb(0 0 0 / 45%);
+        padding: 48px;
+      }
+      h1 {
+        margin: 0 0 18px;
+        font-size: 52px;
+        letter-spacing: -0.04em;
+      }
+      p {
+        margin: 0 0 28px;
+        color: #b8c7ee;
+        font-size: 22px;
+        line-height: 1.45;
+      }
+      ul {
+        display: grid;
+        gap: 16px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      li {
+        border: 1px solid #33446f;
+        border-radius: 18px;
+        background: rgb(255 255 255 / 5%);
+        padding: 18px 22px;
+        font-size: 20px;
+      }
+      strong {
+        color: #9ee493;
+      }
+      code {
+        color: #ffd166;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section>
+        <h1>PR #39 — Review ledger cleanup</h1>
+        <p>
+          This bookkeeping PR moves the Lightbulb parent review-loop state from stale PR #7 data to the merged PR #30/#36/#37 batch.
+        </p>
+        <ul>
+          <li><strong>Scope:</strong> only <code>.lightbulb/loops/pr-review-*</code> state files plus this evidence packet.</li>
+          <li><strong>Validation:</strong> JSON parses, whitespace diff is clean, and the PR is mergeable with no GitHub checks reported.</li>
+          <li><strong>Cloud review:</strong> <code>@codex review</code> was requested; Codex returned the current usage-limit blocker.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>
