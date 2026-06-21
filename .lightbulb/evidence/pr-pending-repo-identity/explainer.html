@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Lightbulb repo identity evidence</title>
+<style>
+  body { margin: 0; font-family: Inter, ui-sans-serif, system-ui, sans-serif; background: #07111f; color: #eef4ff; }
+  .slide { min-height: 100vh; display: grid; place-items: center; padding: 56px; box-sizing: border-box; }
+  .card { width: min(1040px, 100%); border: 1px solid #28416e; border-radius: 28px; padding: 44px; background: linear-gradient(145deg, #101b34, #0b1224); box-shadow: 0 30px 90px #0009; }
+  h1 { font-size: 52px; margin: 0 0 18px; letter-spacing: -0.04em; }
+  h2 { color: #facc15; margin-top: 34px; }
+  p, li { font-size: 22px; line-height: 1.45; color: #cbd5e1; }
+  code { color: #93c5fd; background: #0007; padding: 2px 8px; border-radius: 8px; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 28px; }
+  .tile { border: 1px solid #335382; border-radius: 18px; padding: 20px; background: #0a1428; }
+  .ok { color: #7dffb2; font-weight: 700; }
+</style>
+<body>
+  <section class="slide">
+    <div class="card">
+      <h1>Lightbulb is now the public repo identity</h1>
+      <p>Issue #46 replaces upstream-first repository docs with Lightbulb-first onboarding while keeping OpenCode lineage explicit.</p>
+      <div class="grid">
+        <div class="tile"><h2>README</h2><p>Starts with Lightbulb, not OpenCode.</p></div>
+        <div class="tile"><h2>Metadata</h2><p>Root package name and repository now point at Lightbulb.</p></div>
+        <div class="tile"><h2>CLI docs</h2><p><code>./bin/lightbulb</code> help and dashboard smokes pass.</p></div>
+      </div>
+      <h2>Verified gates</h2>
+      <ul>
+        <li><span class="ok">PASS</span> docs whitespace and brand grep review</li>
+        <li><span class="ok">PASS</span> <code>./bin/lightbulb --help</code></li>
+        <li><span class="ok">PASS</span> <code>./bin/lightbulb dashboard --seed --format json</code></li>
+      </ul>
+    </div>
+  </section>
+</body>
+</html>
