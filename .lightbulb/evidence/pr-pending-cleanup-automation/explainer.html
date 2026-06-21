@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Lightbulb upstream automation cleanup evidence</title>
+<style>
+  body { margin: 0; font-family: Inter, ui-sans-serif, system-ui, sans-serif; background: #0b1020; color: #eef4ff; }
+  .slide { min-height: 100vh; display: grid; place-items: center; padding: 56px; box-sizing: border-box; }
+  .card { width: min(1040px, 100%); border: 1px solid #25345f; border-radius: 28px; padding: 44px; background: linear-gradient(145deg, #111936, #0d1328); box-shadow: 0 30px 90px #0008; }
+  h1 { font-size: 52px; margin: 0 0 18px; letter-spacing: -0.04em; }
+  h2 { color: #8bd4ff; margin-top: 34px; }
+  p, li { font-size: 22px; line-height: 1.45; color: #c9d7ef; }
+  code { color: #ffe08a; background: #0006; padding: 2px 8px; border-radius: 8px; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 28px; }
+  .tile { border: 1px solid #324777; border-radius: 18px; padding: 20px; background: #0b1228; }
+  .ok { color: #7dffb2; font-weight: 700; }
+</style>
+<body>
+  <section class="slide">
+    <div class="card">
+      <h1>Upstream-only automation removed from Lightbulb</h1>
+      <p>Issue #45 deletes or disables inherited OpenCode release, publish, stale-cleanup, docs-sync, and action surfaces that could target the wrong project.</p>
+      <div class="grid">
+        <div class="tile"><h2>Deleted</h2><p>2,671 net lines of inherited automation removed.</p></div>
+        <div class="tile"><h2>Guarded</h2><p><code>raw-changelog</code> now requires explicit <code>GH_REPO</code>.</p></div>
+        <div class="tile"><h2>Deferred</h2><p>GitHub Action now fails fast until Lightbulb has a native release channel.</p></div>
+      </div>
+      <h2>Verified gates</h2>
+      <ul>
+        <li><span class="ok">PASS</span> <code>git diff --check</code></li>
+        <li><span class="ok">PASS</span> upstream repo / <code>opencode github run</code> scans</li>
+        <li><span class="ok">PASS</span> changelog help and missing-<code>GH_REPO</code> guard smoke</li>
+      </ul>
+    </div>
+  </section>
+</body>
+</html>
