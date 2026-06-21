@@ -2,7 +2,7 @@ import path from "path"
 import { describe, expect } from "bun:test"
 import { rm } from "fs/promises"
 import { eq } from "drizzle-orm"
-import { Effect, Exit, Layer } from "effect"
+import { Cause, Effect, Exit, Layer } from "effect"
 import { Lightbulb } from "@opencode-ai/core/lightbulb"
 import {
   LightbulbArtifactEdgeTable,
@@ -138,8 +138,10 @@ describe("Lightbulb", () => {
                           }),
                           retentionPolicy: { mode: "keep" },
                           retentionDecision: "hold-for-gate",
+                          producerKind: "worker",
                           producerRunID: seeded.runID,
                           producerWorkerID: seeded.workerID,
+                          source: {},
                           lineage: [
                             {
                               relation: "produced_by",
@@ -570,6 +572,232 @@ describe("Lightbulb", () => {
     ),
   )
 
+  it.live("registers a harness-authored PRD artifact with source issue and goal lineage", () =>
+    Effect.acquireRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ).pipe(
+      Effect.flatMap((tmp) =>
+        Effect.gen(function* () {
+          const lightbulb = yield* Lightbulb.Service
+          const seeded = yield* lightbulb.seedTracerBullet()
+          yield* Effect.promise(() => Bun.write(path.join(tmp.path, "issue-23-prd.md"), "Harness PRD body"))
+
+          const registered = yield* lightbulb.registerHarnessArtifact({
+            accountID: seeded.accountID,
+            producerKind: "harness",
+            type: "prd",
+            uri: "issue-23-prd.md",
+            summary: "Issue 23 PRD artifact for parent review.",
+            retentionPolicy: { mode: "keep" },
+            baseDirectory: tmp.path,
+            source: {
+              issueRef: "#23",
+              goalID: seeded.goalID,
+            },
+          })
+          const graph = yield* lightbulb.readAccountGraph(seeded.accountID)
+          const artifact = graph?.artifacts.find((artifact) => artifact.id === registered.id)
+          const dashboard = yield* lightbulb.readDashboard(seeded.accountID)
+          const handle = dashboard?.artifactHandles.find((artifact) => artifact.id === registered.id)
+
+          expect(registered).toMatchObject({
+            type: "prd",
+            uri: "issue-23-prd.md",
+            summary: "Issue 23 PRD artifact for parent review.",
+            status: "registered",
+            integrity: expect.objectContaining({
+              status: "verified",
+              checksum: expect.stringMatching(/^sha256:/),
+              expectedSizeBytes: "Harness PRD body".length,
+            }),
+            retentionPolicy: { mode: "keep" },
+            retentionDecision: "keep",
+            producerKind: "harness",
+            producerRunID: null,
+            producerWorkerID: null,
+            source: {
+              issueRef: "#23",
+              goalID: seeded.goalID,
+            },
+            lineage: [],
+          })
+          expect(artifact?.producer_kind).toBe("harness")
+          expect(artifact?.producer_run_id).toBeNull()
+          expect(artifact?.producer_worker_id).toBeNull()
+          expect(artifact?.task_packet_id).toBeNull()
+          expect(artifact?.source_issue_ref).toBe("#23")
+          expect(artifact?.source_goal_id).toBe(seeded.goalID)
+          expect(artifact?.checksum).toMatch(/^sha256:/)
+          expect(handle).toMatchObject({
+            id: registered.id,
+            producerKind: "harness",
+            source: {
+              issueRef: "#23",
+              goalID: seeded.goalID,
+            },
+          })
+          expect(JSON.stringify(dashboard)).not.toContain("Harness PRD body")
+        }).pipe(Effect.provide(layer(tmp.path))),
+      ),
+    ),
+  )
+
+  it.live("registers a harness-authored run report in parent summaries without embedding contents", () =>
+    Effect.acquireRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ).pipe(
+      Effect.flatMap((tmp) =>
+        Effect.gen(function* () {
+          const lightbulb = yield* Lightbulb.Service
+          const seeded = yield* lightbulb.seedTracerBullet()
+          yield* Effect.promise(() => Bun.write(path.join(tmp.path, "run-report.md"), "Harness run report body"))
+
+          const registered = yield* lightbulb.registerHarnessArtifact({
+            accountID: seeded.accountID,
+            producerKind: "harness",
+            type: "run_report",
+            uri: "run-report.md",
+            summary: "Harness run report for issue 23.",
+            retentionPolicy: { mode: "expire", expiresAt: 100 },
+            baseDirectory: tmp.path,
+            source: {
+              issueRef: "#23",
+              runID: seeded.runID,
+              gateID: seeded.gateID,
+            },
+          })
+          const summary = yield* lightbulb.parentSummary(seeded.runID)
+          const handle = summary?.artifacts.find((artifact) => artifact.id === registered.id)
+          const graph = yield* lightbulb.readAccountGraph(seeded.accountID)
+          const artifact = graph?.artifacts.find((artifact) => artifact.id === registered.id)
+
+          expect(registered).toMatchObject({
+            type: "run_report",
+            producerKind: "harness",
+            producerRunID: null,
+            producerWorkerID: null,
+            source: {
+              issueRef: "#23",
+              runID: seeded.runID,
+              gateID: seeded.gateID,
+            },
+            integrity: expect.objectContaining({
+              status: "verified",
+              checksum: expect.stringMatching(/^sha256:/),
+              expectedSizeBytes: "Harness run report body".length,
+            }),
+            retentionPolicy: { mode: "expire", expiresAt: 100 },
+            retentionDecision: "hold-for-gate",
+            lineage: [
+              {
+                relation: "produced_by",
+                runID: seeded.runID,
+                workerID: null,
+                summary: "Harness registered this artifact for parent orchestration.",
+              },
+            ],
+          })
+          expect(handle?.id).toBe(registered.id)
+          expect(handle?.status).toBe("registered")
+          expect(handle?.producerKind).toBe("harness")
+          expect(handle?.integrity.status).toBe("unchecked")
+          expect(handle?.integrity.checksum).toMatch(/^sha256:/)
+          expect(handle?.integrity.uncheckedReason).toBe("live artifact content not checked")
+          expect(handle?.retentionDecision).toBe("hold-for-gate")
+          expect(handle?.source).toMatchObject({
+            issueRef: "#23",
+            runID: seeded.runID,
+            gateID: seeded.gateID,
+          })
+          expect(artifact?.metadata).toMatchObject({
+            integrity: {
+              algorithm: "sha256",
+              sizeBytes: "Harness run report body".length,
+            },
+          })
+          expect(JSON.stringify(summary)).not.toContain("Harness run report body")
+        }).pipe(Effect.provide(layer(tmp.path))),
+      ),
+    ),
+  )
+
+  it.live("rejects invalid harness artifact handles and lineage with deterministic reasons", () =>
+    Effect.acquireRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ).pipe(
+      Effect.flatMap((tmp) =>
+        Effect.gen(function* () {
+          const lightbulb = yield* Lightbulb.Service
+          const first = yield* lightbulb.seedTracerBullet()
+          const second = yield* lightbulb.seedTracerBullet()
+
+          const missingHandle = yield* lightbulb
+            .registerHarnessArtifact({
+              accountID: first.accountID,
+              producerKind: "harness",
+              type: "plan",
+              uri: "",
+              summary: "Missing handle should be rejected.",
+              retentionPolicy: { mode: "keep" },
+            })
+            .pipe(Effect.exit)
+          const unsupportedType = yield* lightbulb
+            .registerHarnessArtifact({
+              accountID: first.accountID,
+              producerKind: "harness",
+              type: "audio" as Lightbulb.ArtifactType,
+              uri: "artifact://issue-23/audio",
+              summary: "Unsupported type should be rejected.",
+              retentionPolicy: { mode: "keep" },
+              uncheckedReason: "external URI not fetched by test",
+            })
+            .pipe(Effect.exit)
+          const oversizedInline = yield* lightbulb
+            .registerHarnessArtifact({
+              accountID: first.accountID,
+              producerKind: "harness",
+              type: "plan",
+              uri: "artifact://issue-23/inline",
+              inlineContent: "x".repeat(9 * 1024),
+              summary: "Oversized inline content should be rejected.",
+              retentionPolicy: { mode: "keep" },
+            })
+            .pipe(Effect.exit)
+          const invalidLineage = yield* lightbulb
+            .registerHarnessArtifact({
+              accountID: first.accountID,
+              producerKind: "harness",
+              type: "plan",
+              uri: "artifact://issue-23/cross-account-plan",
+              summary: "Cross-account lineage should be rejected.",
+              retentionPolicy: { mode: "keep" },
+              uncheckedReason: "external URI not fetched by test",
+              source: {
+                runID: second.runID,
+              },
+            })
+            .pipe(Effect.exit)
+
+          expect(Exit.isFailure(missingHandle) ? Cause.pretty(missingHandle.cause) : "").toContain(
+            "artifact handle uri is required",
+          )
+          expect(Exit.isFailure(unsupportedType) ? Cause.pretty(unsupportedType.cause) : "").toContain(
+            "unsupported artifact type: audio",
+          )
+          expect(Exit.isFailure(oversizedInline) ? Cause.pretty(oversizedInline.cause) : "").toContain(
+            "inline artifact content exceeds 8192 bytes",
+          )
+          expect(Exit.isFailure(invalidLineage) ? Cause.pretty(invalidLineage.cause) : "").toContain(
+            "artifact source run belongs to another account",
+          )
+        }).pipe(Effect.provide(layer(tmp.path))),
+      ),
+    ),
+  )
+
   it.live("rejects internally inconsistent artifact producer lineage", () =>
     Effect.acquireRelease(
       Effect.promise(() => tmpdir()),
@@ -589,6 +817,7 @@ describe("Lightbulb", () => {
               producer_run_id: first.runID,
               producer_worker_id: second.workerID,
               task_packet_id: first.taskPacketID,
+              producer_kind: "worker",
               type: "report",
               uri: ".lightbulb/runs/invalid-lineage.md",
               checksum: null,

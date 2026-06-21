@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "9c219ff5-f62d-4e3e-bb82-2a8813574ba8",
+  "id": "d023634f-8d7a-4dd4-9f7c-fbff7cc43bd5",
   "prevIds": [
-    "39e1b18a-da19-4f14-98f6-6c8fa1f21ce9"
+    "9c219ff5-f62d-4e3e-bb82-2a8813574ba8"
   ],
   "ddl": [
     {
@@ -734,7 +734,7 @@
     },
     {
       "type": "text",
-      "notNull": true,
+      "notNull": false,
       "autoincrement": false,
       "default": null,
       "generated": null,
@@ -744,7 +744,7 @@
     },
     {
       "type": "text",
-      "notNull": true,
+      "notNull": false,
       "autoincrement": false,
       "default": null,
       "generated": null,
@@ -754,11 +754,71 @@
     },
     {
       "type": "text",
-      "notNull": true,
+      "notNull": false,
       "autoincrement": false,
       "default": null,
       "generated": null,
       "name": "task_packet_id",
+      "entityType": "columns",
+      "table": "lightbulb_artifact"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "producer_kind",
+      "entityType": "columns",
+      "table": "lightbulb_artifact"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "source_issue_ref",
+      "entityType": "columns",
+      "table": "lightbulb_artifact"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "source_goal_id",
+      "entityType": "columns",
+      "table": "lightbulb_artifact"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "source_loop_id",
+      "entityType": "columns",
+      "table": "lightbulb_artifact"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "source_run_id",
+      "entityType": "columns",
+      "table": "lightbulb_artifact"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "source_gate_id",
       "entityType": "columns",
       "table": "lightbulb_artifact"
     },
@@ -2685,6 +2745,51 @@
     },
     {
       "columns": [
+        "source_goal_id"
+      ],
+      "tableTo": "lightbulb_goal",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_lightbulb_artifact_source_goal_id_lightbulb_goal_id_fk",
+      "entityType": "fks",
+      "table": "lightbulb_artifact"
+    },
+    {
+      "columns": [
+        "source_loop_id"
+      ],
+      "tableTo": "lightbulb_loop",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_lightbulb_artifact_source_loop_id_lightbulb_loop_id_fk",
+      "entityType": "fks",
+      "table": "lightbulb_artifact"
+    },
+    {
+      "columns": [
+        "source_run_id"
+      ],
+      "tableTo": "lightbulb_run",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_lightbulb_artifact_source_run_id_lightbulb_run_id_fk",
+      "entityType": "fks",
+      "table": "lightbulb_artifact"
+    },
+    {
+      "columns": [
         "account_id",
         "producer_run_id"
       ],
@@ -3552,6 +3657,62 @@
       "where": null,
       "origin": "manual",
       "name": "lightbulb_artifact_task_packet_idx",
+      "entityType": "indexes",
+      "table": "lightbulb_artifact"
+    },
+    {
+      "columns": [
+        {
+          "value": "source_goal_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "lightbulb_artifact_source_goal_idx",
+      "entityType": "indexes",
+      "table": "lightbulb_artifact"
+    },
+    {
+      "columns": [
+        {
+          "value": "source_loop_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "lightbulb_artifact_source_loop_idx",
+      "entityType": "indexes",
+      "table": "lightbulb_artifact"
+    },
+    {
+      "columns": [
+        {
+          "value": "source_run_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "lightbulb_artifact_source_run_idx",
+      "entityType": "indexes",
+      "table": "lightbulb_artifact"
+    },
+    {
+      "columns": [
+        {
+          "value": "source_gate_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "lightbulb_artifact_source_gate_idx",
       "entityType": "indexes",
       "table": "lightbulb_artifact"
     },

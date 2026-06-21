@@ -1,16 +1,20 @@
 import { Buffer } from "buffer"
+import { and, eq, inArray, or } from "drizzle-orm"
 import { Effect } from "effect"
 import { fileURLToPath } from "url"
+import type { Database } from "../database/database"
 import { Hash } from "../util/hash"
 import { isAbsolute, join } from "path"
-import { LightbulbArtifactTable, LightbulbGateTable, LightbulbRunTable } from "./sql"
+import { LightbulbArtifactEdgeTable, LightbulbArtifactTable, LightbulbGateTable, LightbulbRunTable } from "./sql"
 import type {
+  ArtifactHandle,
   ArtifactID,
   ArtifactIntegritySummary,
   ArtifactRetentionDecision,
   ArtifactRetentionPolicy,
   ArtifactStatus,
   GateStatus,
+  RunID,
   RunStatus,
 } from "../lightbulb"
 
@@ -29,10 +33,23 @@ type ArtifactMetadata = {
 export function integrityForRegistration(input: {
   readonly uri: string
   readonly baseDirectory?: string
+  readonly checksum?: string
+  readonly sizeBytes?: number
   readonly uncheckedReason?: string
   readonly now: number
 }) {
   return Effect.gen(function* () {
+    if (input.checksum) {
+      return {
+        checksum: input.checksum,
+        metadata: {
+          algorithm: "sha256" as const,
+          checkedAt: input.now,
+          sizeBytes: input.sizeBytes,
+        },
+      }
+    }
+
     if (input.uncheckedReason) {
       return {
         checksum: null,
@@ -158,6 +175,110 @@ export function statusForRetentionDecision(decision: ArtifactRetentionDecision):
   if (decision === "expire") return "expired"
   if (decision === "supersede") return "superseded"
   return
+}
+
+export function readArtifactHandle(
+  db: Database.Interface["db"],
+  input: {
+    readonly artifactID: ArtifactID
+    readonly baseDirectory?: string
+    readonly now: number
+    readonly liveCheck: boolean
+  },
+) {
+  return Effect.gen(function* () {
+    const artifact = yield* db
+      .select()
+      .from(LightbulbArtifactTable)
+      .where(eq(LightbulbArtifactTable.id, input.artifactID))
+      .get()
+      .pipe(Effect.orDie)
+    if (!artifact) return
+
+    const gates = yield* db
+      .select()
+      .from(LightbulbGateTable)
+      .where(
+        artifact.source_gate_id
+          ? and(
+              eq(LightbulbGateTable.account_id, artifact.account_id),
+              or(eq(LightbulbGateTable.artifact_id, artifact.id), eq(LightbulbGateTable.id, artifact.source_gate_id)),
+            )
+          : and(eq(LightbulbGateTable.account_id, artifact.account_id), eq(LightbulbGateTable.artifact_id, artifact.id)),
+      )
+      .all()
+      .pipe(Effect.orDie)
+    const edges = yield* db
+      .select()
+      .from(LightbulbArtifactEdgeTable)
+      .where(eq(LightbulbArtifactEdgeTable.artifact_id, artifact.id))
+      .all()
+      .pipe(Effect.orDie)
+    const retentionRunIDs = [
+      ...new Set([artifact.producer_run_id, artifact.source_run_id, ...edges.map((edge) => edge.consumer_run_id)])
+    ].filter((runID): runID is RunID => !!runID)
+    const relatedRuns = retentionRunIDs.length
+      ? yield* db
+          .select()
+          .from(LightbulbRunTable)
+          .where(inArray(LightbulbRunTable.id, retentionRunIDs))
+          .all()
+          .pipe(Effect.orDie)
+      : []
+    const consumerRuns = relatedRuns.filter(
+      (run) => edges.some((edge) => edge.consumer_run_id === run.id) || run.id === artifact.source_run_id,
+    )
+
+    const integrity = input.liveCheck
+      ? yield* checkArtifactIntegrity(artifact, input.baseDirectory, input.now)
+      : storedArtifactIntegrity(artifact)
+
+    return toArtifactHandle(artifact, edges, {
+      integrity,
+      retentionDecision: retentionDecisionFor(artifact, {
+        consumerRuns,
+        gates,
+        now: input.now,
+        producerRun: relatedRuns.find((run) => run.id === artifact.producer_run_id),
+      }),
+    })
+  })
+}
+
+export function toArtifactHandle(
+  row: typeof LightbulbArtifactTable.$inferSelect,
+  edges: readonly (typeof LightbulbArtifactEdgeTable.$inferSelect)[] = [],
+  input?: {
+    readonly integrity: ArtifactIntegritySummary
+    readonly retentionDecision: ArtifactRetentionDecision
+  },
+): ArtifactHandle {
+  return {
+    id: row.id,
+    type: row.type,
+    uri: row.uri,
+    summary: row.summary,
+    status: row.status,
+    integrity: input?.integrity ?? storedArtifactIntegrity(row),
+    retentionPolicy: parseRetentionPolicy(row.retention_policy),
+    retentionDecision: input?.retentionDecision ?? "keep",
+    producerKind: row.producer_kind,
+    producerRunID: row.producer_run_id,
+    producerWorkerID: row.producer_worker_id,
+    source: {
+      ...(row.source_issue_ref ? { issueRef: row.source_issue_ref } : {}),
+      ...(row.source_goal_id ? { goalID: row.source_goal_id } : {}),
+      ...(row.source_loop_id ? { loopID: row.source_loop_id } : {}),
+      ...(row.source_run_id ? { runID: row.source_run_id } : {}),
+      ...(row.source_gate_id ? { gateID: row.source_gate_id } : {}),
+    },
+    lineage: edges.map((edge) => ({
+      relation: edge.relation,
+      runID: edge.consumer_run_id,
+      workerID: edge.consumer_worker_id ?? null,
+      summary: edge.summary,
+    })),
+  }
 }
 
 export function serializeRetentionPolicy(policy: ArtifactRetentionPolicy) {
