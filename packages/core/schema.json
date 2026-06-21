@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "bb9df4bc-4d86-4f9a-9f5a-d8b53eec5068",
+  "id": "4e5d1e0f-e3d5-41e1-a0a4-b591f963338f",
   "prevIds": [
-    "a22b85d7-ed78-4993-ab2b-450453c1bffd"
+    "bb9df4bc-4d86-4f9a-9f5a-d8b53eec5068"
   ],
   "ddl": [
     {
@@ -64,6 +64,18 @@
     },
     {
       "name": "lightbulb_loop",
+      "entityType": "tables"
+    },
+    {
+      "name": "lightbulb_route_steer",
+      "entityType": "tables"
+    },
+    {
+      "name": "lightbulb_route_stop",
+      "entityType": "tables"
+    },
+    {
+      "name": "lightbulb_route",
       "entityType": "tables"
     },
     {
@@ -1321,6 +1333,336 @@
       "name": "time_updated",
       "entityType": "columns",
       "table": "lightbulb_loop"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "lightbulb_route_steer"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "account_id",
+      "entityType": "columns",
+      "table": "lightbulb_route_steer"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "route_id",
+      "entityType": "columns",
+      "table": "lightbulb_route_steer"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "reason",
+      "entityType": "columns",
+      "table": "lightbulb_route_steer"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "from_stop_id",
+      "entityType": "columns",
+      "table": "lightbulb_route_steer"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "to_stop_id",
+      "entityType": "columns",
+      "table": "lightbulb_route_steer"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "summary",
+      "entityType": "columns",
+      "table": "lightbulb_route_steer"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "instruction",
+      "entityType": "columns",
+      "table": "lightbulb_route_steer"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "metadata",
+      "entityType": "columns",
+      "table": "lightbulb_route_steer"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "lightbulb_route_steer"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_updated",
+      "entityType": "columns",
+      "table": "lightbulb_route_steer"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "lightbulb_route_stop"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "account_id",
+      "entityType": "columns",
+      "table": "lightbulb_route_stop"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "route_id",
+      "entityType": "columns",
+      "table": "lightbulb_route_stop"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "sequence",
+      "entityType": "columns",
+      "table": "lightbulb_route_stop"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "kind",
+      "entityType": "columns",
+      "table": "lightbulb_route_stop"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "lightbulb_route_stop"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "title",
+      "entityType": "columns",
+      "table": "lightbulb_route_stop"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "objective",
+      "entityType": "columns",
+      "table": "lightbulb_route_stop"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "evidence",
+      "entityType": "columns",
+      "table": "lightbulb_route_stop"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "metadata",
+      "entityType": "columns",
+      "table": "lightbulb_route_stop"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "lightbulb_route_stop"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_updated",
+      "entityType": "columns",
+      "table": "lightbulb_route_stop"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "lightbulb_route"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "account_id",
+      "entityType": "columns",
+      "table": "lightbulb_route"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "goal_id",
+      "entityType": "columns",
+      "table": "lightbulb_route"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "destination",
+      "entityType": "columns",
+      "table": "lightbulb_route"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "lightbulb_route"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "current_stop_id",
+      "entityType": "columns",
+      "table": "lightbulb_route"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "summary",
+      "entityType": "columns",
+      "table": "lightbulb_route"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "metadata",
+      "entityType": "columns",
+      "table": "lightbulb_route"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "lightbulb_route"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_updated",
+      "entityType": "columns",
+      "table": "lightbulb_route"
     },
     {
       "type": "text",
@@ -3049,6 +3391,181 @@
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
+      "name": "fk_lightbulb_route_steer_account_id_lightbulb_account_id_fk",
+      "entityType": "fks",
+      "table": "lightbulb_route_steer"
+    },
+    {
+      "columns": [
+        "route_id"
+      ],
+      "tableTo": "lightbulb_route",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_lightbulb_route_steer_route_id_lightbulb_route_id_fk",
+      "entityType": "fks",
+      "table": "lightbulb_route_steer"
+    },
+    {
+      "columns": [
+        "account_id",
+        "route_id"
+      ],
+      "tableTo": "lightbulb_route",
+      "columnsTo": [
+        "account_id",
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": true,
+      "name": "lightbulb_route_steer_account_route_fk",
+      "entityType": "fks",
+      "table": "lightbulb_route_steer"
+    },
+    {
+      "columns": [
+        "account_id",
+        "from_stop_id"
+      ],
+      "tableTo": "lightbulb_route_stop",
+      "columnsTo": [
+        "account_id",
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": true,
+      "name": "lightbulb_route_steer_account_from_stop_fk",
+      "entityType": "fks",
+      "table": "lightbulb_route_steer"
+    },
+    {
+      "columns": [
+        "account_id",
+        "to_stop_id"
+      ],
+      "tableTo": "lightbulb_route_stop",
+      "columnsTo": [
+        "account_id",
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": true,
+      "name": "lightbulb_route_steer_account_to_stop_fk",
+      "entityType": "fks",
+      "table": "lightbulb_route_steer"
+    },
+    {
+      "columns": [
+        "account_id"
+      ],
+      "tableTo": "lightbulb_account",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_lightbulb_route_stop_account_id_lightbulb_account_id_fk",
+      "entityType": "fks",
+      "table": "lightbulb_route_stop"
+    },
+    {
+      "columns": [
+        "route_id"
+      ],
+      "tableTo": "lightbulb_route",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_lightbulb_route_stop_route_id_lightbulb_route_id_fk",
+      "entityType": "fks",
+      "table": "lightbulb_route_stop"
+    },
+    {
+      "columns": [
+        "account_id",
+        "route_id"
+      ],
+      "tableTo": "lightbulb_route",
+      "columnsTo": [
+        "account_id",
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": true,
+      "name": "lightbulb_route_stop_account_route_fk",
+      "entityType": "fks",
+      "table": "lightbulb_route_stop"
+    },
+    {
+      "columns": [
+        "account_id"
+      ],
+      "tableTo": "lightbulb_account",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_lightbulb_route_account_id_lightbulb_account_id_fk",
+      "entityType": "fks",
+      "table": "lightbulb_route"
+    },
+    {
+      "columns": [
+        "goal_id"
+      ],
+      "tableTo": "lightbulb_goal",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_lightbulb_route_goal_id_lightbulb_goal_id_fk",
+      "entityType": "fks",
+      "table": "lightbulb_route"
+    },
+    {
+      "columns": [
+        "account_id",
+        "goal_id"
+      ],
+      "tableTo": "lightbulb_goal",
+      "columnsTo": [
+        "account_id",
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": true,
+      "name": "lightbulb_route_account_goal_fk",
+      "entityType": "fks",
+      "table": "lightbulb_route"
+    },
+    {
+      "columns": [
+        "account_id"
+      ],
+      "tableTo": "lightbulb_account",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
       "name": "fk_lightbulb_run_account_id_lightbulb_account_id_fk",
       "entityType": "fks",
       "table": "lightbulb_run"
@@ -3493,6 +4010,33 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "lightbulb_route_steer_pk",
+      "table": "lightbulb_route_steer",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "lightbulb_route_stop_pk",
+      "table": "lightbulb_route_stop",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "lightbulb_route_pk",
+      "table": "lightbulb_route",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "lightbulb_run_pk",
       "table": "lightbulb_run",
       "entityType": "pks"
@@ -3895,6 +4439,24 @@
         {
           "value": "account_id",
           "isExpression": false
+        },
+        {
+          "value": "id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "lightbulb_goal_account_id_idx",
+      "entityType": "indexes",
+      "table": "lightbulb_goal"
+    },
+    {
+      "columns": [
+        {
+          "value": "account_id",
+          "isExpression": false
         }
       ],
       "isUnique": false,
@@ -3935,6 +4497,144 @@
       "name": "lightbulb_loop_account_id_idx",
       "entityType": "indexes",
       "table": "lightbulb_loop"
+    },
+    {
+      "columns": [
+        {
+          "value": "account_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "lightbulb_route_steer_account_idx",
+      "entityType": "indexes",
+      "table": "lightbulb_route_steer"
+    },
+    {
+      "columns": [
+        {
+          "value": "route_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "lightbulb_route_steer_route_idx",
+      "entityType": "indexes",
+      "table": "lightbulb_route_steer"
+    },
+    {
+      "columns": [
+        {
+          "value": "account_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "lightbulb_route_stop_account_idx",
+      "entityType": "indexes",
+      "table": "lightbulb_route_stop"
+    },
+    {
+      "columns": [
+        {
+          "value": "route_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "lightbulb_route_stop_route_idx",
+      "entityType": "indexes",
+      "table": "lightbulb_route_stop"
+    },
+    {
+      "columns": [
+        {
+          "value": "route_id",
+          "isExpression": false
+        },
+        {
+          "value": "sequence",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "lightbulb_route_stop_route_sequence_idx",
+      "entityType": "indexes",
+      "table": "lightbulb_route_stop"
+    },
+    {
+      "columns": [
+        {
+          "value": "account_id",
+          "isExpression": false
+        },
+        {
+          "value": "id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "lightbulb_route_stop_account_id_idx",
+      "entityType": "indexes",
+      "table": "lightbulb_route_stop"
+    },
+    {
+      "columns": [
+        {
+          "value": "account_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "lightbulb_route_account_idx",
+      "entityType": "indexes",
+      "table": "lightbulb_route"
+    },
+    {
+      "columns": [
+        {
+          "value": "goal_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "lightbulb_route_goal_idx",
+      "entityType": "indexes",
+      "table": "lightbulb_route"
+    },
+    {
+      "columns": [
+        {
+          "value": "account_id",
+          "isExpression": false
+        },
+        {
+          "value": "id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "lightbulb_route_account_id_idx",
+      "entityType": "indexes",
+      "table": "lightbulb_route"
     },
     {
       "columns": [

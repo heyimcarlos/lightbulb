@@ -17,6 +17,30 @@ describe("lightbulb dashboard display", () => {
       },
     ]
 
+    const artifactHandle = {
+      id: artifactID,
+      type: "report" as const,
+      uri: ".lightbulb/runs/issue-3-dashboard.md",
+      summary: "Dashboard worker report.",
+      status: "registered" as const,
+      integrity: {
+        status: "unchecked" as const,
+        checksum: null,
+        checkedAt: null,
+        uncheckedReason: null,
+        expectedSizeBytes: null,
+        actualChecksum: null,
+        actualSizeBytes: null,
+      },
+      retentionPolicy: { mode: "keep" as const },
+      retentionDecision: "keep" as const,
+      producerKind: "worker" as const,
+      producerRunID: runID,
+      producerWorkerID: workerID,
+      source: {},
+      lineage,
+    }
+
     expect(
       formatLightbulbDashboard({
         account: {
@@ -28,7 +52,7 @@ describe("lightbulb dashboard display", () => {
           {
             id: Lightbulb.GoalID.make("lbgoal_demo"),
             title: "Bootstrap loop harness",
-            status: "open",
+            status: "active",
             summary: "Create one durable account control graph.",
             loops: [
               {
@@ -61,18 +85,7 @@ describe("lightbulb dashboard display", () => {
                         artifactID,
                       },
                     ],
-                    artifacts: [
-                      {
-                        id: artifactID,
-                        type: "report",
-                        uri: ".lightbulb/runs/issue-3-dashboard.md",
-                        summary: "Dashboard worker report.",
-                        status: "registered",
-                        producerRunID: runID,
-                        producerWorkerID: workerID,
-                        lineage,
-                      },
-                    ],
+                    artifacts: [artifactHandle],
                   },
                 ],
               },
@@ -98,24 +111,13 @@ describe("lightbulb dashboard display", () => {
             },
           ],
         },
-        artifactHandles: [
-          {
-            id: artifactID,
-            type: "report",
-            uri: ".lightbulb/runs/issue-3-dashboard.md",
-            summary: "Dashboard worker report.",
-            status: "registered",
-            producerRunID: runID,
-            producerWorkerID: workerID,
-            lineage,
-          },
-        ],
+        artifactHandles: [artifactHandle],
       }).replaceAll(EOL, "\n"),
     ).toBe(`Lightbulb Dashboard
 Account Lightbulb Demo [active] lbacc_demo
 
 Goals / Loops / Runs
-  goal lbgoal_demo [open] Bootstrap loop harness
+  goal lbgoal_demo [active] Bootstrap loop harness
     Create one durable account control graph.
     loop lbloop_demo implementation [active]
       Implementation loop owns the active tracer run.
