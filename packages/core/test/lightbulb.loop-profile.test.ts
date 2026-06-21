@@ -246,6 +246,56 @@ describe("Lightbulb loop profile bootstrap", () => {
     ),
   )
 
+  it.live("recomputes due time when a managed loop moves in and out of budget hold", () =>
+    Effect.acquireRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ).pipe(
+      Effect.flatMap((tmp) =>
+        Effect.gen(function* () {
+          const lightbulb = yield* Lightbulb.Service
+          const created = yield* lightbulb.createOrAdoptGoal({
+            accountName: "Budget Refresh Account",
+            title: "Refresh budget holds",
+            objective: "Recompute schedule due times when budget status changes.",
+          })
+          const first = yield* lightbulb.bootstrapLoopProfiles({
+            accountID: created.goal.account_id,
+            goalID: created.goal.id,
+            profiles: discoveryProfile(),
+            defaultPolicy,
+            now,
+          })
+          const held = yield* lightbulb.bootstrapLoopProfiles({
+            accountID: created.goal.account_id,
+            goalID: created.goal.id,
+            profiles: discoveryProfile(),
+            defaultPolicy: {
+              ...defaultPolicy,
+              budget: {
+                ...defaultPolicy.budget,
+                status: "held",
+                holdReason: "daily_cost_budget_exhausted",
+              },
+            },
+            now: now + 60_000,
+          })
+          const reopened = yield* lightbulb.bootstrapLoopProfiles({
+            accountID: created.goal.account_id,
+            goalID: created.goal.id,
+            profiles: discoveryProfile(),
+            defaultPolicy,
+            now: now + 120_000,
+          })
+
+          expect(first.created[0]?.schedule?.nextDueAt).toBe(now + defaultPolicy.schedule.cadenceMs)
+          expect(held.held[0]?.schedule?.nextDueAt).toBe(null)
+          expect(reopened.adopted[0]?.schedule?.nextDueAt).toBe(now + 120_000 + defaultPolicy.schedule.cadenceMs)
+        }).pipe(Effect.provide(layer(tmp.path))),
+      ),
+    ),
+  )
+
   it.live("rejects invalid profiles with bounded reasons and no loop rows", () =>
     Effect.acquireRelease(
       Effect.promise(() => tmpdir()),

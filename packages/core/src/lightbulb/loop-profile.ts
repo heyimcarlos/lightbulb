@@ -664,6 +664,7 @@ function profileWithPreservedSchedule(
 ): Extract<ValidatedProfile, { valid: true }> {
   if (!current || current.profileID !== profile.definition.profileID) return profile
   if (
+    current.budget.status === profile.budget.status &&
     current.schedule.enabled === profile.schedule.enabled &&
     current.schedule.cadenceMs === profile.schedule.cadenceMs
   ) {
