@@ -19,3 +19,12 @@
 - `packages/web bun astro check` synced content but remains blocked by pre-existing share/session type errors unrelated to the docs-only changes.
 - Posted exact `@codex review`: https://github.com/heyimcarlos/lightbulb/pull/54#issuecomment-4763159000.
 - Blocked on current-head Codex response and queued GitHub checks.
+
+## 2026-06-21T21:10:02Z — PR #54 current-head runner finding fixed
+
+- Fixed current-head Codex finding by disabling `opencode github run` with the Lightbulb unsupported-command failure path.
+- Pushed `c289dbe1834592aee568e2e794204e3480d1d1de` to `cleanup-automation`.
+- Evidence updated under `.lightbulb/evidence/pr-54/verification.md`.
+- Passed: `git diff --check`, `packages/opencode bun test test/cli/help/help-snapshots.test.ts test/cli/lightbulb.test.ts --timeout 30000` (7 pass, 34 snapshots), and `packages/opencode bun typecheck`.
+- Posted exact `@codex review`: https://github.com/heyimcarlos/lightbulb/pull/54#issuecomment-4763299108.
+- Blocked on current-head Codex response and queued GitHub checks.

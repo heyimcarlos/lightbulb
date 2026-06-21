@@ -2,23 +2,23 @@
   "pr": 54,
   "url": "https://github.com/heyimcarlos/lightbulb/pull/54",
   "head": "cleanup-automation",
-  "head_sha": "d52f2ddb83cee072491742ac2e81f3ccd5e596b0",
+  "head_sha": "c289dbe1834592aee568e2e794204e3480d1d1de",
   "base": "dev",
-  "last_reviewed_at": "2026-06-21T20:11:31Z",
+  "last_reviewed_at": "2026-06-21T21:10:02Z",
   "state": "pending_codex_review_and_ci",
   "issue": 45,
   "external_codex_review": {
     "requested": true,
-    "requested_at": "2026-06-21T20:11:21Z",
-    "comment_url": "https://github.com/heyimcarlos/lightbulb/pull/54#issuecomment-4763159000",
+    "requested_at": "2026-06-21T21:09:57Z",
+    "comment_url": "https://github.com/heyimcarlos/lightbulb/pull/54#issuecomment-4763299108",
     "blocked": false,
-    "reason": "Waiting for current-head Codex review response. Prior current-head findings were fixed in d52f2ddb."
+    "reason": "Waiting for current-head Codex review response after disabling the inherited GitHub runner."
   },
   "local_gates": {
     "git diff --check": "passed",
-    "packages/opencode:bun test test/cli/help/help-snapshots.test.ts test/cli/github-action.test.ts test/cli/lightbulb.test.ts --timeout 30000": "passed: 23 pass, 0 fail",
+    "packages/opencode:bun test test/cli/help/help-snapshots.test.ts test/cli/lightbulb.test.ts --timeout 30000": "passed: 7 pass, 0 fail, 34 snapshots",
     "packages/opencode:bun typecheck": "passed",
-    "packages/tui:bun typecheck": "passed",
+    "packages/tui:bun typecheck": "passed before current follow-up; not rerun because this follow-up only touches packages/opencode and evidence markdown",
     "packages/web:bun astro check": "blocked by pre-existing share/session type errors after content sync; docs pages parsed before diagnostics"
   },
   "local_review": {
@@ -26,7 +26,7 @@
     "unresolved_findings": []
   },
   "merge_blockers": [
-    "waiting for requested Codex review response on d52f2ddb83cee072491742ac2e81f3ccd5e596b0",
-    "waiting for queued GitHub checks on d52f2ddb83cee072491742ac2e81f3ccd5e596b0"
+    "waiting for requested Codex review response on c289dbe1834592aee568e2e794204e3480d1d1de",
+    "waiting for queued GitHub checks on c289dbe1834592aee568e2e794204e3480d1d1de"
   ]
 }
