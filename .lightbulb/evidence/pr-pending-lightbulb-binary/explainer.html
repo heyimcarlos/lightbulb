@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Lightbulb Binary Evidence</title>
+  <style>
+    body { margin: 0; background: #0b1020; color: #e6edf3; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+    .slide { min-height: 100vh; display: grid; place-items: center; padding: 48px; box-sizing: border-box; }
+    .card { width: min(1000px, 92vw); border: 1px solid #26324d; border-radius: 28px; padding: 44px; background: linear-gradient(145deg, #111827, #0f172a); box-shadow: 0 30px 100px #0008; }
+    h1 { font-size: 54px; margin: 0 0 20px; letter-spacing: -0.04em; }
+    h2 { color: #93c5fd; margin-top: 0; }
+    p, li { font-size: 24px; line-height: 1.45; }
+    code { color: #fde68a; background: #1f2937; padding: 3px 8px; border-radius: 8px; }
+    .ok { color: #86efac; font-weight: 700; }
+    .warn { color: #fbbf24; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <section class="slide">
+    <div class="card">
+      <h1>Lightbulb gets a primary binary</h1>
+      <p>Issue #44 adds <code>lightbulb</code> beside the compatibility <code>opencode</code> command.</p>
+      <ul>
+        <li><code>lightbulb dashboard --help</code> is top-level.</li>
+        <li><code>opencode lightbulb dashboard --help</code> remains compatible.</li>
+        <li>Issue #43 adds the staged rebrand/cleanup inventory.</li>
+      </ul>
+    </div>
+  </section>
+  <section class="slide">
+    <div class="card">
+      <h2>Verified behavior</h2>
+      <ul>
+        <li class="ok">CLI tests: 5 pass, 0 fail.</li>
+        <li class="ok">Package typecheck passed.</li>
+        <li class="ok">Binary smoke: help and seeded JSON dashboard passed.</li>
+        <li class="warn">Single-binary build blocked by host Bun 1.3.12; repo script requires ^1.3.14.</li>
+      </ul>
+    </div>
+  </section>
+</body>
+</html>
