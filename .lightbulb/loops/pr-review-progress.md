@@ -107,3 +107,10 @@
 - Pushed commit `c9e0c734` to `cleanup-automation`, resolved the current review thread, and requested `@codex review` again.
 - Local gates passed: `git diff --check` and `packages/web:bun run build`.
 - Blocked from merge: PR #54 checks are queued on the new head and current-head Codex review is EYES-only pending; PR #55 checks remain queued/pending.
+
+## 2026-06-21T21:18:30Z — PR #54 GitHub runner docs review fix pushed
+
+- Fixed Codex current-head finding on PR #54: all CLI docs/locales now mark `opencode github run` as disabled and remove the stale `--event`/`--token` runner flags.
+- Pushed commit `7fb6796ab` to `cleanup-automation`, resolved the runner-doc review thread, and requested `@codex review` again.
+- Local gates passed: `git diff --check`, stale runner-doc grep, `packages/web:bun run build`, and `packages/opencode:bun test test/cli/lightbulb.test.ts --timeout 30000` (6 pass).
+- Blocked from merge: PR #54 checks are queued/in progress on the new head and current-head Codex review is pending; PR #55 checks remain queued/pending.

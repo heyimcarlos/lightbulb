@@ -1,19 +1,19 @@
 {
-  "updated_at": "2026-06-21T20:52:44Z",
+  "updated_at": "2026-06-21T21:18:30Z",
   "prs": [
     {
       "pr": 54,
       "url": "https://github.com/heyimcarlos/lightbulb/pull/54",
       "head": "cleanup-automation",
       "base": "dev",
-      "head_sha": "c9e0c7349b96428446d7c80cacf79623db8ff858",
+      "head_sha": "7fb6796abcb0ad05e0ff68d3c094fd5776c357c2",
       "state": "pending_ci_and_current_head_codex_review",
       "local_gates": {
-        "git diff --check": "passed after CLI divider spacing fix",
-        "packages/web:bun run build": "passed; Astro/MDX build completed",
-        "script/raw-changelog.ts --help": "passed before docs-only spacing fix",
-        "GH_REPO=heyimcarlos/lightbulb bun script/raw-changelog.ts --from HEAD --to HEAD": "passed before docs-only spacing fix",
-        "previous package gates": "passed before docs-only spacing fix: GitHub help/action tests, Lightbulb CLI tests, packages/opencode typecheck, installer smokes"
+        "git diff --check": "passed after GitHub runner docs fix",
+        "packages/web:bun run build": "passed after GitHub runner docs fix",
+        "packages/opencode:bun test test/cli/lightbulb.test.ts --timeout 30000": "passed: 6 pass, 0 fail",
+        "stale runner-doc grep": "passed: localized cli.mdx pages only mention opencode github run as disabled",
+        "previous package gates": "passed before runner-doc fix: GitHub help/action tests, Lightbulb CLI tests, packages/opencode typecheck, installer smokes, changelog command smokes"
       },
       "review_fixes": [
         "Disabled opencode github install so it cannot open the upstream app or write anomalyco/opencode/github@latest workflows.",
@@ -21,15 +21,16 @@
         "Changed the disabled installer from Effect.die to fail(...) and instance:false so it surfaces as an expected CLI failure even outside a project directory.",
         "Changed .opencode/command/changelog.md to pass GH_REPO=heyimcarlos/lightbulb into script/raw-changelog.ts.",
         "Restored blank lines before CLI section dividers in every localized cli.mdx copy so MDX does not parse the disabled-installer note as a Setext heading.",
-        "Resolved all current Codex review threads after fixes were pushed."
+        "Resolved all current Codex review threads after fixes were pushed.",
+        "Replaced stale `opencode github run` CLI docs and localized flag tables with disabled-runner guidance after the current-head Codex finding."
       ],
       "external_codex_review": {
         "requested": true,
         "pending": true,
-        "reason": "Requested @codex review on current head c9e0c734; latest trigger has EYES reaction only so review is pending."
+        "reason": "Requested @codex review on current head 7fb6796 after resolving the runner-doc review thread."
       },
       "blockers": [
-        "GitHub checks are queued/pending on the latest head.",
+        "GitHub checks are queued/in progress on the latest head.",
         "Current-head Codex review is pending."
       ]
     },
