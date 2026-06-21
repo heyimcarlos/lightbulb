@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "d023634f-8d7a-4dd4-9f7c-fbff7cc43bd5",
+  "id": "a22b85d7-ed78-4993-ab2b-450453c1bffd",
   "prevIds": [
-    "9c219ff5-f62d-4e3e-bb82-2a8813574ba8"
+    "d023634f-8d7a-4dd4-9f7c-fbff7cc43bd5"
   ],
   "ddl": [
     {
@@ -4301,6 +4301,12 @@
       "name": "todo_session_idx",
       "entityType": "indexes",
       "table": "todo"
+    },
+    {
+      "value": "(\n        \"producer_kind\" = 'harness'\n        AND \"producer_run_id\" IS NULL\n        AND \"producer_worker_id\" IS NULL\n        AND \"task_packet_id\" IS NULL\n      ) OR (\n        \"producer_kind\" = 'worker'\n        AND \"producer_run_id\" IS NOT NULL\n        AND \"producer_worker_id\" IS NOT NULL\n        AND \"task_packet_id\" IS NOT NULL\n      )",
+      "name": "lightbulb_artifact_producer_kind_fields",
+      "entityType": "checks",
+      "table": "lightbulb_artifact"
     }
   ],
   "renames": []

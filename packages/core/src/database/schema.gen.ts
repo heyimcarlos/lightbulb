@@ -146,7 +146,18 @@ export default {
           CONSTRAINT \`lightbulb_artifact_account_run_fk\` FOREIGN KEY (\`account_id\`,\`producer_run_id\`) REFERENCES \`lightbulb_run\`(\`account_id\`,\`id\`) ON DELETE CASCADE,
           CONSTRAINT \`lightbulb_artifact_producer_worker_run_fk\` FOREIGN KEY (\`producer_worker_id\`,\`producer_run_id\`) REFERENCES \`lightbulb_worker\`(\`id\`,\`run_id\`) ON DELETE CASCADE,
           CONSTRAINT \`lightbulb_artifact_account_task_packet_fk\` FOREIGN KEY (\`account_id\`,\`task_packet_id\`) REFERENCES \`lightbulb_task_packet\`(\`account_id\`,\`id\`) ON DELETE CASCADE,
-          CONSTRAINT \`lightbulb_artifact_task_packet_worker_fk\` FOREIGN KEY (\`task_packet_id\`,\`producer_worker_id\`) REFERENCES \`lightbulb_task_packet\`(\`id\`,\`worker_id\`) ON DELETE CASCADE
+          CONSTRAINT \`lightbulb_artifact_task_packet_worker_fk\` FOREIGN KEY (\`task_packet_id\`,\`producer_worker_id\`) REFERENCES \`lightbulb_task_packet\`(\`id\`,\`worker_id\`) ON DELETE CASCADE,
+          CONSTRAINT "lightbulb_artifact_producer_kind_fields" CHECK((
+                "producer_kind" = 'harness'
+                AND "producer_run_id" IS NULL
+                AND "producer_worker_id" IS NULL
+                AND "task_packet_id" IS NULL
+              ) OR (
+                "producer_kind" = 'worker'
+                AND "producer_run_id" IS NOT NULL
+                AND "producer_worker_id" IS NOT NULL
+                AND "task_packet_id" IS NOT NULL
+              ))
         );
       `)
       yield* tx.run(`

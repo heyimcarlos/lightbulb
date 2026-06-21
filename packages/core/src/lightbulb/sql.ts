@@ -1,4 +1,5 @@
-import { foreignKey, index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core"
+import { sql } from "drizzle-orm"
+import { check, foreignKey, index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core"
 import { Timestamps } from "../database/schema.sql"
 import type { Lightbulb } from "../lightbulb"
 
@@ -210,6 +211,20 @@ export const LightbulbArtifactTable = sqliteTable(
       foreignColumns: [LightbulbTaskPacketTable.id, LightbulbTaskPacketTable.worker_id],
       name: "lightbulb_artifact_task_packet_worker_fk",
     }).onDelete("cascade"),
+    check(
+      "lightbulb_artifact_producer_kind_fields",
+      sql`(
+        ${table.producer_kind} = 'harness'
+        AND ${table.producer_run_id} IS NULL
+        AND ${table.producer_worker_id} IS NULL
+        AND ${table.task_packet_id} IS NULL
+      ) OR (
+        ${table.producer_kind} = 'worker'
+        AND ${table.producer_run_id} IS NOT NULL
+        AND ${table.producer_worker_id} IS NOT NULL
+        AND ${table.task_packet_id} IS NOT NULL
+      )`,
+    ),
   ],
 )
 

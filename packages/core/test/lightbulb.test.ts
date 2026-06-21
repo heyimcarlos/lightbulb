@@ -8,6 +8,8 @@ import {
   LightbulbArtifactEdgeTable,
   LightbulbArtifactTable,
   LightbulbGateTable,
+  LightbulbGoalTable,
+  LightbulbLoopTable,
   LightbulbRunTable,
 } from "@opencode-ai/core/lightbulb/sql"
 import { Database } from "@opencode-ai/core/database/database"
@@ -780,6 +782,76 @@ describe("Lightbulb", () => {
               },
             })
             .pipe(Effect.exit)
+          const database = yield* Database.Service
+          const otherGoalID = Lightbulb.GoalID.create()
+          const otherLoopID = Lightbulb.LoopID.create()
+          const otherRunID = Lightbulb.RunID.create()
+          const otherGateID = Lightbulb.GateID.create()
+          yield* database.db.insert(LightbulbGoalTable).values({
+            id: otherGoalID,
+            account_id: first.accountID,
+            title: "Same-account unrelated goal",
+            status: "open",
+            summary: "This goal must not be mixed with the first goal's sources.",
+          })
+          yield* database.db.insert(LightbulbLoopTable).values({
+            id: otherLoopID,
+            account_id: first.accountID,
+            goal_id: otherGoalID,
+            kind: "implementation",
+            status: "active",
+            summary: "Same-account unrelated loop.",
+          })
+          yield* database.db.insert(LightbulbRunTable).values({
+            id: otherRunID,
+            account_id: first.accountID,
+            loop_id: otherLoopID,
+            status: "complete",
+            review_status: "requested",
+            debug_status: "fixed",
+            gate_status: "pending",
+            summary: "Same-account unrelated run.",
+            started_at: Date.now(),
+            completed_at: Date.now(),
+          })
+          yield* database.db.insert(LightbulbGateTable).values({
+            id: otherGateID,
+            account_id: first.accountID,
+            run_id: otherRunID,
+            kind: "review",
+            status: "pending",
+            summary: "Same-account unrelated gate.",
+          })
+          const wrongGoalRun = yield* lightbulb
+            .registerHarnessArtifact({
+              accountID: first.accountID,
+              producerKind: "harness",
+              type: "plan",
+              uri: "artifact://issue-23/wrong-goal-run",
+              summary: "Same-account run from another goal should be rejected.",
+              retentionPolicy: { mode: "keep" },
+              uncheckedReason: "external URI not fetched by test",
+              source: {
+                goalID: first.goalID,
+                runID: otherRunID,
+              },
+            })
+            .pipe(Effect.exit)
+          const wrongGoalGate = yield* lightbulb
+            .registerHarnessArtifact({
+              accountID: first.accountID,
+              producerKind: "harness",
+              type: "plan",
+              uri: "artifact://issue-23/wrong-goal-gate",
+              summary: "Same-account gate from another goal should be rejected.",
+              retentionPolicy: { mode: "keep" },
+              uncheckedReason: "external URI not fetched by test",
+              source: {
+                goalID: first.goalID,
+                gateID: otherGateID,
+              },
+            })
+            .pipe(Effect.exit)
 
           expect(Exit.isFailure(missingHandle) ? Cause.pretty(missingHandle.cause) : "").toContain(
             "artifact handle uri is required",
@@ -792,6 +864,12 @@ describe("Lightbulb", () => {
           )
           expect(Exit.isFailure(invalidLineage) ? Cause.pretty(invalidLineage.cause) : "").toContain(
             "artifact source run belongs to another account",
+          )
+          expect(Exit.isFailure(wrongGoalRun) ? Cause.pretty(wrongGoalRun.cause) : "").toContain(
+            "artifact source run does not belong to source goal",
+          )
+          expect(Exit.isFailure(wrongGoalGate) ? Cause.pretty(wrongGoalGate.cause) : "").toContain(
+            "artifact source gate does not belong to source goal",
           )
         }).pipe(Effect.provide(layer(tmp.path))),
       ),
@@ -828,7 +906,27 @@ describe("Lightbulb", () => {
             .run()
             .pipe(Effect.exit)
 
+          const missingProducerFields = yield* database.db
+            .insert(LightbulbArtifactTable)
+            .values({
+              id: Lightbulb.ArtifactID.create(),
+              account_id: first.accountID,
+              producer_run_id: null,
+              producer_worker_id: null,
+              task_packet_id: null,
+              producer_kind: "worker",
+              type: "report",
+              uri: ".lightbulb/runs/missing-producer.md",
+              checksum: null,
+              status: "registered",
+              summary: "A worker artifact must name its producer run, worker, and packet.",
+              retention_policy: "discard",
+            })
+            .run()
+            .pipe(Effect.exit)
+
           expect(Exit.isFailure(rejected)).toBe(true)
+          expect(Exit.isFailure(missingProducerFields)).toBe(true)
         }).pipe(Effect.provide(layer(tmp.path))),
       ),
     ),
