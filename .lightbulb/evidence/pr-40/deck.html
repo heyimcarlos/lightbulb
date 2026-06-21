@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>PR #40 Evidence — Lightbulb Subagents</title>
+<style>
+  :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; background: #0b1020; color: #f8fafc; }
+  body { margin: 0; }
+  main { display: grid; gap: 24px; padding: 32px; }
+  section { min-height: 520px; border: 1px solid #334155; border-radius: 24px; padding: 40px; background: linear-gradient(135deg, #111827, #172554); box-shadow: 0 24px 80px #0008; }
+  h1 { font-size: 52px; margin: 0 0 24px; }
+  h2 { font-size: 38px; margin: 0 0 18px; color: #93c5fd; }
+  p, li { font-size: 24px; line-height: 1.45; }
+  code { color: #facc15; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .card { border: 1px solid #475569; border-radius: 18px; padding: 20px; background: #02061799; }
+  .ok { color: #86efac; }
+  .warn { color: #fdba74; }
+</style>
+</head>
+<body>
+<main>
+<section>
+  <h1>PR #40: Lightbulb Subagents</h1>
+  <p>Adds six project-scoped OpenCode subagents so Lightbulb can route codebase, thoughts, and web-research questions to focused read/search-only agents.</p>
+</section>
+<section>
+  <h2>What changed</h2>
+  <div class="grid">
+    <div class="card"><p><code>codebase-locator</code><br />Finds relevant code files without analysis.</p></div>
+    <div class="card"><p><code>codebase-analyzer</code><br />Explains current implementation with file:line references.</p></div>
+    <div class="card"><p><code>codebase-pattern-finder</code><br />Catalogs existing implementation/test patterns.</p></div>
+    <div class="card"><p><code>thoughts-locator</code><br />Finds relevant thoughts documents.</p></div>
+    <div class="card"><p><code>thoughts-analyzer</code><br />Extracts high-value decisions and constraints.</p></div>
+    <div class="card"><p><code>web-search-researcher</code><br />Researches current web sources with citations.</p></div>
+  </div>
+</section>
+<section>
+  <h2>Safety boundary</h2>
+  <ul>
+    <li>All six agents use <code>mode: subagent</code>.</li>
+    <li>Frontmatter denies <code>*</code> first, then allows only read/search/web/todo permissions required for the role.</li>
+    <li>No edit, bash, PR, issue, or merge authority is granted by these agent files.</li>
+  </ul>
+</section>
+<section>
+  <h2>Verification</h2>
+  <ul>
+    <li class="ok"><code>bun test test/config/config.test.ts --timeout 30000</code> — 94 pass.</li>
+    <li class="ok"><code>bun typecheck</code> — pass.</li>
+    <li class="ok"><code>agent list</code> smoke — all six agents listed as subagents.</li>
+    <li class="ok"><code>git diff --check origin/dev...HEAD</code> — pass.</li>
+    <li class="warn">Codex cloud review unavailable: usage limit response on current head.</li>
+  </ul>
+</section>
+</main>
+</body>
+</html>
