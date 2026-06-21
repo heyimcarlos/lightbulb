@@ -1,33 +1,36 @@
 {
-  "updated_at": "2026-06-21T20:27:03Z",
+  "updated_at": "2026-06-21T20:52:44Z",
   "prs": [
     {
       "pr": 54,
       "url": "https://github.com/heyimcarlos/lightbulb/pull/54",
       "head": "cleanup-automation",
       "base": "dev",
-      "head_sha": "069561d38b9fc8716a94185134f38cb841996259",
+      "head_sha": "c9e0c7349b96428446d7c80cacf79623db8ff858",
       "state": "pending_ci_and_current_head_codex_review",
       "local_gates": {
-        "git diff --check": "passed after changelog command fix",
-        "script/raw-changelog.ts --help": "passed",
-        "GH_REPO=heyimcarlos/lightbulb bun script/raw-changelog.ts --from HEAD --to HEAD": "passed: no notable changes",
-        "previous package gates": "passed before markdown-only changelog command fix: GitHub help/action tests, Lightbulb CLI tests, packages/opencode typecheck, installer smokes"
+        "git diff --check": "passed after CLI divider spacing fix",
+        "packages/web:bun run build": "passed; Astro/MDX build completed",
+        "script/raw-changelog.ts --help": "passed before docs-only spacing fix",
+        "GH_REPO=heyimcarlos/lightbulb bun script/raw-changelog.ts --from HEAD --to HEAD": "passed before docs-only spacing fix",
+        "previous package gates": "passed before docs-only spacing fix: GitHub help/action tests, Lightbulb CLI tests, packages/opencode typecheck, installer smokes"
       },
       "review_fixes": [
         "Disabled opencode github install so it cannot open the upstream app or write anomalyco/opencode/github@latest workflows.",
         "Deleted .github/workflows/publish-vscode.yml so Lightbulb tags/manual dispatch cannot publish the upstream opencode VS Code extension.",
         "Changed the disabled installer from Effect.die to fail(...) and instance:false so it surfaces as an expected CLI failure even outside a project directory.",
         "Changed .opencode/command/changelog.md to pass GH_REPO=heyimcarlos/lightbulb into script/raw-changelog.ts.",
+        "Restored blank lines before CLI section dividers in every localized cli.mdx copy so MDX does not parse the disabled-installer note as a Setext heading.",
         "Resolved all current Codex review threads after fixes were pushed."
       ],
       "external_codex_review": {
         "requested": true,
         "pending": true,
-        "reason": "Requested @codex review on current head 069561d38; response/checks pending."
+        "reason": "Requested @codex review on current head c9e0c734; latest trigger has EYES reaction only so review is pending."
       },
       "blockers": [
-        "GitHub checks are queued/pending on the latest head."
+        "GitHub checks are queued/pending on the latest head.",
+        "Current-head Codex review is pending."
       ]
     },
     {

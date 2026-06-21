@@ -100,3 +100,10 @@
 - Pushed commit `069561d38` to `cleanup-automation`, resolved all current Codex review threads, and requested `@codex review` again.
 - Local gates passed: `git diff --check`, `bun script/raw-changelog.ts --help`, and `GH_REPO=heyimcarlos/lightbulb bun script/raw-changelog.ts --from HEAD --to HEAD`.
 - Blocked from merge: PR #54 and PR #55 GitHub checks are still queued/pending; PR #54 current-head Codex review is pending.
+
+## 2026-06-21T20:52:44Z — PR #54 CLI divider review fix pushed
+
+- Fixed Codex current-head finding on PR #54: restored blank lines before the `---` divider in all localized `cli.mdx` copies so MDX no longer treats the disabled-installer paragraph as a Setext heading.
+- Pushed commit `c9e0c734` to `cleanup-automation`, resolved the current review thread, and requested `@codex review` again.
+- Local gates passed: `git diff --check` and `packages/web:bun run build`.
+- Blocked from merge: PR #54 checks are queued on the new head and current-head Codex review is EYES-only pending; PR #55 checks remain queued/pending.
