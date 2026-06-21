@@ -43,3 +43,18 @@
 - Squash-merged PR #49 into `dev` as `77275a774d38c204ac01cb3c8dac5c1baf55c263`.
 - Post-merge verification on fetched `origin/dev`: Lightbulb tests (27 pass), `bun typecheck`, migration check, `git diff --check`, and file-size guard.
 - Closed issue #5 and reconciled labels to `agent-reviewed` + `agent-integrated`.
+
+## 2026-06-21T16:59:19Z — PR #50 evidence, review fallback, merge
+
+- Reviewed PR #50 (`lightbulb-delegate`) at head `1750583fb17ccf4a1012e51e8c088a91aaf3d571`.
+- Added and pushed evidence packet:
+  - `.lightbulb/evidence/pr-50/delegation-setup-evidence.html`
+  - `.lightbulb/evidence/pr-50/terminal-evidence.md`
+- Re-requested `@codex review`; earlier connector response was usage-limit blocked and no actionable review comments or inline threads existed.
+- Local gates passed from isolated worktrees:
+  - `packages/opencode: bun typecheck` — passed.
+  - `packages/opencode: bun test test/config/config.test.ts --timeout 30000` — 94 pass, 0 fail.
+  - `agent list` smoke — all five Lightbulb agents discovered.
+  - `git diff --check` — passed.
+- No GitHub status checks reported; merge state clean.
+- Squash-merged PR #50 into `dev` as `3076665b6ec40e34b12dde1ccc5cb436ec63468a` and post-merge verified the same focused gates on fetched `origin/dev`.

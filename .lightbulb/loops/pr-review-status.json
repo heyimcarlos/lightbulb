@@ -1,33 +1,30 @@
 {
-  "pr": 49,
-  "url": "https://github.com/heyimcarlos/lightbulb/pull/49",
-  "head": "context-policy",
+  "pr": 50,
+  "url": "https://github.com/heyimcarlos/lightbulb/pull/50",
+  "head": "lightbulb-delegate",
   "base": "dev",
-  "head_sha": "fd077271ad79fbe2341dce6eb4db20e54e35ee81",
-  "last_reviewed_at": "2026-06-21T16:31:18Z",
+  "head_sha": "1750583fb17ccf4a1012e51e8c088a91aaf3d571",
+  "last_reviewed_at": "2026-06-21T16:59:19Z",
   "state": "merged_post_merge_verified",
   "external_codex_review": {
     "requested": true,
     "blocked": true,
-    "reason": "Codex connector returned usage-limit blocker for current-head review after @codex review."
+    "reason": "Codex connector had returned a usage-limit blocker; @codex review was requested again for current head before merge and no actionable review comments were present."
   },
   "local_gates": {
-    "packages/core:bun test test/lightbulb-policy.test.ts --timeout 30000": "passed: 5 pass, 0 fail",
-    "packages/core:bun test test/lightbulb-policy.test.ts test/lightbulb.test.ts --timeout 30000": "passed: 27 pass, 0 fail",
-    "packages/core:bun typecheck": "passed",
-    "packages/core:bun run script/migration.ts --check": "passed: no schema changes",
-    "git diff --check": "passed",
-    "thermo file-size guard": "passed: lightbulb.ts 991 lines, policy.ts 217 lines"
+    "agent list smoke": "passed: lightbulb-implementer, lightbulb-locator, lightbulb-orchestrator, lightbulb-researcher, lightbulb-reviewer discovered",
+    "packages/opencode:bun typecheck": "passed",
+    "packages/opencode:bun test test/config/config.test.ts --timeout 30000": "passed: 94 pass, 0 fail",
+    "git diff --check": "passed"
   },
   "local_review": {
     "actionable_findings": [],
     "unresolved_findings": []
   },
   "evidence": {
-    "deck": ".lightbulb/evidence/pr-pending-context-policy/deck.html",
-    "terminal_visual": ".lightbulb/evidence/pr-pending-context-policy/screenshots/verification.svg",
-    "verification": ".lightbulb/evidence/pr-pending-context-policy/verification.md"
+    "deck": ".lightbulb/evidence/pr-50/delegation-setup-evidence.html",
+    "terminal_evidence": ".lightbulb/evidence/pr-50/terminal-evidence.md"
   },
   "blockers": [],
-  "merge_commit": "77275a774d38c204ac01cb3c8dac5c1baf55c263"
+  "merge_commit": "3076665b6ec40e34b12dde1ccc5cb436ec63468a"
 }
