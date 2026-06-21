@@ -7,6 +7,7 @@ import { Lightbulb } from "@opencode-ai/core/lightbulb"
 import {
   LightbulbArtifactEdgeTable,
   LightbulbArtifactTable,
+  LightbulbGateTable,
   LightbulbRunTable,
 } from "@opencode-ai/core/lightbulb/sql"
 import { Database } from "@opencode-ai/core/database/database"
@@ -525,12 +526,45 @@ describe("Lightbulb", () => {
             now: 101,
           })
 
+          const second = yield* lightbulb.seedTracerBullet()
+          yield* Effect.promise(() => Bun.write(path.join(tmp.path, "cross-account-gate.md"), "cross account gate"))
+          const crossAccountGate = yield* lightbulb.registerArtifact({
+            producerRunID: seeded.runID,
+            producerWorkerID: seeded.workerID,
+            taskPacketID: seeded.taskPacketID,
+            type: "report",
+            uri: "cross-account-gate.md",
+            summary: "Report with only a foreign account gate.",
+            retentionPolicy: { mode: "expire", expiresAt: 100 },
+            baseDirectory: tmp.path,
+          })
+          yield* database.db
+            .insert(LightbulbGateTable)
+            .values({
+              id: Lightbulb.GateID.create(),
+              account_id: second.accountID,
+              run_id: second.runID,
+              kind: "review",
+              status: "pending",
+              summary: "Foreign account gate must not hold retention.",
+              artifact_id: crossAccountGate.id,
+            })
+            .run()
+            .pipe(Effect.orDie)
+          const foreignGateExpired = yield* lightbulb.applyArtifactRetention({
+            artifactID: crossAccountGate.id,
+            baseDirectory: tmp.path,
+            now: 101,
+          })
+
           expect(gateHeld?.retentionDecision).toBe("hold-for-gate")
           expect(gateHeld?.status).toBe("registered")
           expect(activeHeld?.retentionDecision).toBe("hold-for-active-run")
           expect(activeHeld?.status).toBe("registered")
           expect(dependencyHeld?.retentionDecision).toBe("hold-for-dependency")
           expect(dependencyHeld?.status).toBe("registered")
+          expect(foreignGateExpired?.retentionDecision).toBe("expire")
+          expect(foreignGateExpired?.status).toBe("expired")
         }).pipe(Effect.provide(layer(tmp.path))),
       ),
     ),

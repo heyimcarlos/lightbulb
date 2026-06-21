@@ -1,6 +1,6 @@
 export * as Lightbulb from "./lightbulb"
 
-import { asc, eq, inArray } from "drizzle-orm"
+import { and, asc, eq, inArray } from "drizzle-orm"
 import { Context, Effect, Layer, Schema } from "effect"
 import { Database } from "./database/database"
 import { withStatics } from "./schema"
@@ -792,7 +792,7 @@ function toGraphArtifactHandle(row: typeof LightbulbArtifactTable.$inferSelect, 
     integrity: storedArtifactIntegrity(row),
     retentionDecision: retentionDecisionFor(row, {
       consumerRuns: graph.runs.filter((run) => edges.some((edge) => edge.consumer_run_id === run.id)),
-      gates: graph.gates.filter((gate) => gate.artifact_id === row.id),
+      gates: graph.gates.filter((gate) => gate.account_id === row.account_id && gate.artifact_id === row.id),
       now: Date.now(),
       producerRun: graph.runs.find((run) => run.id === row.producer_run_id),
     }),
@@ -820,7 +820,7 @@ function readArtifactHandle(
     const gates = yield* db
       .select()
       .from(LightbulbGateTable)
-      .where(eq(LightbulbGateTable.artifact_id, artifact.id))
+      .where(and(eq(LightbulbGateTable.account_id, artifact.account_id), eq(LightbulbGateTable.artifact_id, artifact.id)))
       .all()
       .pipe(Effect.orDie)
     const producerRun = yield* db
