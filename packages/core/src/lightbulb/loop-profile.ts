@@ -664,7 +664,7 @@ function profileWithPreservedSchedule(
 ): Extract<ValidatedProfile, { valid: true }> {
   if (!current || current.profileID !== profile.definition.profileID) return profile
   if (
-    current.budget.status === profile.budget.status &&
+    loopBudgetMatches(current.budget, profile.budget) &&
     current.schedule.enabled === profile.schedule.enabled &&
     current.schedule.cadenceMs === profile.schedule.cadenceMs
   ) {
@@ -678,6 +678,17 @@ function profileWithPreservedSchedule(
     }
   }
   return profile
+}
+
+function loopBudgetMatches(current: StoredLoopProfileMetadata["budget"], next: LoopProfileBudgetEnvelope) {
+  return (
+    current.status === next.status &&
+    current.maxRunsPerDay === next.maxRunsPerDay &&
+    current.maxTokens === next.maxTokens &&
+    current.maxCostUsd === next.maxCostUsd &&
+    current.maxContextTokens === next.maxContextTokens &&
+    current.holdReason === next.holdReason
+  )
 }
 
 function readStoredLoopProfileMetadata(

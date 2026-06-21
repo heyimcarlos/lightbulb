@@ -296,6 +296,47 @@ describe("Lightbulb loop profile bootstrap", () => {
     ),
   )
 
+  it.live("recomputes due time when a managed loop budget envelope changes", () =>
+    Effect.acquireRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ).pipe(
+      Effect.flatMap((tmp) =>
+        Effect.gen(function* () {
+          const lightbulb = yield* Lightbulb.Service
+          const created = yield* lightbulb.createOrAdoptGoal({
+            accountName: "Budget Limit Refresh Account",
+            title: "Refresh budget limits",
+            objective: "Recompute schedule due times when managed budget limits change.",
+          })
+          yield* lightbulb.bootstrapLoopProfiles({
+            accountID: created.goal.account_id,
+            goalID: created.goal.id,
+            profiles: discoveryProfile(),
+            defaultPolicy,
+            now,
+          })
+          const refreshed = yield* lightbulb.bootstrapLoopProfiles({
+            accountID: created.goal.account_id,
+            goalID: created.goal.id,
+            profiles: discoveryProfile(),
+            defaultPolicy: {
+              ...defaultPolicy,
+              budget: {
+                ...defaultPolicy.budget,
+                maxRunsPerDay: defaultPolicy.budget.maxRunsPerDay + 1,
+              },
+            },
+            now: now + 180_000,
+          })
+
+          expect(refreshed.adopted[0]?.schedule?.nextDueAt).toBe(now + 180_000 + defaultPolicy.schedule.cadenceMs)
+          expect(refreshed.adopted[0]?.budget?.maxRunsPerDay).toBe(defaultPolicy.budget.maxRunsPerDay + 1)
+        }).pipe(Effect.provide(layer(tmp.path))),
+      ),
+    ),
+  )
+
   it.live("rejects invalid profiles with bounded reasons and no loop rows", () =>
     Effect.acquireRelease(
       Effect.promise(() => tmpdir()),
