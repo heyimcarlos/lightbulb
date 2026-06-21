@@ -1,32 +1,61 @@
 {
-  "pr": 54,
-  "url": "https://github.com/heyimcarlos/lightbulb/pull/54",
-  "head": "cleanup-automation",
-  "head_sha": "c289dbe1834592aee568e2e794204e3480d1d1de",
-  "base": "dev",
-  "last_reviewed_at": "2026-06-21T21:10:02Z",
-  "state": "pending_codex_review_and_ci",
-  "issue": 45,
-  "external_codex_review": {
-    "requested": true,
-    "requested_at": "2026-06-21T21:09:57Z",
-    "comment_url": "https://github.com/heyimcarlos/lightbulb/pull/54#issuecomment-4763299108",
-    "blocked": false,
-    "reason": "Waiting for current-head Codex review response after disabling the inherited GitHub runner."
-  },
-  "local_gates": {
-    "git diff --check": "passed",
-    "packages/opencode:bun test test/cli/help/help-snapshots.test.ts test/cli/lightbulb.test.ts --timeout 30000": "passed: 7 pass, 0 fail, 34 snapshots",
-    "packages/opencode:bun typecheck": "passed",
-    "packages/tui:bun typecheck": "passed before current follow-up; not rerun because this follow-up only touches packages/opencode and evidence markdown",
-    "packages/web:bun astro check": "blocked by pre-existing share/session type errors after content sync; docs pages parsed before diagnostics"
-  },
-  "local_review": {
-    "actionable_findings": [],
-    "unresolved_findings": []
-  },
-  "merge_blockers": [
-    "waiting for requested Codex review response on c289dbe1834592aee568e2e794204e3480d1d1de",
-    "waiting for queued GitHub checks on c289dbe1834592aee568e2e794204e3480d1d1de"
+  "updated_at": "2026-06-21T22:06:44Z",
+  "state": "pending_ci",
+  "open_prs": [
+    {
+      "pr": 54,
+      "url": "https://github.com/heyimcarlos/lightbulb/pull/54",
+      "head": "cleanup-automation",
+      "head_sha": "7fb6796abcb0ad05e0ff68d3c094fd5776c357c2",
+      "base": "dev",
+      "state": "pending_ci",
+      "issue": 45,
+      "external_codex_review": {
+        "requested": true,
+        "cleared": true,
+        "cleared_at": "2026-06-21T21:22:13Z",
+        "comment_url": "https://github.com/heyimcarlos/lightbulb/pull/54#issuecomment-4763328230",
+        "reviewed_commit": "7fb6796abc",
+        "blocked": false
+      },
+      "review_threads": {
+        "unresolved_actionable": 0,
+        "note": "GraphQL reviewThreads check shows all Codex threads resolved; latest current-head Codex top-level review found no major issues."
+      },
+      "local_gates": {
+        "git diff --check": "passed",
+        "packages/opencode:bun test test/cli/help/help-snapshots.test.ts test/cli/lightbulb.test.ts --timeout 30000": "passed: 7 pass, 0 fail, 34 snapshots",
+        "packages/opencode:bun typecheck": "passed",
+        "packages/tui:bun typecheck": "passed before current follow-up; not rerun because this follow-up only touches packages/opencode and evidence markdown",
+        "packages/web:bun astro check": "blocked by pre-existing share/session type errors after content sync; docs pages parsed before diagnostics"
+      },
+      "merge_blockers": [
+        "waiting for queued GitHub checks on 7fb6796abcb0ad05e0ff68d3c094fd5776c357c2"
+      ]
+    },
+    {
+      "pr": 55,
+      "url": "https://github.com/heyimcarlos/lightbulb/pull/55",
+      "head": "repo-identity",
+      "head_sha": "c5ab88fff65d7e587b59aea0677aed1349e73210",
+      "base": "dev",
+      "state": "pending_ci",
+      "issue": 46,
+      "external_codex_review": {
+        "requested": true,
+        "cleared": true,
+        "cleared_at": "2026-06-21T19:40:47Z",
+        "comment_url": "https://github.com/heyimcarlos/lightbulb/pull/55#issuecomment-4763085368",
+        "reviewed_commit": "c5ab88fff6",
+        "blocked": false
+      },
+      "review_threads": {
+        "unresolved_actionable": 0,
+        "note": "GraphQL reviewThreads check returned no review threads."
+      },
+      "merge_blockers": [
+        "waiting for queued GitHub checks on c5ab88fff65d7e587b59aea0677aed1349e73210"
+      ]
+    }
   ]
 }
