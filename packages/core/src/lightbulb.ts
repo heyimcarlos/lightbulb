@@ -135,6 +135,66 @@ export type RegisterArtifactInput = {
   readonly retentionPolicy?: string
 }
 
+export type Dashboard = {
+  readonly account: {
+    readonly id: AccountID
+    readonly name: string
+    readonly status: AccountStatus
+  }
+  readonly goals: DashboardGoal[]
+  readonly inbox: {
+    readonly taskPackets: {
+      readonly id: TaskPacketID
+      readonly workerID: WorkerID
+      readonly title: string
+      readonly status: TaskPacketStatus
+    }[]
+    readonly gates: DashboardGate[]
+  }
+  readonly artifactHandles: ArtifactHandle[]
+}
+
+export type DashboardGoal = {
+  readonly id: GoalID
+  readonly title: string
+  readonly status: GoalStatus
+  readonly summary: string
+  readonly loops: DashboardLoop[]
+}
+
+export type DashboardLoop = {
+  readonly id: LoopID
+  readonly kind: LoopKind
+  readonly status: LoopStatus
+  readonly summary: string
+  readonly runs: DashboardRun[]
+}
+
+export type DashboardRun = {
+  readonly id: RunID
+  readonly status: RunStatus
+  readonly reviewStatus: ReviewStatus
+  readonly debugStatus: DebugStatus
+  readonly gateStatus: GateStatus
+  readonly summary: string
+  readonly workers: {
+    readonly id: WorkerID
+    readonly role: string
+    readonly status: WorkerStatus
+    readonly summary: string
+  }[]
+  readonly gates: DashboardGate[]
+  readonly artifacts: ArtifactHandle[]
+}
+
+export type DashboardGate = {
+  readonly id: GateID
+  readonly kind: GateKind
+  readonly status: GateStatus
+  readonly summary: string
+  readonly artifactID: ArtifactID | null
+}
+
 export interface Interface {
   readonly seedTracerBullet: (input?: {
     readonly accountName?: string
@@ -144,6 +204,7 @@ export interface Interface {
   }) => Effect.Effect<SeededGraph>
   readonly registerArtifact: (input: RegisterArtifactInput) => Effect.Effect<ArtifactHandle>
   readonly readAccountGraph: (accountID: AccountID) => Effect.Effect<AccountGraph | undefined>
+  readonly readDashboard: (accountID: AccountID) => Effect.Effect<Dashboard | undefined>
   readonly consumeArtifact: (input: {
     readonly artifactID: ArtifactID
     readonly consumerRunID: RunID
@@ -363,88 +424,12 @@ export const layer = Layer.effect(
           .pipe(Effect.orDie)
       }),
       readAccountGraph: Effect.fn("Lightbulb.readAccountGraph")(function* (accountID) {
-        const account = yield* db
-          .select()
-          .from(LightbulbAccountTable)
-          .where(eq(LightbulbAccountTable.id, accountID))
-          .get()
-          .pipe(Effect.orDie)
-        if (!account) return
-        return {
-          account,
-          goals: yield* db
-            .select()
-            .from(LightbulbGoalTable)
-            .where(eq(LightbulbGoalTable.account_id, accountID))
-            .orderBy(asc(LightbulbGoalTable.time_created))
-            .all()
-            .pipe(Effect.orDie),
-          loops: yield* db
-            .select()
-            .from(LightbulbLoopTable)
-            .where(eq(LightbulbLoopTable.account_id, accountID))
-            .orderBy(asc(LightbulbLoopTable.time_created))
-            .all()
-            .pipe(Effect.orDie),
-          runs: yield* db
-            .select()
-            .from(LightbulbRunTable)
-            .where(eq(LightbulbRunTable.account_id, accountID))
-            .orderBy(asc(LightbulbRunTable.time_created))
-            .all()
-            .pipe(Effect.orDie),
-          workers: yield* db
-            .select()
-            .from(LightbulbWorkerTable)
-            .where(eq(LightbulbWorkerTable.account_id, accountID))
-            .orderBy(asc(LightbulbWorkerTable.time_created))
-            .all()
-            .pipe(Effect.orDie),
-          taskPackets: yield* db
-            .select()
-            .from(LightbulbTaskPacketTable)
-            .where(eq(LightbulbTaskPacketTable.account_id, accountID))
-            .orderBy(asc(LightbulbTaskPacketTable.time_created))
-            .all()
-            .pipe(Effect.orDie),
-          artifacts: yield* db
-            .select()
-            .from(LightbulbArtifactTable)
-            .where(eq(LightbulbArtifactTable.account_id, accountID))
-            .orderBy(asc(LightbulbArtifactTable.time_created))
-            .all()
-            .pipe(Effect.orDie),
-          artifactEdges: yield* db
-            .select()
-            .from(LightbulbArtifactEdgeTable)
-            .innerJoin(
-              LightbulbArtifactTable,
-              eq(LightbulbArtifactEdgeTable.artifact_id, LightbulbArtifactTable.id),
-            )
-            .where(eq(LightbulbArtifactTable.account_id, accountID))
-            .orderBy(asc(LightbulbArtifactEdgeTable.time_created))
-            .all()
-            .pipe(Effect.orDie)
-            .pipe(
-              Effect.map((rows) =>
-                rows.map((row) => row.lightbulb_artifact_edge),
-              ),
-            ),
-          gates: yield* db
-            .select()
-            .from(LightbulbGateTable)
-            .where(eq(LightbulbGateTable.account_id, accountID))
-            .orderBy(asc(LightbulbGateTable.time_created))
-            .all()
-            .pipe(Effect.orDie),
-          events: yield* db
-            .select()
-            .from(LightbulbEventTable)
-            .where(eq(LightbulbEventTable.account_id, accountID))
-            .orderBy(asc(LightbulbEventTable.time_created))
-            .all()
-            .pipe(Effect.orDie),
-        }
+        return yield* readAccountGraphFromDb(db, accountID)
+      }),
+      readDashboard: Effect.fn("Lightbulb.readDashboard")(function* (accountID) {
+        const graph = yield* readAccountGraphFromDb(db, accountID)
+        if (!graph) return
+        return toDashboard(graph)
       }),
       consumeArtifact: Effect.fn("Lightbulb.consumeArtifact")(function* (input) {
         yield* db
@@ -551,6 +536,156 @@ export const layer = Layer.effect(
 )
 
 export const defaultLayer = layer.pipe(Layer.provide(Database.defaultLayer))
+
+function readAccountGraphFromDb(db: Database.Interface["db"], accountID: AccountID) {
+  return Effect.gen(function* () {
+    const account = yield* db
+      .select()
+      .from(LightbulbAccountTable)
+      .where(eq(LightbulbAccountTable.id, accountID))
+      .get()
+      .pipe(Effect.orDie)
+    if (!account) return
+    return {
+      account,
+      goals: yield* db
+        .select()
+        .from(LightbulbGoalTable)
+        .where(eq(LightbulbGoalTable.account_id, accountID))
+        .orderBy(asc(LightbulbGoalTable.time_created))
+        .all()
+        .pipe(Effect.orDie),
+      loops: yield* db
+        .select()
+        .from(LightbulbLoopTable)
+        .where(eq(LightbulbLoopTable.account_id, accountID))
+        .orderBy(asc(LightbulbLoopTable.time_created))
+        .all()
+        .pipe(Effect.orDie),
+      runs: yield* db
+        .select()
+        .from(LightbulbRunTable)
+        .where(eq(LightbulbRunTable.account_id, accountID))
+        .orderBy(asc(LightbulbRunTable.time_created))
+        .all()
+        .pipe(Effect.orDie),
+      workers: yield* db
+        .select()
+        .from(LightbulbWorkerTable)
+        .where(eq(LightbulbWorkerTable.account_id, accountID))
+        .orderBy(asc(LightbulbWorkerTable.time_created))
+        .all()
+        .pipe(Effect.orDie),
+      taskPackets: yield* db
+        .select()
+        .from(LightbulbTaskPacketTable)
+        .where(eq(LightbulbTaskPacketTable.account_id, accountID))
+        .orderBy(asc(LightbulbTaskPacketTable.time_created))
+        .all()
+        .pipe(Effect.orDie),
+      artifacts: yield* db
+        .select()
+        .from(LightbulbArtifactTable)
+        .where(eq(LightbulbArtifactTable.account_id, accountID))
+        .orderBy(asc(LightbulbArtifactTable.time_created))
+        .all()
+        .pipe(Effect.orDie),
+      artifactEdges: yield* db
+        .select()
+        .from(LightbulbArtifactEdgeTable)
+        .innerJoin(LightbulbArtifactTable, eq(LightbulbArtifactEdgeTable.artifact_id, LightbulbArtifactTable.id))
+        .where(eq(LightbulbArtifactTable.account_id, accountID))
+        .orderBy(asc(LightbulbArtifactEdgeTable.time_created))
+        .all()
+        .pipe(Effect.orDie)
+        .pipe(Effect.map((rows) => rows.map((row) => row.lightbulb_artifact_edge))),
+      gates: yield* db
+        .select()
+        .from(LightbulbGateTable)
+        .where(eq(LightbulbGateTable.account_id, accountID))
+        .orderBy(asc(LightbulbGateTable.time_created))
+        .all()
+        .pipe(Effect.orDie),
+      events: yield* db
+        .select()
+        .from(LightbulbEventTable)
+        .where(eq(LightbulbEventTable.account_id, accountID))
+        .orderBy(asc(LightbulbEventTable.time_created))
+        .all()
+        .pipe(Effect.orDie),
+    }
+  })
+}
+
+function toDashboard(graph: AccountGraph): Dashboard {
+  return {
+    account: {
+      id: graph.account.id,
+      name: graph.account.name,
+      status: graph.account.status,
+    },
+    goals: graph.goals.map((goal) => ({
+      id: goal.id,
+      title: goal.title,
+      status: goal.status,
+      summary: goal.summary,
+      loops: graph.loops
+        .filter((loop) => loop.goal_id === goal.id)
+        .map((loop) => ({
+          id: loop.id,
+          kind: loop.kind,
+          status: loop.status,
+          summary: loop.summary,
+          runs: graph.runs
+            .filter((run) => run.loop_id === loop.id)
+            .map((run) => ({
+              id: run.id,
+              status: run.status,
+              reviewStatus: run.review_status,
+              debugStatus: run.debug_status,
+              gateStatus: run.gate_status,
+              summary: run.summary,
+              workers: graph.workers
+                .filter((worker) => worker.run_id === run.id)
+                .map((worker) => ({
+                  id: worker.id,
+                  role: worker.role,
+                  status: worker.status,
+                  summary: worker.summary,
+                })),
+              gates: graph.gates.filter((gate) => gate.run_id === run.id).map(toDashboardGate),
+              artifacts: graph.artifacts
+                .filter((artifact) => artifact.producer_run_id === run.id)
+                .map((artifact) => toArtifactHandle(artifact, graph.artifactEdges.filter((edge) => edge.artifact_id === artifact.id))),
+            })),
+        })),
+    })),
+    inbox: {
+      taskPackets: graph.taskPackets.map((packet) => ({
+        id: packet.id,
+        workerID: packet.worker_id,
+        title: packet.title,
+        status: packet.status,
+      })),
+      gates: graph.gates
+        .filter((gate) => gate.status === "pending" || gate.status === "blocked")
+        .map(toDashboardGate),
+    },
+    artifactHandles: graph.artifacts.map((artifact) =>
+      toArtifactHandle(artifact, graph.artifactEdges.filter((edge) => edge.artifact_id === artifact.id)),
+    ),
+  }
+}
+
+function toDashboardGate(row: typeof LightbulbGateTable.$inferSelect): DashboardGate {
+  return {
+    id: row.id,
+    kind: row.kind,
+    status: row.status,
+    summary: row.summary,
+    artifactID: row.artifact_id,
+  }
+}
 
 function toArtifactHandle(
   row: typeof LightbulbArtifactTable.$inferSelect,
