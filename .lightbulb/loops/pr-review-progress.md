@@ -80,8 +80,16 @@
 - PR #54 (`cleanup-automation`) fixed current-head Codex findings:
   - Disabled `opencode github install` with a Lightbulb unsupported failure.
   - Deleted `.github/workflows/publish-vscode.yml`.
-  - Resolved the two now-outdated Codex review threads after verification.
+  - Resolved both stale Codex review threads after the fixes were pushed.
 - PR #54 local gates passed: `git diff --check`, upstream-action/publish grep guards, GitHub help/action tests (18 pass), Lightbulb CLI tests (5 pass), `packages/opencode:bun typecheck`, and installer unsupported smoke.
 - PR #55 (`repo-identity`) fixed the stale Lightbulb dashboard fixture required by current type definitions; local gates passed: `git diff --check`, Lightbulb CLI tests (5 pass), and `packages/opencode:bun typecheck`.
 - Pushed both branches and requested `@codex review` on both current heads.
 - Blocked from merge: GitHub checks still queued/pending; PR #54 current-head Codex review is EYES-only pending, and PR #55 current-head Codex response has not arrived yet.
+
+## 2026-06-21T20:02:13Z — PR #54 current-head review fix pushed
+
+- Fixed Codex current-head finding on PR #54: disabled `opencode github install` now uses `fail(...)` and `instance:false`, so it exits cleanly with the unsupported Lightbulb message even outside a project directory.
+- Pushed commit `559f5cccf` to `cleanup-automation`, resolved the outdated review thread, and requested `@codex review` again.
+- Local gates passed: `git diff --check`, GitHub help/action tests (18 pass), Lightbulb CLI tests (5 pass), `packages/opencode:bun typecheck`, package installer smoke, and `/tmp` installer smoke.
+- PR #55 current-head Codex review is clean; still blocked on queued GitHub checks.
+- Blocked from merge: PR #54 and PR #55 GitHub checks remain queued/pending; PR #54 latest Codex review is EYES-only pending.

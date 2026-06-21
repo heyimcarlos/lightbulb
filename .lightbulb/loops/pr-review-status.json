@@ -1,12 +1,12 @@
 {
-  "updated_at": "2026-06-21T19:36:43Z",
+  "updated_at": "2026-06-21T20:02:13Z",
   "prs": [
     {
       "pr": 54,
       "url": "https://github.com/heyimcarlos/lightbulb/pull/54",
       "head": "cleanup-automation",
       "base": "dev",
-      "head_sha": "f24fb81b68b15793a4fd68eb5e13a943aaa0d816",
+      "head_sha": "559f5cccf2e0e757f8fc7e23c0f0a90c3cae3fd0",
       "state": "pending_ci_and_current_head_codex_review",
       "local_gates": {
         "git diff --check": "passed",
@@ -16,17 +16,19 @@
         "packages/opencode:bun test test/cli/help/help-snapshots.test.ts test/cli/github-action.test.ts --timeout 30000": "passed: 18 pass, 0 fail",
         "packages/opencode:bun test test/cli/lightbulb.test.ts --timeout 30000": "passed: 5 pass, 0 fail",
         "packages/opencode:bun typecheck": "passed",
-        "packages/opencode:OPENCODE_DB=/tmp/lightbulb-pr54-install.sqlite bun src/index.ts github install": "passed: exits 1 with Lightbulb unsupported installer message"
+        "packages/opencode:OPENCODE_DB=/tmp/lightbulb-pr54-install-fix-pkg.sqlite bun src/index.ts github install": "passed: exits 1 with clean Lightbulb unsupported installer message",
+        "/tmp:OPENCODE_DB=/tmp/lightbulb-pr54-install-fix.sqlite bun /home/cyberjanitor/worktrees/lightbulb-pr-54/packages/opencode/src/index.ts github install": "passed: exits 1 with clean Lightbulb unsupported installer message without project bootstrap"
       },
       "review_fixes": [
         "Disabled opencode github install so it cannot open the upstream app or write anomalyco/opencode/github@latest workflows.",
         "Deleted .github/workflows/publish-vscode.yml so Lightbulb tags/manual dispatch cannot publish the upstream opencode VS Code extension.",
-        "Resolved both stale Codex review threads after the fixes were pushed."
+        "Changed the disabled installer from Effect.die to fail(...) and instance:false so it surfaces as an expected CLI failure even outside a project directory.",
+        "Resolved all Codex review threads after fixes were pushed."
       ],
       "external_codex_review": {
         "requested": true,
         "pending": true,
-        "reason": "Latest @codex review comment on head f24fb81b has only an EYES reaction so far."
+        "reason": "Latest @codex review comment on head 559f5ccc has only an EYES reaction so far."
       },
       "blockers": [
         "GitHub checks are still pending/queued on the latest head."
@@ -38,7 +40,7 @@
       "head": "repo-identity",
       "base": "dev",
       "head_sha": "c5ab88fff65d7e587b59aea0677aed1349e73210",
-      "state": "pending_ci_and_current_head_codex_review",
+      "state": "pending_ci",
       "local_gates": {
         "git diff --check": "passed",
         "packages/opencode:bun test test/cli/lightbulb.test.ts --timeout 30000": "passed: 5 pass, 0 fail",
@@ -49,8 +51,8 @@
       ],
       "external_codex_review": {
         "requested": true,
-        "pending": true,
-        "reason": "Latest @codex review requested on head c5ab88ff; no current-head response yet."
+        "pending": false,
+        "reason": "Codex connector reported no major issues on current head c5ab88fff6."
       },
       "blockers": [
         "GitHub checks are still pending/queued on the latest head."
