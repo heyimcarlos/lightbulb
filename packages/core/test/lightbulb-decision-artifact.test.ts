@@ -203,6 +203,56 @@ describe("Lightbulb decision artifact routing", () => {
     ),
   )
 
+  it.live("rejects non-routable artifacts before superseding", () =>
+    Effect.acquireRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ).pipe(
+      Effect.flatMap((tmp) =>
+        Effect.gen(function* () {
+          const lightbulb = yield* Lightbulb.Service
+          const seeded = yield* lightbulb.seedTracerBullet()
+          yield* Effect.promise(() => Bun.write(path.join(tmp.path, "replacement-decision.md"), "replacement decision"))
+
+          const report = yield* lightbulb.registerHarnessArtifact({
+            accountID: seeded.accountID,
+            producerKind: "harness",
+            type: "report",
+            uri: "generic-report.md",
+            summary: "Generic report with decision-shaped metadata.",
+            retentionPolicy: { mode: "keep" },
+            metadata: {
+              decision: {
+                status: "pending",
+                owner: "architecture",
+              },
+            },
+          })
+          const rejected = yield* lightbulb
+            .registerDecisionArtifact({
+              accountID: seeded.accountID,
+              type: "adr",
+              uri: "replacement-decision.md",
+              summary: "Replacement decision targeting a non-routable artifact.",
+              retentionPolicy: { mode: "keep" },
+              baseDirectory: tmp.path,
+              source: {
+                issueRef: "#24",
+              },
+              decision: {
+                status: "accepted",
+                owner: "architecture",
+                supersedesArtifactID: report.id,
+              },
+            })
+            .pipe(Effect.flip)
+
+          expect(rejected).toMatchObject({ reason: "superseded artifact is not a decision artifact" })
+        }).pipe(Effect.provide(layer(tmp.path))),
+      ),
+    ),
+  )
+
   it.live("holds ready issue routing for an unresolved decision gate", () =>
     Effect.acquireRelease(
       Effect.promise(() => tmpdir()),

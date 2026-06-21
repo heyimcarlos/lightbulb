@@ -116,7 +116,7 @@ export function registerDecisionArtifactInDb(db: Database.Interface["db"], input
     if (input.decision.supersedesArtifactID && !superseded)
       return yield* Effect.fail(new ArtifactRegistrationRejected({ reason: "superseded decision artifact was not found" }))
 
-    const supersededDecision = superseded ? decisionForArtifact(superseded) : undefined
+    const supersededDecision = superseded && isDecisionArtifactType(superseded.type) ? decisionForArtifact(superseded) : undefined
     if (superseded && !supersededDecision)
       return yield* Effect.fail(new ArtifactRegistrationRejected({ reason: "superseded artifact is not a decision artifact" }))
 
