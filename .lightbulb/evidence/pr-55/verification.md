@@ -2,7 +2,7 @@
 
 - Branch: `repo-identity`
 - Issue: #46
-- Captured: 2026-06-21T19:09:41Z
+- Captured: 2026-06-21T23:10:34Z
 
 ## Behavior evidence
 

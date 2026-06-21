@@ -1,0 +1,15 @@
+lightbulb dashboard
+
+show the Lightbulb account work graph
+
+Options:
+  -h, --help          show help                                                            [boolean]
+  -v, --version       show version number                                                  [boolean]
+      --print-logs    print logs to stderr                                                 [boolean]
+      --log-level     log level                 [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
+      --pure          run without external plugins                                         [boolean]
+      --account       Lightbulb account ID to display                                       [string]
+      --seed          seed a tracer-bullet graph before displaying it                      [boolean]
+      --account-name  account name to use with --seed                                       [string]
+      --artifact-uri  artifact URI to use with --seed                                       [string]
+      --format        output format                      [choices: "text", "json"] [default: "text"]

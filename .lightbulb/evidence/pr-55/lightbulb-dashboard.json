@@ -1,24 +1,29 @@
 {
   "account": {
-    "id": "lbacc_eeb94144e001VM399NChPz8Pxv",
+    "id": "lbacc_eec72a1440019GZdm5k1MG2L07",
     "name": "Lightbulb Bootstrap",
     "status": "active"
   },
   "goals": [
     {
-      "id": "lbgoal_eeb94144e002VlYktByE3nVm3N",
+      "id": "lbgoal_eec72a144002zZa0vef3WacMP3",
       "title": "Bootstrap loop harness",
       "status": "active",
       "summary": "Create one durable Lightbulb goal graph.",
       "loops": [
         {
-          "id": "lbloop_eeb94144e0032JqhZDKZ7ABaGf",
+          "id": "lbloop_eec72a14400392W4t0mhXc23OU",
           "kind": "implementation",
           "status": "active",
           "summary": "Implementation loop owns the tracer bullet run.",
+          "profileID": null,
+          "schedule": null,
+          "budget": null,
+          "scheduleClassification": "not_due",
+          "scheduleReason": "schedule_not_configured",
           "runs": [
             {
-              "id": "lbrun_eeb94144e004p1bd9eHE5hqbp8",
+              "id": "lbrun_eec72a144004wmqe47j6HH3ji9",
               "status": "complete",
               "reviewStatus": "requested",
               "debugStatus": "fixed",
@@ -26,7 +31,7 @@
               "summary": "Worker produced a durable implementation report artifact.",
               "workers": [
                 {
-                  "id": "lbworker_eeb94144e005OWNyt2JOyPcBpZ",
+                  "id": "lbworker_eec72a144005Pgi0V70O0mxYJu",
                   "role": "bounded implementation worker",
                   "status": "complete",
                   "summary": "Implemented the schema tracer bullet and returned artifact handles."
@@ -34,16 +39,16 @@
               ],
               "gates": [
                 {
-                  "id": "lbgate_eeb94144e0088GqraH2aqB5Wrs",
+                  "id": "lbgate_eec72a144008Jqhh7WVadwUlAu",
                   "kind": "review",
                   "status": "pending",
                   "summary": "Parent review is pending against the report artifact.",
-                  "artifactID": "lbartifact_eeb94144e007jLrD7mPMT3Ev9M"
+                  "artifactID": "lbartifact_eec72a1440076cAkL7IXEaA7D3"
                 }
               ],
               "artifacts": [
                 {
-                  "id": "lbartifact_eeb94144e007jLrD7mPMT3Ev9M",
+                  "id": "lbartifact_eec72a1440076cAkL7IXEaA7D3",
                   "type": "report",
                   "uri": ".lightbulb/runs/schema-tracer-bullet.md",
                   "summary": "Concise worker report for parent orchestration.",
@@ -51,7 +56,7 @@
                   "integrity": {
                     "status": "unchecked",
                     "checksum": null,
-                    "checkedAt": 1782068810830,
+                    "checkedAt": 1782083395908,
                     "uncheckedReason": "tracer artifact content not checked",
                     "expectedSizeBytes": null,
                     "actualChecksum": null,
@@ -62,14 +67,14 @@
                   },
                   "retentionDecision": "hold-for-gate",
                   "producerKind": "worker",
-                  "producerRunID": "lbrun_eeb94144e004p1bd9eHE5hqbp8",
-                  "producerWorkerID": "lbworker_eeb94144e005OWNyt2JOyPcBpZ",
+                  "producerRunID": "lbrun_eec72a144004wmqe47j6HH3ji9",
+                  "producerWorkerID": "lbworker_eec72a144005Pgi0V70O0mxYJu",
                   "source": {},
                   "lineage": [
                     {
                       "relation": "produced_by",
-                      "runID": "lbrun_eeb94144e004p1bd9eHE5hqbp8",
-                      "workerID": "lbworker_eeb94144e005OWNyt2JOyPcBpZ",
+                      "runID": "lbrun_eec72a144004wmqe47j6HH3ji9",
+                      "workerID": "lbworker_eec72a144005Pgi0V70O0mxYJu",
                       "summary": "Worker produced this artifact for parent review."
                     }
                   ]
@@ -84,25 +89,25 @@
   "inbox": {
     "taskPackets": [
       {
-        "id": "lbpacket_eeb94144e006MclpHYX5hE9uOy",
-        "workerID": "lbworker_eeb94144e005OWNyt2JOyPcBpZ",
+        "id": "lbpacket_eec72a144006EGYhza2O9xp0Hk",
+        "workerID": "lbworker_eec72a144005Pgi0V70O0mxYJu",
         "title": "Implement schema tracer bullet",
         "status": "complete"
       }
     ],
     "gates": [
       {
-        "id": "lbgate_eeb94144e0088GqraH2aqB5Wrs",
+        "id": "lbgate_eec72a144008Jqhh7WVadwUlAu",
         "kind": "review",
         "status": "pending",
         "summary": "Parent review is pending against the report artifact.",
-        "artifactID": "lbartifact_eeb94144e007jLrD7mPMT3Ev9M"
+        "artifactID": "lbartifact_eec72a1440076cAkL7IXEaA7D3"
       }
     ]
   },
   "artifactHandles": [
     {
-      "id": "lbartifact_eeb94144e007jLrD7mPMT3Ev9M",
+      "id": "lbartifact_eec72a1440076cAkL7IXEaA7D3",
       "type": "report",
       "uri": ".lightbulb/runs/schema-tracer-bullet.md",
       "summary": "Concise worker report for parent orchestration.",
@@ -110,7 +115,7 @@
       "integrity": {
         "status": "unchecked",
         "checksum": null,
-        "checkedAt": 1782068810830,
+        "checkedAt": 1782083395908,
         "uncheckedReason": "tracer artifact content not checked",
         "expectedSizeBytes": null,
         "actualChecksum": null,
@@ -121,14 +126,14 @@
       },
       "retentionDecision": "hold-for-gate",
       "producerKind": "worker",
-      "producerRunID": "lbrun_eeb94144e004p1bd9eHE5hqbp8",
-      "producerWorkerID": "lbworker_eeb94144e005OWNyt2JOyPcBpZ",
+      "producerRunID": "lbrun_eec72a144004wmqe47j6HH3ji9",
+      "producerWorkerID": "lbworker_eec72a144005Pgi0V70O0mxYJu",
       "source": {},
       "lineage": [
         {
           "relation": "produced_by",
-          "runID": "lbrun_eeb94144e004p1bd9eHE5hqbp8",
-          "workerID": "lbworker_eeb94144e005OWNyt2JOyPcBpZ",
+          "runID": "lbrun_eec72a144004wmqe47j6HH3ji9",
+          "workerID": "lbworker_eec72a144005Pgi0V70O0mxYJu",
           "summary": "Worker produced this artifact for parent review."
         }
       ]
