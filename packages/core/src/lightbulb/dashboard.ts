@@ -30,7 +30,7 @@ export function toGoalRunTree(graph: AccountGraph, goal: GoalLifecycle): GoalRun
 
   return {
     goal: toGoalSummary(goal),
-    loops: loops.map((loop) => toDashboardLoop(goalGraph, loop, runs)),
+    loops: loops.map((loop) => toDashboardLoop(goalGraph, loop, runs, graph)),
     taskPackets: graph.taskPackets
       .filter((packet) => workerIDs.has(packet.worker_id))
       .map((packet) => ({
@@ -98,17 +98,22 @@ function toDashboardLoop(
   graph: AccountGraph,
   loop: typeof LightbulbLoopTable.$inferSelect,
   runs: readonly (typeof LightbulbRunTable.$inferSelect)[] = graph.runs,
+  retentionGraph = graph,
 ): DashboardLoop {
   return {
     id: loop.id,
     kind: loop.kind,
     status: loop.status,
     summary: loop.summary,
-    runs: runs.filter((run) => run.loop_id === loop.id).map((run) => toDashboardRun(graph, run)),
+    runs: runs.filter((run) => run.loop_id === loop.id).map((run) => toDashboardRun(graph, run, retentionGraph)),
   }
 }
 
-function toDashboardRun(graph: AccountGraph, run: typeof LightbulbRunTable.$inferSelect): DashboardRun {
+function toDashboardRun(
+  graph: AccountGraph,
+  run: typeof LightbulbRunTable.$inferSelect,
+  retentionGraph = graph,
+): DashboardRun {
   return {
     id: run.id,
     status: run.status,
@@ -127,7 +132,7 @@ function toDashboardRun(graph: AccountGraph, run: typeof LightbulbRunTable.$infe
     gates: graph.gates.filter((gate) => gate.run_id === run.id).map(toDashboardGate),
     artifacts: graph.artifacts
       .filter((artifact) => artifact.producer_run_id === run.id || artifact.source_run_id === run.id)
-      .map((artifact) => toGraphArtifactHandle(artifact, graph)),
+      .map((artifact) => toGraphArtifactHandle(artifact, graph, retentionGraph)),
   }
 }
 

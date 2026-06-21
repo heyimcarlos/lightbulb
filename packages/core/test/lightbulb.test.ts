@@ -568,6 +568,9 @@ describe("Lightbulb", () => {
           expect(tree?.artifactHandles.find((artifact) => artifact.id === seeded.artifactID)?.retentionDecision).toBe(
             "hold-for-active-run",
           )
+          expect(tree?.loops[0]?.runs[0]?.artifacts.find((artifact) => artifact.id === seeded.artifactID)?.retentionDecision).toBe(
+            "hold-for-active-run",
+          )
           expect(tree?.artifactHandles.find((artifact) => artifact.id === seeded.artifactID)?.lineage.map((edge) => edge.summary)).toEqual([
             "Worker produced this artifact for parent review.",
           ])
