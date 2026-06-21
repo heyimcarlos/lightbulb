@@ -5,6 +5,8 @@ export default {
   id: "20260621093000_lightbulb_harness_artifacts",
   up(tx) {
     return Effect.gen(function* () {
+      yield* tx.run(`CREATE TEMP TABLE \`__lightbulb_artifact_edge_backup\` AS SELECT * FROM \`lightbulb_artifact_edge\`;`)
+      yield* tx.run(`CREATE TEMP TABLE \`__lightbulb_gate_artifact_backup\` AS SELECT \`id\`, \`artifact_id\` FROM \`lightbulb_gate\` WHERE \`artifact_id\` IS NOT NULL;`)
       yield* tx.run(`PRAGMA foreign_keys=OFF;`)
       yield* tx.run(`
         CREATE TABLE \`__new_lightbulb_artifact\` (
@@ -89,6 +91,38 @@ export default {
       `)
       yield* tx.run(`DROP TABLE \`lightbulb_artifact\`;`)
       yield* tx.run(`ALTER TABLE \`__new_lightbulb_artifact\` RENAME TO \`lightbulb_artifact\`;`)
+      yield* tx.run(`CREATE UNIQUE INDEX \`lightbulb_artifact_account_id_idx\` ON \`lightbulb_artifact\` (\`account_id\`,\`id\`);`)
+      yield* tx.run(`
+        INSERT OR IGNORE INTO \`lightbulb_artifact_edge\`(
+          \`account_id\`,
+          \`artifact_id\`,
+          \`consumer_run_id\`,
+          \`consumer_worker_id\`,
+          \`relation\`,
+          \`summary\`,
+          \`time_created\`
+        )
+        SELECT
+          \`account_id\`,
+          \`artifact_id\`,
+          \`consumer_run_id\`,
+          \`consumer_worker_id\`,
+          \`relation\`,
+          \`summary\`,
+          \`time_created\`
+        FROM \`__lightbulb_artifact_edge_backup\`;
+      `)
+      yield* tx.run(`
+        UPDATE \`lightbulb_gate\`
+        SET \`artifact_id\` = (
+          SELECT \`artifact_id\`
+          FROM \`__lightbulb_gate_artifact_backup\`
+          WHERE \`__lightbulb_gate_artifact_backup\`.\`id\` = \`lightbulb_gate\`.\`id\`
+        )
+        WHERE \`id\` IN (SELECT \`id\` FROM \`__lightbulb_gate_artifact_backup\`);
+      `)
+      yield* tx.run(`DROP TABLE \`__lightbulb_artifact_edge_backup\`;`)
+      yield* tx.run(`DROP TABLE \`__lightbulb_gate_artifact_backup\`;`)
       yield* tx.run(`PRAGMA foreign_keys=ON;`)
       yield* tx.run(`CREATE INDEX \`lightbulb_artifact_account_idx\` ON \`lightbulb_artifact\` (\`account_id\`);`)
       yield* tx.run(`CREATE INDEX \`lightbulb_artifact_producer_run_idx\` ON \`lightbulb_artifact\` (\`producer_run_id\`);`)
@@ -98,7 +132,6 @@ export default {
       yield* tx.run(`CREATE INDEX \`lightbulb_artifact_source_loop_idx\` ON \`lightbulb_artifact\` (\`source_loop_id\`);`)
       yield* tx.run(`CREATE INDEX \`lightbulb_artifact_source_run_idx\` ON \`lightbulb_artifact\` (\`source_run_id\`);`)
       yield* tx.run(`CREATE INDEX \`lightbulb_artifact_source_gate_idx\` ON \`lightbulb_artifact\` (\`source_gate_id\`);`)
-      yield* tx.run(`CREATE UNIQUE INDEX \`lightbulb_artifact_account_id_idx\` ON \`lightbulb_artifact\` (\`account_id\`,\`id\`);`)
     })
   },
 } satisfies DatabaseMigration.Migration
