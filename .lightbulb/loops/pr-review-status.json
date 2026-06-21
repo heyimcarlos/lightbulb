@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-06-21T21:41:02Z",
+  "updated_at": "2026-06-21T23:10:54Z",
   "prs": [
     {
       "pr": 54,
@@ -38,23 +38,27 @@
       "url": "https://github.com/heyimcarlos/lightbulb/pull/55",
       "head": "repo-identity",
       "base": "dev",
-      "head_sha": "c5ab88fff65d7e587b59aea0677aed1349e73210",
+      "head_sha": "3f49791e8d53eddfa6ed34ecd9852ea1b6b92dae",
       "state": "pending_ci",
       "local_gates": {
-        "git diff --check": "passed",
+        "git diff --check": "passed before and after evidence refresh",
+        "packages/opencode:OPENCODE_DB=/tmp/lightbulb-pr55-smoke.sqlite ./bin/lightbulb --help": "passed; stderr captured in .lightbulb/evidence/pr-55/lightbulb-help.txt",
+        "packages/opencode:OPENCODE_DB=/tmp/lightbulb-pr55-smoke.sqlite ./bin/lightbulb dashboard --help": "passed; stderr captured in .lightbulb/evidence/pr-55/lightbulb-dashboard-help.txt",
+        "packages/opencode:OPENCODE_DB=/tmp/lightbulb-pr55-smoke.sqlite ./bin/lightbulb dashboard --seed --format json": "passed; JSON captured in .lightbulb/evidence/pr-55/lightbulb-dashboard.json",
         "packages/opencode:bun test test/cli/lightbulb.test.ts --timeout 30000": "passed: 5 pass, 0 fail",
         "packages/opencode:bun typecheck": "passed"
       },
       "review_fixes": [
-        "Updated dashboard test fixture for current loop schedule fields so package typecheck passes."
+        "Updated dashboard test fixture for current loop schedule fields so package typecheck passes.",
+        "Filled previously empty PR evidence artifacts with current Lightbulb CLI help, dashboard help, and seeded dashboard JSON output."
       ],
       "external_codex_review": {
         "requested": true,
         "pending": false,
-        "reason": "Codex connector reported no major issues on current head c5ab88fff6."
+        "reason": "Codex connector reported no major issues on current head 3f49791e8d after evidence refresh."
       },
       "blockers": [
-        "GitHub checks are still queued/pending on the latest head."
+        "GitHub checks are still queued/pending on the latest head after 10 minutes of gh pr checks --watch --fail-fast."
       ]
     }
   ]
