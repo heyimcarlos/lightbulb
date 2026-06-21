@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "9c219ff5-f62d-4e3e-bb82-2a8813574ba8",
+  "id": "bb9df4bc-4d86-4f9a-9f5a-d8b53eec5068",
   "prevIds": [
-    "39e1b18a-da19-4f14-98f6-6c8fa1f21ce9"
+    "9c219ff5-f62d-4e3e-bb82-2a8813574ba8"
   ],
   "ddl": [
     {
@@ -1066,6 +1066,36 @@
       "type": "text",
       "notNull": true,
       "autoincrement": false,
+      "default": "''",
+      "generated": null,
+      "name": "objective",
+      "entityType": "columns",
+      "table": "lightbulb_goal"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "source_ref",
+      "entityType": "columns",
+      "table": "lightbulb_goal"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "owner_id",
+      "entityType": "columns",
+      "table": "lightbulb_goal"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
       "default": null,
       "generated": null,
       "name": "status",
@@ -1079,6 +1109,36 @@
       "default": null,
       "generated": null,
       "name": "summary",
+      "entityType": "columns",
+      "table": "lightbulb_goal"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "hold_reason",
+      "entityType": "columns",
+      "table": "lightbulb_goal"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "completion_reason",
+      "entityType": "columns",
+      "table": "lightbulb_goal"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "completed_at",
       "entityType": "columns",
       "table": "lightbulb_goal"
     },
@@ -3648,6 +3708,24 @@
       "where": null,
       "origin": "manual",
       "name": "lightbulb_goal_account_idx",
+      "entityType": "indexes",
+      "table": "lightbulb_goal"
+    },
+    {
+      "columns": [
+        {
+          "value": "account_id",
+          "isExpression": false
+        },
+        {
+          "value": "source_ref",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "lightbulb_goal_account_source_ref_idx",
       "entityType": "indexes",
       "table": "lightbulb_goal"
     },

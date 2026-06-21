@@ -1,6 +1,6 @@
 export * as Lightbulb from "./lightbulb"
 
-import { asc, eq } from "drizzle-orm"
+import { and, asc, eq } from "drizzle-orm"
 import { Context, Effect, Layer, Schema } from "effect"
 import { Database } from "./database/database"
 import { withStatics } from "./schema"
@@ -44,7 +44,7 @@ export const EventID = prefixedID("lbevent", "Lightbulb.EventID")
 export type EventID = typeof EventID.Type
 
 export type AccountStatus = "active" | "paused" | "archived"
-export type GoalStatus = "open" | "blocked" | "verified" | "cancelled"
+export type GoalStatus = "active" | "held" | "completed" | "cancelled" | "stopped"
 export type LoopKind = "discovery" | "implementation" | "debug" | "review" | "integration"
 export type LoopStatus = "active" | "idle" | "blocked" | "complete"
 export type RunStatus = "queued" | "running" | "blocked" | "complete" | "failed"
@@ -57,6 +57,59 @@ export type ArtifactType = "report" | "plan" | "patch" | "test_result" | "handof
 export type ArtifactStatus = "registered" | "consumed" | "superseded" | "expired"
 export type ArtifactEdgeRelation = "produced_by" | "consumed_by" | "supersedes" | "verifies"
 export type GateKind = "review" | "debug" | "verification"
+
+export type GoalLifecycle = typeof LightbulbGoalTable.$inferSelect
+
+export type CreateGoalInput = {
+  readonly accountID?: AccountID
+  readonly accountName?: string
+  readonly goalID?: GoalID
+  readonly title: string
+  readonly objective: string
+  readonly sourceRef?: string
+  readonly ownerID?: string
+  readonly summary?: string
+  readonly metadata?: Record<string, unknown>
+}
+
+export type CreateGoalResult = {
+  readonly goal: GoalLifecycle
+  readonly adopted: boolean
+}
+
+export type UpdateGoalStatusInput = {
+  readonly goalID: GoalID
+  readonly status: GoalStatus
+  readonly reason?: string
+}
+
+export type GoalSummary = {
+  readonly id: GoalID
+  readonly title: string
+  readonly objective: string
+  readonly sourceRef: string | null
+  readonly ownerID: string | null
+  readonly status: GoalStatus
+  readonly summary: string
+  readonly holdReason: string | null
+  readonly completionReason: string | null
+  readonly completedAt: number | null
+  readonly timeCreated: number
+  readonly timeUpdated: number
+}
+
+export type GoalRunTree = {
+  readonly goal: GoalSummary
+  readonly loops: DashboardLoop[]
+  readonly taskPackets: {
+    readonly id: TaskPacketID
+    readonly workerID: WorkerID
+    readonly title: string
+    readonly status: TaskPacketStatus
+  }[]
+  readonly gates: DashboardGate[]
+  readonly artifactHandles: ArtifactHandle[]
+}
 
 export type ArtifactLineageEdge = {
   readonly relation: ArtifactEdgeRelation
@@ -196,6 +249,10 @@ export type DashboardGate = {
 }
 
 export interface Interface {
+  readonly createOrAdoptGoal: (input: CreateGoalInput) => Effect.Effect<CreateGoalResult>
+  readonly readGoal: (goalID: GoalID) => Effect.Effect<GoalLifecycle | undefined>
+  readonly updateGoalStatus: (input: UpdateGoalStatusInput) => Effect.Effect<GoalLifecycle>
+  readonly readGoalRunTree: (goalID: GoalID) => Effect.Effect<GoalRunTree | undefined>
   readonly seedTracerBullet: (input?: {
     readonly accountName?: string
     readonly artifactUri?: string
@@ -222,6 +279,146 @@ export const layer = Layer.effect(
     const { db } = yield* Database.Service
 
     return Service.of({
+      createOrAdoptGoal: Effect.fn("Lightbulb.createOrAdoptGoal")(function* (input) {
+        const goalID = input.goalID ?? GoalID.create()
+        return yield* db
+          .transaction((tx) =>
+            Effect.gen(function* () {
+              if (input.goalID) {
+                const existing = yield* tx
+                  .select()
+                  .from(LightbulbGoalTable)
+                  .where(eq(LightbulbGoalTable.id, input.goalID))
+                  .get()
+                if (existing) return { goal: existing, adopted: true }
+              }
+              if (input.sourceRef) {
+                const existing = yield* tx
+                  .select()
+                  .from(LightbulbGoalTable)
+                  .where(
+                    input.accountID
+                      ? and(
+                          eq(LightbulbGoalTable.account_id, input.accountID),
+                          eq(LightbulbGoalTable.source_ref, input.sourceRef),
+                        )
+                      : eq(LightbulbGoalTable.source_ref, input.sourceRef),
+                  )
+                  .get()
+                if (existing) return { goal: existing, adopted: true }
+              }
+              const accountID = input.accountID ?? AccountID.create()
+              yield* tx
+                .insert(LightbulbAccountTable)
+                .values({
+                  id: accountID,
+                  name: input.accountName ?? "Lightbulb Account",
+                  status: "active",
+                  metadata: input.ownerID ? { owner_id: input.ownerID } : undefined,
+                })
+                .onConflictDoNothing()
+                .run()
+              yield* tx
+                .insert(LightbulbGoalTable)
+                .values({
+                  id: goalID,
+                  account_id: accountID,
+                  title: input.title,
+                  objective: input.objective,
+                  source_ref: input.sourceRef ?? null,
+                  owner_id: input.ownerID ?? null,
+                  status: "active",
+                  summary: input.summary ?? input.objective,
+                  metadata: input.metadata,
+                })
+                .run()
+              yield* tx
+                .insert(LightbulbEventTable)
+                .values({
+                  id: EventID.create(),
+                  account_id: accountID,
+                  aggregate_type: "goal",
+                  aggregate_id: goalID,
+                  type: "lightbulb.goal.created",
+                  summary: "Created durable Lightbulb goal.",
+                  data: { source_ref: input.sourceRef ?? null, owner_id: input.ownerID ?? null },
+                  time_created: Date.now(),
+                })
+                .run()
+              const goal = yield* tx.select().from(LightbulbGoalTable).where(eq(LightbulbGoalTable.id, goalID)).get()
+              if (!goal) return yield* Effect.die(new Error("Lightbulb goal was not created"))
+              return { goal, adopted: false }
+            }),
+          )
+          .pipe(Effect.orDie)
+      }),
+      readGoal: Effect.fn("Lightbulb.readGoal")(function* (goalID) {
+        return yield* db
+          .select()
+          .from(LightbulbGoalTable)
+          .where(eq(LightbulbGoalTable.id, goalID))
+          .get()
+          .pipe(Effect.orDie)
+      }),
+      updateGoalStatus: Effect.fn("Lightbulb.updateGoalStatus")(function* (input) {
+        const now = Date.now()
+        const terminal = isTerminalGoalStatus(input.status)
+        return yield* db
+          .transaction((tx) =>
+            Effect.gen(function* () {
+              const current = yield* tx
+                .select()
+                .from(LightbulbGoalTable)
+                .where(eq(LightbulbGoalTable.id, input.goalID))
+                .get()
+              if (!current) return yield* Effect.die(new Error("Lightbulb goal not found"))
+              yield* tx
+                .update(LightbulbGoalTable)
+                .set({
+                  status: input.status,
+                  hold_reason: input.status === "held" ? input.reason ?? null : null,
+                  completion_reason: terminal ? input.reason ?? null : null,
+                  completed_at: terminal ? now : null,
+                  time_updated: now,
+                })
+                .where(eq(LightbulbGoalTable.id, input.goalID))
+                .run()
+              yield* tx
+                .insert(LightbulbEventTable)
+                .values({
+                  id: EventID.create(),
+                  account_id: current.account_id,
+                  aggregate_type: "goal",
+                  aggregate_id: input.goalID,
+                  type: "lightbulb.goal.status_changed",
+                  summary: `Goal moved from ${current.status} to ${input.status}.`,
+                  data: { from: current.status, to: input.status, reason: input.reason ?? null },
+                  time_created: now,
+                })
+                .run()
+              const goal = yield* tx
+                .select()
+                .from(LightbulbGoalTable)
+                .where(eq(LightbulbGoalTable.id, input.goalID))
+                .get()
+              if (!goal) return yield* Effect.die(new Error("Lightbulb goal not found"))
+              return goal
+            }),
+          )
+          .pipe(Effect.orDie)
+      }),
+      readGoalRunTree: Effect.fn("Lightbulb.readGoalRunTree")(function* (goalID) {
+        const goal = yield* db
+          .select()
+          .from(LightbulbGoalTable)
+          .where(eq(LightbulbGoalTable.id, goalID))
+          .get()
+          .pipe(Effect.orDie)
+        if (!goal) return
+        const graph = yield* readAccountGraphFromDb(db, goal.account_id)
+        if (!graph) return
+        return toGoalRunTree(graph, goal)
+      }),
       seedTracerBullet: Effect.fn("Lightbulb.seedTracerBullet")(function* (input) {
         const now = Date.now()
         const ids = {
@@ -252,7 +449,9 @@ export const layer = Layer.effect(
                   id: ids.goalID,
                   account_id: ids.accountID,
                   title: "Bootstrap loop harness",
-                  status: "open",
+                  objective: "Create one durable Lightbulb goal graph.",
+                  source_ref: "lightbulb:bootstrap-tracer-bullet",
+                  status: "active",
                   summary: "Create one durable Lightbulb goal graph.",
                 })
                 .run()
@@ -617,6 +816,52 @@ function readAccountGraphFromDb(db: Database.Interface["db"], accountID: Account
   })
 }
 
+function isTerminalGoalStatus(status: GoalStatus) {
+  return status === "completed" || status === "cancelled" || status === "stopped"
+}
+
+function toGoalRunTree(graph: AccountGraph, goal: GoalLifecycle): GoalRunTree {
+  const loops = graph.loops.filter((loop) => loop.goal_id === goal.id)
+  const loopIDs = new Set(loops.map((loop) => loop.id))
+  const runs = graph.runs.filter((run) => loopIDs.has(run.loop_id))
+  const runIDs = new Set(runs.map((run) => run.id))
+  const workers = graph.workers.filter((worker) => runIDs.has(worker.run_id))
+  const workerIDs = new Set(workers.map((worker) => worker.id))
+  const artifacts = graph.artifacts.filter((artifact) => runIDs.has(artifact.producer_run_id))
+
+  return {
+    goal: toGoalSummary(goal),
+    loops: loops.map((loop) => toDashboardLoop(graph, loop, runs)),
+    taskPackets: graph.taskPackets
+      .filter((packet) => workerIDs.has(packet.worker_id))
+      .map((packet) => ({
+        id: packet.id,
+        workerID: packet.worker_id,
+        title: packet.title,
+        status: packet.status,
+      })),
+    gates: graph.gates.filter((gate) => runIDs.has(gate.run_id)).map(toDashboardGate),
+    artifactHandles: artifacts.map((artifact) => toArtifactHandleFromGraph(graph, artifact)),
+  }
+}
+
+function toGoalSummary(goal: GoalLifecycle): GoalSummary {
+  return {
+    id: goal.id,
+    title: goal.title,
+    objective: goal.objective,
+    sourceRef: goal.source_ref,
+    ownerID: goal.owner_id,
+    status: goal.status,
+    summary: goal.summary,
+    holdReason: goal.hold_reason,
+    completionReason: goal.completion_reason,
+    completedAt: goal.completed_at,
+    timeCreated: goal.time_created,
+    timeUpdated: goal.time_updated,
+  }
+}
+
 function toDashboard(graph: AccountGraph): Dashboard {
   return {
     account: {
@@ -631,34 +876,7 @@ function toDashboard(graph: AccountGraph): Dashboard {
       summary: goal.summary,
       loops: graph.loops
         .filter((loop) => loop.goal_id === goal.id)
-        .map((loop) => ({
-          id: loop.id,
-          kind: loop.kind,
-          status: loop.status,
-          summary: loop.summary,
-          runs: graph.runs
-            .filter((run) => run.loop_id === loop.id)
-            .map((run) => ({
-              id: run.id,
-              status: run.status,
-              reviewStatus: run.review_status,
-              debugStatus: run.debug_status,
-              gateStatus: run.gate_status,
-              summary: run.summary,
-              workers: graph.workers
-                .filter((worker) => worker.run_id === run.id)
-                .map((worker) => ({
-                  id: worker.id,
-                  role: worker.role,
-                  status: worker.status,
-                  summary: worker.summary,
-                })),
-              gates: graph.gates.filter((gate) => gate.run_id === run.id).map(toDashboardGate),
-              artifacts: graph.artifacts
-                .filter((artifact) => artifact.producer_run_id === run.id)
-                .map((artifact) => toArtifactHandle(artifact, graph.artifactEdges.filter((edge) => edge.artifact_id === artifact.id))),
-            })),
-        })),
+        .map((loop) => toDashboardLoop(graph, loop)),
     })),
     inbox: {
       taskPackets: graph.taskPackets.map((packet) => ({
@@ -671,9 +889,44 @@ function toDashboard(graph: AccountGraph): Dashboard {
         .filter((gate) => gate.status === "pending" || gate.status === "blocked")
         .map(toDashboardGate),
     },
-    artifactHandles: graph.artifacts.map((artifact) =>
-      toArtifactHandle(artifact, graph.artifactEdges.filter((edge) => edge.artifact_id === artifact.id)),
-    ),
+    artifactHandles: graph.artifacts.map((artifact) => toArtifactHandleFromGraph(graph, artifact)),
+  }
+}
+
+function toDashboardLoop(
+  graph: AccountGraph,
+  loop: typeof LightbulbLoopTable.$inferSelect,
+  runs: readonly (typeof LightbulbRunTable.$inferSelect)[] = graph.runs,
+): DashboardLoop {
+  return {
+    id: loop.id,
+    kind: loop.kind,
+    status: loop.status,
+    summary: loop.summary,
+    runs: runs.filter((run) => run.loop_id === loop.id).map((run) => toDashboardRun(graph, run)),
+  }
+}
+
+function toDashboardRun(graph: AccountGraph, run: typeof LightbulbRunTable.$inferSelect): DashboardRun {
+  return {
+    id: run.id,
+    status: run.status,
+    reviewStatus: run.review_status,
+    debugStatus: run.debug_status,
+    gateStatus: run.gate_status,
+    summary: run.summary,
+    workers: graph.workers
+      .filter((worker) => worker.run_id === run.id)
+      .map((worker) => ({
+        id: worker.id,
+        role: worker.role,
+        status: worker.status,
+        summary: worker.summary,
+      })),
+    gates: graph.gates.filter((gate) => gate.run_id === run.id).map(toDashboardGate),
+    artifacts: graph.artifacts
+      .filter((artifact) => artifact.producer_run_id === run.id)
+      .map((artifact) => toArtifactHandleFromGraph(graph, artifact)),
   }
 }
 
@@ -685,6 +938,16 @@ function toDashboardGate(row: typeof LightbulbGateTable.$inferSelect): Dashboard
     summary: row.summary,
     artifactID: row.artifact_id,
   }
+}
+
+function toArtifactHandleFromGraph(
+  graph: AccountGraph,
+  artifact: typeof LightbulbArtifactTable.$inferSelect,
+): ArtifactHandle {
+  return toArtifactHandle(
+    artifact,
+    graph.artifactEdges.filter((edge) => edge.artifact_id === artifact.id),
+  )
 }
 
 function toArtifactHandle(
