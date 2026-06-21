@@ -63,6 +63,18 @@ describe("lightbulb CLI entrypoint", () => {
       }),
     60_000,
   )
+
+  cliIt.live(
+    "fails fast for the inherited GitHub runner",
+    ({ opencode }) =>
+      Effect.gen(function* () {
+        const result = yield* opencode.spawn(["github", "run"])
+
+        opencode.expectExit(result, 1, "opencode github run")
+        expect(result.stderr).toContain("The inherited OpenCode GitHub runner is disabled in Lightbulb")
+      }),
+    60_000,
+  )
 })
 
 describe("lightbulb dashboard display", () => {

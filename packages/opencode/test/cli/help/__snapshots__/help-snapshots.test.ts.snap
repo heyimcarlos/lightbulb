@@ -329,7 +329,7 @@ manage GitHub agent
 
 Commands:
   opencode github install  unsupported in Lightbulb
-  opencode github run      run the GitHub agent
+  opencode github run      unsupported in Lightbulb
 
 Options:
   -h, --help        show help                                                              [boolean]
@@ -605,16 +605,14 @@ Options:
 exports[`opencode CLI help-text snapshots every documented command emits stable help text: opencode github run --help 1`] = `
 "opencode github run
 
-run the GitHub agent
+unsupported in Lightbulb
 
 Options:
   -h, --help        show help                                                              [boolean]
   -v, --version     show version number                                                    [boolean]
       --print-logs  print logs to stderr                                                   [boolean]
       --log-level   log level                   [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
-      --pure        run without external plugins                                           [boolean]
-      --event       GitHub mock event to run the agent for                                  [string]
-      --token       GitHub personal access token (github_pat_********)                      [string]"
+      --pure        run without external plugins                                           [boolean]"
 `;
 
 exports[`opencode CLI help-text snapshots every documented command emits stable help text: opencode db path --help 1`] = `

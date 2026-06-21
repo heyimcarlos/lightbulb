@@ -30,6 +30,8 @@ From the repository root:
 - `bun script/raw-changelog.ts` without `GH_REPO` — exited 1 with the expected guard message.
 - Review follow-up: removed the inherited GitHub Action install docs/tips, replaced GitHub docs pages with a disabled-in-Lightbulb note, and disabled `script/release` after `publish.yml` deletion.
 - Review follow-up gates: `git diff --check`, `packages/opencode bun test test/cli/help/help-snapshots.test.ts test/cli/github-action.test.ts test/cli/lightbulb.test.ts --timeout 30000` (23 pass), `packages/opencode bun typecheck`, and `packages/tui bun typecheck` — passed.
+- 2026-06-21T21:09:20Z review follow-up: `opencode github run` is now disabled with the same Lightbulb unsupported-command path as `github install`, and the inherited runner flags were removed from help.
+- 2026-06-21T21:09:20Z follow-up gates: `git diff --check`, `packages/opencode bun test test/cli/help/help-snapshots.test.ts test/cli/lightbulb.test.ts --timeout 30000` (7 pass, 0 fail, 34 snapshots), and `packages/opencode bun typecheck` — passed.
 - `packages/web bun astro check` synced content but remains blocked by pre-existing share/session type errors in `src/components/Share.tsx`, `src/components/share/part.tsx`, and `src/pages/s/[id].astro`; the new docs pages parsed before diagnostics.
 
 Package-local typecheck is required for the retained opencode CLI command and TUI tip removal. The docs change is covered by Astro content sync plus `git diff --check` because the package-wide Astro diagnostics are unrelated existing type-contract drift.
