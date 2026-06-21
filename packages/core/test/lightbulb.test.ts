@@ -409,7 +409,7 @@ describe("Lightbulb", () => {
               id: unrelatedRunID,
               account_id: seeded.accountID,
               loop_id: unrelatedLoopID,
-              status: "complete",
+              status: "running",
               review_status: "approved",
               debug_status: "fixed",
               gate_status: "passed",
@@ -424,6 +424,18 @@ describe("Lightbulb", () => {
             consumerRunID: unrelatedRunID,
             summary: "Unrelated goal consumed this artifact later.",
           })
+          yield* database.db
+            .update(LightbulbGateTable)
+            .set({ status: "passed" })
+            .where(eq(LightbulbGateTable.id, seeded.gateID))
+            .run()
+            .pipe(Effect.orDie)
+          yield* database.db
+            .update(LightbulbArtifactTable)
+            .set({ retention_policy: "expire_at:100" })
+            .where(eq(LightbulbArtifactTable.id, seeded.artifactID))
+            .run()
+            .pipe(Effect.orDie)
           const tree = yield* lightbulb.readGoalRunTree(seeded.goalID)
 
           expect(tree?.goal).toMatchObject({
@@ -459,13 +471,17 @@ describe("Lightbulb", () => {
             {
               id: seeded.gateID,
               kind: "review",
-              status: "pending",
+              status: "passed",
               summary: "Parent review is pending against the report artifact.",
               artifactID: seeded.artifactID,
             },
           ])
           expect(tree?.artifactHandles.map((artifact) => [artifact.id, artifact.uri, artifact.summary])).toEqual([
             [seeded.artifactID, ".lightbulb/runs/issue-16-goal-lifecycle.md", "Goal lifecycle worker report."],
+          ])
+          expect(tree?.artifactHandles[0]?.retentionDecision).toBe("hold-for-active-run")
+          expect(tree?.artifactHandles[0]?.lineage.map((edge) => edge.summary)).toEqual([
+            "Worker produced this artifact for parent review.",
           ])
           expect(JSON.stringify(tree)).not.toContain("Unrelated goal")
         }).pipe(Effect.provide(layer(tmp.path))),

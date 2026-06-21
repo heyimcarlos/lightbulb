@@ -791,7 +791,7 @@ function toGoalRunTree(graph: AccountGraph, goal: GoalLifecycle): GoalRunTree {
         status: packet.status,
       })),
     gates: goalGraph.gates.map(toDashboardGate),
-    artifactHandles: artifacts.map((artifact) => toGraphArtifactHandle(artifact, goalGraph)),
+    artifactHandles: artifacts.map((artifact) => toGraphArtifactHandle(artifact, goalGraph, graph)),
   }
 }
 
@@ -888,15 +888,20 @@ function toDashboardGate(row: typeof LightbulbGateTable.$inferSelect): Dashboard
   }
 }
 
-function toGraphArtifactHandle(row: typeof LightbulbArtifactTable.$inferSelect, graph: AccountGraph) {
+function toGraphArtifactHandle(
+  row: typeof LightbulbArtifactTable.$inferSelect,
+  graph: AccountGraph,
+  retentionGraph = graph,
+) {
   const edges = graph.artifactEdges.filter((edge) => edge.artifact_id === row.id)
+  const retentionEdges = retentionGraph.artifactEdges.filter((edge) => edge.artifact_id === row.id)
   return toArtifactHandle(row, edges, {
     integrity: storedArtifactIntegrity(row),
     retentionDecision: retentionDecisionFor(row, {
-      consumerRuns: graph.runs.filter((run) => edges.some((edge) => edge.consumer_run_id === run.id)),
-      gates: graph.gates.filter((gate) => gate.account_id === row.account_id && gate.artifact_id === row.id),
+      consumerRuns: retentionGraph.runs.filter((run) => retentionEdges.some((edge) => edge.consumer_run_id === run.id)),
+      gates: retentionGraph.gates.filter((gate) => gate.account_id === row.account_id && gate.artifact_id === row.id),
       now: Date.now(),
-      producerRun: graph.runs.find((run) => run.id === row.producer_run_id),
+      producerRun: retentionGraph.runs.find((run) => run.id === row.producer_run_id),
     }),
   })
 }
