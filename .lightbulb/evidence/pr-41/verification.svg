@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <rect width="1280" height="720" fill="#0b1020"/>
+  <rect x="52" y="48" width="1176" height="624" rx="18" fill="#111827" stroke="#334155" stroke-width="2"/>
+  <circle cx="84" cy="82" r="8" fill="#ef4444"/><circle cx="112" cy="82" r="8" fill="#f59e0b"/><circle cx="140" cy="82" r="8" fill="#22c55e"/>
+  <text x="72" y="135" fill="#93c5fd" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="24">$ npx skills@latest list --json | jq ...</text>
+  <text x="92" y="178" fill="#e5e7eb" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="26">{ "listed": 20, "unique": 20, "duplicates": 0 }</text>
+  <text x="72" y="245" fill="#93c5fd" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="24">$ bun typecheck  # packages/opencode</text>
+  <text x="92" y="288" fill="#86efac" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="26">$ tsgo --noEmit</text>
+  <text x="92" y="330" fill="#86efac" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="26">exit 0</text>
+  <text x="72" y="397" fill="#93c5fd" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="24">$ bun test test/skill/discovery.test.ts --timeout 30000</text>
+  <text x="92" y="440" fill="#86efac" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="26">6 pass / 0 fail / 18 expect() calls</text>
+  <text x="72" y="507" fill="#93c5fd" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="24">$ git diff --check origin/dev...HEAD</text>
+  <text x="92" y="550" fill="#86efac" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="26">pass</text>
+  <text x="72" y="622" fill="#fbbf24" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="22">PR #41 evidence: canonical project skills installed without duplicate skill names.</text>
+</svg>
