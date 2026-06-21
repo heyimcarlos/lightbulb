@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-labelledby="title desc">
+  <title id="title">PR #39 verification screenshot</title>
+  <desc id="desc">Visual evidence that the Lightbulb PR review ledger was updated and locally verified.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#07111f" />
+      <stop offset="0.55" stop-color="#111f3d" />
+      <stop offset="1" stop-color="#1d2a44" />
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="720" fill="url(#bg)" />
+  <rect x="70" y="70" width="1140" height="580" rx="34" fill="#101a31" stroke="#31436e" stroke-width="2" />
+  <text x="120" y="150" fill="#e5edff" font-family="Inter, Arial, sans-serif" font-size="52" font-weight="700">Lightbulb PR #39 evidence</text>
+  <text x="120" y="205" fill="#aebce4" font-family="Inter, Arial, sans-serif" font-size="25">Review ledger bookkeeping after PR #30/#36/#37 merged</text>
+  <g font-family="Inter, Arial, sans-serif" font-size="28">
+    <rect x="120" y="270" width="1040" height="76" rx="18" fill="#172541" stroke="#334a7a" />
+    <text x="155" y="318" fill="#9ee493">✓ JSON ledger parses with python3 -m json.tool</text>
+    <rect x="120" y="370" width="1040" height="76" rx="18" fill="#172541" stroke="#334a7a" />
+    <text x="155" y="418" fill="#9ee493">✓ git diff --check origin/dev...HEAD passed</text>
+    <rect x="120" y="470" width="1040" height="76" rx="18" fill="#172541" stroke="#334a7a" />
+    <text x="155" y="518" fill="#ffd166">ⓘ GitHub checks absent; PR mergeable</text>
+    <rect x="120" y="570" width="1040" height="46" rx="14" fill="#241d38" stroke="#554072" />
+    <text x="155" y="602" fill="#f4c2ff" font-size="22">Codex cloud review returned usage-limit blocker after @codex review request.</text>
+  </g>
+</svg>
