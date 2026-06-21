@@ -54,7 +54,7 @@ describe("Lightbulb", () => {
     ),
   )
 
-  it.live("summarizes artifact handles for parent orchestration without raw logs", () =>
+  it.live("registers and consumes artifact handles for parent orchestration without raw logs", () =>
     Effect.acquireRelease(
       Effect.promise(() => tmpdir()),
       (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
@@ -66,8 +66,16 @@ describe("Lightbulb", () => {
             artifactSummary: "Concise report for parent review.",
             rawWorkerLog: "RAW MODEL STREAM SHOULD STAY OUT OF PARENT SUMMARY",
           })
+          const registered = yield* lightbulb.registerArtifact({
+            producerRunID: seeded.runID,
+            producerWorkerID: seeded.workerID,
+            taskPacketID: seeded.taskPacketID,
+            type: "report",
+            uri: ".lightbulb/runs/issue-4-artifact-flow.md",
+            summary: "Issue 4 worker report for parent review.",
+          })
           yield* lightbulb.consumeArtifact({
-            artifactID: seeded.artifactID,
+            artifactID: registered.id,
             consumerRunID: seeded.runID,
             consumerWorkerID: seeded.workerID,
             summary: "Parent reviewed the report handle.",
@@ -75,19 +83,63 @@ describe("Lightbulb", () => {
 
           const graph = yield* lightbulb.readAccountGraph(seeded.accountID)
           const summary = yield* lightbulb.parentSummary(seeded.runID)
+          const consumed = summary?.artifacts.find((artifact) => artifact.id === registered.id)
 
-          expect(graph?.artifactEdges.map((edge) => edge.relation).sort()).toEqual(["consumed_by", "produced_by"])
-          expect(graph?.artifacts[0]?.status).toBe("consumed")
+          expect(registered).toEqual({
+            id: registered.id,
+            type: "report",
+            uri: ".lightbulb/runs/issue-4-artifact-flow.md",
+            summary: "Issue 4 worker report for parent review.",
+            status: "registered",
+            producerRunID: seeded.runID,
+            producerWorkerID: seeded.workerID,
+            lineage: [
+              {
+                relation: "produced_by",
+                runID: seeded.runID,
+                workerID: seeded.workerID,
+                summary: "Worker produced this artifact for parent review.",
+              },
+            ],
+          })
+          expect(
+            graph?.artifactEdges
+              .filter((edge) => edge.artifact_id === registered.id)
+              .map((edge) => edge.relation)
+              .sort(),
+          ).toEqual(["consumed_by", "produced_by"])
+          expect(graph?.artifacts.find((artifact) => artifact.id === registered.id)?.status).toBe("consumed")
           expect(JSON.stringify(graph)).not.toContain("RAW MODEL STREAM")
-          expect(summary?.artifacts).toEqual([
+          expect(consumed).toMatchObject({
+            id: registered.id,
+            type: "report",
+            uri: ".lightbulb/runs/issue-4-artifact-flow.md",
+            summary: "Issue 4 worker report for parent review.",
+            status: "consumed",
+            producerRunID: seeded.runID,
+            producerWorkerID: seeded.workerID,
+          })
+          expect(
+            consumed?.lineage
+              .map((edge) => ({
+                relation: edge.relation,
+                runID: edge.runID,
+                workerID: edge.workerID,
+                summary: edge.summary,
+              }))
+              .sort((left, right) => left.relation.localeCompare(right.relation)),
+          ).toEqual([
             {
-              id: seeded.artifactID,
-              type: "report",
-              uri: ".lightbulb/runs/schema-tracer-bullet.md",
-              summary: "Concise report for parent review.",
-              status: "consumed",
-              producerRunID: seeded.runID,
-              producerWorkerID: seeded.workerID,
+              relation: "consumed_by",
+              runID: seeded.runID,
+              workerID: seeded.workerID,
+              summary: "Parent reviewed the report handle.",
+            },
+            {
+              relation: "produced_by",
+              runID: seeded.runID,
+              workerID: seeded.workerID,
+              summary: "Worker produced this artifact for parent review.",
             },
           ])
           expect(JSON.stringify(summary)).not.toContain("RAW MODEL STREAM")
