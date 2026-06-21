@@ -1,30 +1,32 @@
 {
-  "pr": 53,
-  "url": "https://github.com/heyimcarlos/lightbulb/pull/53",
-  "head": "schedule-budgets",
-  "head_sha": "e1055ecac1c6124632bab0860265a1334cf21da8",
+  "pr": 54,
+  "url": "https://github.com/heyimcarlos/lightbulb/pull/54",
+  "head": "cleanup-automation",
+  "head_sha": "d52f2ddb83cee072491742ac2e81f3ccd5e596b0",
   "base": "dev",
-  "merge_commit": "99a736ada44c741e79b0a412f290ca1f6c447363",
-  "last_reviewed_at": "2026-06-21T18:12:10Z",
-  "state": "merged",
-  "issue": 8,
+  "last_reviewed_at": "2026-06-21T20:11:31Z",
+  "state": "pending_codex_review_and_ci",
+  "issue": 45,
   "external_codex_review": {
     "requested": true,
-    "requested_at": "2026-06-21T18:10:06Z",
-    "comment_url": "https://github.com/heyimcarlos/lightbulb/pull/53#issuecomment-4762851050",
-    "blocked": true,
-    "reason": "Codex cloud review returned current-head usage-limit blocker; local Hermes review/gates were used as fallback."
+    "requested_at": "2026-06-21T20:11:21Z",
+    "comment_url": "https://github.com/heyimcarlos/lightbulb/pull/54#issuecomment-4763159000",
+    "blocked": false,
+    "reason": "Waiting for current-head Codex review response. Prior current-head findings were fixed in d52f2ddb."
   },
   "local_gates": {
-    "packages/core:bun test test/lightbulb-scheduler.test.ts test/lightbulb.test.ts": "passed: 24 pass, 0 fail",
-    "packages/core:bun typecheck": "passed",
-    "packages/core:bun script/migration.ts --check": "passed: no schema changes",
     "git diff --check": "passed",
-    "thermo:file-size": "passed: packages/core/src/lightbulb.ts is 999 lines"
+    "packages/opencode:bun test test/cli/help/help-snapshots.test.ts test/cli/github-action.test.ts test/cli/lightbulb.test.ts --timeout 30000": "passed: 23 pass, 0 fail",
+    "packages/opencode:bun typecheck": "passed",
+    "packages/tui:bun typecheck": "passed",
+    "packages/web:bun astro check": "blocked by pre-existing share/session type errors after content sync; docs pages parsed before diagnostics"
   },
   "local_review": {
     "actionable_findings": [],
     "unresolved_findings": []
   },
-  "merge_blockers": []
+  "merge_blockers": [
+    "waiting for requested Codex review response on d52f2ddb83cee072491742ac2e81f3ccd5e596b0",
+    "waiting for queued GitHub checks on d52f2ddb83cee072491742ac2e81f3ccd5e596b0"
+  ]
 }
