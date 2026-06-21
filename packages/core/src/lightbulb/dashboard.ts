@@ -1,6 +1,7 @@
 import type { AccountGraph, Dashboard, DashboardGate, DashboardLoop, DashboardRun, GoalStatus } from "../lightbulb"
 import { retentionDecisionFor, storedArtifactIntegrity, toArtifactHandle } from "./artifact"
 import type { GoalLifecycle, GoalRunTree, GoalSummary } from "./goal"
+import { classifyLoopSchedule } from "./scheduler"
 import type { LightbulbArtifactTable, LightbulbGateTable, LightbulbLoopTable, LightbulbRunTable } from "./sql"
 
 export function toGoalRunTree(graph: AccountGraph, goal: GoalLifecycle): GoalRunTree {
@@ -100,11 +101,17 @@ function toDashboardLoop(
   runs: readonly (typeof LightbulbRunTable.$inferSelect)[] = graph.runs,
   retentionGraph = graph,
 ): DashboardLoop {
+  const schedule = classifyLoopSchedule({ loop, runs: graph.runs, now: Date.now() })
   return {
     id: loop.id,
     kind: loop.kind,
     status: loop.status,
     summary: loop.summary,
+    profileID: schedule.profileID,
+    schedule: schedule.schedule,
+    budget: schedule.budget,
+    scheduleClassification: schedule.classification,
+    scheduleReason: schedule.reason,
     runs: runs.filter((run) => run.loop_id === loop.id).map((run) => toDashboardRun(graph, run, retentionGraph)),
   }
 }

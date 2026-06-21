@@ -29,6 +29,7 @@ export type {
   ContextBundleWorkItemSummary,
 } from "./lightbulb/context-bundle"
 export * from "./lightbulb/loop-profile"
+export * from "./lightbulb/scheduler"
 
 import { and, asc, eq, or } from "drizzle-orm"
 import { Context, Effect, Layer, Schema } from "effect"
@@ -79,6 +80,7 @@ import {
   LightbulbWorkerTable,
 } from "./lightbulb/sql"
 import { bootstrapLoopProfiles, databaseLoopProfileStorage, type LoopProfileBootstrapServiceInput, type LoopProfileBootstrapSummary } from "./lightbulb/loop-profile"
+import { readLoopSchedulesInDb, type LoopScheduleReadModel } from "./lightbulb/scheduler"
 
 const prefixedID = <const Prefix extends string>(prefix: Prefix, brand: string) =>
   Schema.String.check(Schema.isStartsWith(`${prefix}_`)).pipe(
@@ -371,6 +373,8 @@ export type DashboardLoop = {
   readonly kind: LoopKind
   readonly status: LoopStatus
   readonly summary: string
+  readonly profileID: string | null; readonly schedule: LoopScheduleReadModel["schedule"]; readonly budget: LoopScheduleReadModel["budget"]
+  readonly scheduleClassification: LoopScheduleReadModel["classification"]; readonly scheduleReason: string | null
   readonly runs: DashboardRun[]
 }
 
@@ -442,6 +446,7 @@ export interface Interface {
     readonly state: GatePolicyInput["state"]
   }) => Effect.Effect<GatePolicyTransition | undefined>
   readonly readAccountGraph: (accountID: AccountID) => Effect.Effect<AccountGraph | undefined>
+  readonly readLoopSchedules: (input: { readonly accountID: AccountID; readonly now?: number }) => Effect.Effect<LoopScheduleReadModel[]>
   readonly readDashboard: (accountID: AccountID) => Effect.Effect<Dashboard | undefined>
   readonly readIssueArtifacts: (input: ReadIssueArtifactsInput) => Effect.Effect<ArtifactHandle[]>
   readonly consumeArtifact: (input: {
@@ -653,6 +658,9 @@ export const layer = Layer.effect(
       }),
       readAccountGraph: Effect.fn("Lightbulb.readAccountGraph")(function* (accountID) {
         return yield* readAccountGraphFromDb(db, accountID)
+      }),
+      readLoopSchedules: Effect.fn("Lightbulb.readLoopSchedules")(function* (input) {
+        return yield* readLoopSchedulesInDb(db, { accountID: input.accountID, now: input.now ?? Date.now() })
       }),
       planGoalRoute: Effect.fn("Lightbulb.planGoalRoute")(function* (input) {
         return yield* planGoalRouteInDb(db, input, {
