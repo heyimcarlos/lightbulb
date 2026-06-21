@@ -1,37 +1,33 @@
 {
-  "updated_at": "2026-06-21T20:02:13Z",
+  "updated_at": "2026-06-21T20:27:03Z",
   "prs": [
     {
       "pr": 54,
       "url": "https://github.com/heyimcarlos/lightbulb/pull/54",
       "head": "cleanup-automation",
       "base": "dev",
-      "head_sha": "559f5cccf2e0e757f8fc7e23c0f0a90c3cae3fd0",
+      "head_sha": "069561d38b9fc8716a94185134f38cb841996259",
       "state": "pending_ci_and_current_head_codex_review",
       "local_gates": {
-        "git diff --check": "passed",
-        "grep: anomalyco/opencode under script/github/.github": "passed: no matches",
-        "grep: opencode github run under github/.github/script": "passed: no matches",
-        "grep: VSCE_PAT|OPENVSX_TOKEN|publish-vscode under .github/workflows": "passed: no matches",
-        "packages/opencode:bun test test/cli/help/help-snapshots.test.ts test/cli/github-action.test.ts --timeout 30000": "passed: 18 pass, 0 fail",
-        "packages/opencode:bun test test/cli/lightbulb.test.ts --timeout 30000": "passed: 5 pass, 0 fail",
-        "packages/opencode:bun typecheck": "passed",
-        "packages/opencode:OPENCODE_DB=/tmp/lightbulb-pr54-install-fix-pkg.sqlite bun src/index.ts github install": "passed: exits 1 with clean Lightbulb unsupported installer message",
-        "/tmp:OPENCODE_DB=/tmp/lightbulb-pr54-install-fix.sqlite bun /home/cyberjanitor/worktrees/lightbulb-pr-54/packages/opencode/src/index.ts github install": "passed: exits 1 with clean Lightbulb unsupported installer message without project bootstrap"
+        "git diff --check": "passed after changelog command fix",
+        "script/raw-changelog.ts --help": "passed",
+        "GH_REPO=heyimcarlos/lightbulb bun script/raw-changelog.ts --from HEAD --to HEAD": "passed: no notable changes",
+        "previous package gates": "passed before markdown-only changelog command fix: GitHub help/action tests, Lightbulb CLI tests, packages/opencode typecheck, installer smokes"
       },
       "review_fixes": [
         "Disabled opencode github install so it cannot open the upstream app or write anomalyco/opencode/github@latest workflows.",
         "Deleted .github/workflows/publish-vscode.yml so Lightbulb tags/manual dispatch cannot publish the upstream opencode VS Code extension.",
         "Changed the disabled installer from Effect.die to fail(...) and instance:false so it surfaces as an expected CLI failure even outside a project directory.",
-        "Resolved all Codex review threads after fixes were pushed."
+        "Changed .opencode/command/changelog.md to pass GH_REPO=heyimcarlos/lightbulb into script/raw-changelog.ts.",
+        "Resolved all current Codex review threads after fixes were pushed."
       ],
       "external_codex_review": {
         "requested": true,
         "pending": true,
-        "reason": "Latest @codex review comment on head 559f5ccc has only an EYES reaction so far."
+        "reason": "Requested @codex review on current head 069561d38; response/checks pending."
       },
       "blockers": [
-        "GitHub checks are still pending/queued on the latest head."
+        "GitHub checks are queued/pending on the latest head."
       ]
     },
     {
@@ -55,7 +51,7 @@
         "reason": "Codex connector reported no major issues on current head c5ab88fff6."
       },
       "blockers": [
-        "GitHub checks are still pending/queued on the latest head."
+        "GitHub checks are still queued/pending on the latest head."
       ]
     }
   ]

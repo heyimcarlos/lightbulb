@@ -93,3 +93,10 @@
 - Local gates passed: `git diff --check`, GitHub help/action tests (18 pass), Lightbulb CLI tests (5 pass), `packages/opencode:bun typecheck`, package installer smoke, and `/tmp` installer smoke.
 - PR #55 current-head Codex review is clean; still blocked on queued GitHub checks.
 - Blocked from merge: PR #54 and PR #55 GitHub checks remain queued/pending; PR #54 latest Codex review is EYES-only pending.
+
+## 2026-06-21T20:27:03Z — PR #54 changelog command review fix pushed
+
+- Fixed current-head Codex finding on PR #54: `.opencode/command/changelog.md` now passes `GH_REPO=heyimcarlos/lightbulb` to `script/raw-changelog.ts`, preserving the new safe repo-target guard without breaking the built-in changelog command.
+- Pushed commit `069561d38` to `cleanup-automation`, resolved all current Codex review threads, and requested `@codex review` again.
+- Local gates passed: `git diff --check`, `bun script/raw-changelog.ts --help`, and `GH_REPO=heyimcarlos/lightbulb bun script/raw-changelog.ts --from HEAD --to HEAD`.
+- Blocked from merge: PR #54 and PR #55 GitHub checks are still queued/pending; PR #54 current-head Codex review is pending.
