@@ -1,26 +1,30 @@
 {
-  "pr": 7,
-  "url": "https://github.com/heyimcarlos/lightbulb/pull/7",
-  "head": "lightbulb-orchestration",
+  "pr": 40,
+  "url": "https://github.com/heyimcarlos/lightbulb/pull/40",
+  "head": "adapt-agents",
   "base": "dev",
-  "last_reviewed_at": "2026-06-21T03:24:14Z",
-  "state": "fixing_review_findings",
+  "head_sha": "bcca63e2037569d063274704f93907fac07c6a1d",
+  "merge_commit": "7042c1f53688dc206e7205aea3fe09e0ced1c4bf",
+  "last_reviewed_at": "2026-06-21T15:57:47Z",
+  "state": "merged_post_merge_verified",
   "external_codex_review": {
     "requested": true,
     "blocked": true,
-    "reason": "Codex connector reports that a Codex environment must be configured for heyimcarlos/lightbulb."
+    "reason": "Codex connector returned usage-limit blocker for current-head review after @codex review."
   },
   "local_gates": {
-    "packages/core:bun run script/migration.ts --check": "passed",
-    "packages/core:bun typecheck": "passed",
-    "packages/core:bun test test/lightbulb.test.ts test/database-migration.test.ts": "passed: 19 pass, 0 fail",
-    "git diff --check": "passed",
-    "pre-push hook": "blocked by local Bun 1.3.12 versus repo packageManager ^1.3.14 after required gates passed; push uses HUSKY=0 for this tool-version guard only"
+    "packages/opencode:bun test test/config/config.test.ts --timeout 30000": "passed: 94 pass, 0 fail",
+    "packages/opencode:bun typecheck": "passed",
+    "agent list smoke": "passed: all six new agents listed as subagents",
+    "git diff --check": "passed"
   },
   "local_review": {
-    "actionable_findings": [
-      "Cross-account artifact consumption was not guarded at the DB boundary. Fixed with account-scoped artifact-edge keys and regression coverage."
-    ],
+    "actionable_findings": [],
     "unresolved_findings": []
+  },
+  "evidence": {
+    "deck": ".lightbulb/evidence/pr-40/deck.html",
+    "terminal_visual": ".lightbulb/evidence/pr-40/screenshots/agent-list.svg",
+    "verification": ".lightbulb/evidence/pr-40/verification.md"
   }
 }
