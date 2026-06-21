@@ -328,7 +328,7 @@ exports[`opencode CLI help-text snapshots every documented command emits stable 
 manage GitHub agent
 
 Commands:
-  opencode github install  install the GitHub agent
+  opencode github install  unsupported in Lightbulb
   opencode github run      run the GitHub agent
 
 Options:
@@ -592,7 +592,7 @@ Options:
 exports[`opencode CLI help-text snapshots every documented command emits stable help text: opencode github install --help 1`] = `
 "opencode github install
 
-install the GitHub agent
+unsupported in Lightbulb
 
 Options:
   -h, --help        show help                                                              [boolean]

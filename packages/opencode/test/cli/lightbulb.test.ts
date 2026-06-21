@@ -135,6 +135,11 @@ describe("lightbulb dashboard display", () => {
                 kind: "implementation",
                 status: "active",
                 summary: "Implementation loop owns the active tracer run.",
+                profileID: null,
+                schedule: null,
+                budget: null,
+                scheduleClassification: "not_due",
+                scheduleReason: "schedule_not_configured",
                 runs: [
                   {
                     id: runID,
