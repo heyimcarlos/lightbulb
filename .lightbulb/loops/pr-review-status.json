@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-06-22T01:07:57Z",
+  "updated_at": "2026-06-22T02:06:59Z",
   "state": "pending_ci",
   "merged_prs": [
     {
@@ -46,6 +46,20 @@
       "merge_blockers": [
         "waiting for queued GitHub checks on 3f49791e8d53eddfa6ed34ecd9852ea1b6b92dae"
       ]
+    }
+  ],
+  "dependency_holds": [
+    {
+      "issue": 47,
+      "state": "blocked-by-dependency",
+      "blocked_by": "#46 / PR #55 landing on dev",
+      "note": "Restored hold after stale dependency unblocked comment; kept agent-done and blocked replay until PR #55 lands."
+    },
+    {
+      "issue": 48,
+      "state": "blocked-by-dependency",
+      "blocked_by": "#47 landing on dev after #46",
+      "note": "Restored hold after stale dependency unblocked comment; kept agent-done and blocked final executable retirement until #47 lands."
     }
   ]
 }

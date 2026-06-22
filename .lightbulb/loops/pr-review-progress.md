@@ -54,3 +54,9 @@
 - PR #55 current head `3f49791e8d53eddfa6ed34ecd9852ea1b6b92dae` still has only queued GitHub checks; current-head Codex is clean and review threads are empty, so no CI debug pass started without logs.
 - Corrected #47 to `blocked-by-dependency` pending #46/PR #55 landing on `dev`; removed `ready-for-agent` and commented the parent review hold.
 - Corrected #48 to `blocked-by-dependency` pending #47 landing after #46; removed `ready-for-agent` and commented the parent review hold.
+
+## 2026-06-22T02:06:59Z — stale dependency unblocks reverted for #47/#48
+
+- PR #55 remains open at `3f49791e8d53eddfa6ed34ecd9852ea1b6b92dae`; merge state is `UNSTABLE` because GitHub checks are still queued, while Codex is clean and review threads are empty.
+- Restored #47 to `blocked-by-dependency` after a stale unblocked comment removed the hold; kept `agent-done` and rewrote `## Blocked by` to wait for #46/PR #55 landing on `dev`.
+- Restored #48 to `blocked-by-dependency` after the same stale unblocked path; kept `agent-done` and rewrote `## Blocked by` to wait for #47 landing after #46.
