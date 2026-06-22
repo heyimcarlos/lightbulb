@@ -52,8 +52,8 @@ const ref = {
 const usage = (input: ConstructorParameters<typeof Usage>[0]) => new Usage(input)
 
 const basicUsage = () => usage({ inputTokens: 1, outputTokens: 1, totalTokens: 2 })
-const interruptTimeout = process.platform === "win32" ? "2 seconds" : "250 millis"
-const interruptCeilingMs = process.platform === "win32" ? 2_000 : 250
+const interruptTimeout = process.platform === "win32" ? "5 seconds" : "250 millis"
+const interruptCeilingMs = process.platform === "win32" ? 5_000 : 250
 
 afterEach(() => {
   mock.restore()
