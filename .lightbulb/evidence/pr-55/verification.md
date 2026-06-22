@@ -2,7 +2,7 @@
 
 - Branch: `repo-identity`
 - Issue: #46
-- Captured: 2026-06-21T23:10:34Z
+- Captured: 2026-06-22T16:44:56Z
 
 ## Behavior evidence
 
@@ -19,9 +19,9 @@ From the repository root unless noted:
 - `git grep -n "opencode.ai\|anomalyco/opencode\|OpenCode" -- README.md README.*.md package.json docs/lightbulb` — only intentional substrate/inventory references remain.
 - `packages/opencode`: `OPENCODE_DB=/tmp/lightbulb-issue46-smoke.sqlite ./bin/lightbulb --help` — passed.
 - `packages/opencode`: `OPENCODE_DB=/tmp/lightbulb-issue46-smoke.sqlite ./bin/lightbulb dashboard --help` — passed.
-- `packages/opencode`: `OPENCODE_DB=/tmp/lightbulb-issue46-smoke.sqlite ./bin/lightbulb dashboard --seed --format json` — passed.
-- `packages/opencode`: `bun test test/cli/lightbulb.test.ts --timeout 30000` — 5 pass, 0 fail.
-- `packages/opencode`: `bun typecheck` — passed after updating the dashboard fixture for the current loop schedule fields.
+- `packages/opencode`: `OPENCODE_DB=/tmp/lightbulb-pr55-refresh.sqlite ./bin/lightbulb dashboard --seed --format json` — passed with current operations state.
+- `packages/opencode`: `bun test test/cli/lightbulb.test.ts --timeout 30000` — 7 pass, 0 fail.
+- `packages/opencode`: `bun typecheck` — passed.
 
 ## Evidence artifacts
 

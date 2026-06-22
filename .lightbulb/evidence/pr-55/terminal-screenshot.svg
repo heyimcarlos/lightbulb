@@ -10,5 +10,5 @@
   <text x="64" y="340" fill="#7dffb2" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="23">prints Lightbulb-rooted command list including dashboard</text>
   <text x="64" y="392" fill="#93c5fd" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="23">$ ./bin/lightbulb dashboard --seed --format json</text>
   <text x="64" y="429" fill="#7dffb2" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="23">PASS with clean OPENCODE_DB</text>
-  <text x="64" y="586" fill="#facc15" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="23">Issue #46 evidence captured 2026-06-21T19:09:41Z</text>
+  <text x="64" y="586" fill="#facc15" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="23">Issue #46 evidence captured 2026-06-22T16:44:56Z</text>
 </svg>
