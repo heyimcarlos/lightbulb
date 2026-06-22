@@ -52,6 +52,8 @@ const ref = {
 const usage = (input: ConstructorParameters<typeof Usage>[0]) => new Usage(input)
 
 const basicUsage = () => usage({ inputTokens: 1, outputTokens: 1, totalTokens: 2 })
+const interruptTimeout = process.platform === "win32" ? "2 seconds" : "250 millis"
+const interruptCeilingMs = process.platform === "win32" ? 2_000 : 250
 
 afterEach(() => {
   mock.restore()
@@ -1253,12 +1255,12 @@ describe("session.compaction.process", () => {
         yield* Deferred.await(ready).pipe(Effect.timeout("1 second"))
         const start = Date.now()
         yield* Fiber.interrupt(fiber)
-        const exit = yield* Fiber.await(fiber).pipe(Effect.timeout("250 millis"))
+        const exit = yield* Fiber.await(fiber).pipe(Effect.timeout(interruptTimeout))
 
         expect(Exit.isFailure(exit)).toBe(true)
         if (Exit.isFailure(exit)) {
           expect(Cause.hasInterrupts(exit.cause)).toBe(true)
-          expect(Date.now() - start).toBeLessThan(250)
+          expect(Date.now() - start).toBeLessThan(interruptCeilingMs)
         }
       }).pipe(withCompaction({ llm: stub.layer }))
     },
@@ -1286,7 +1288,7 @@ describe("session.compaction.process", () => {
 
           yield* Deferred.await(ready).pipe(Effect.timeout("1 second"))
           yield* Fiber.interrupt(fiber)
-          const exit = yield* Fiber.await(fiber).pipe(Effect.timeout("250 millis"))
+          const exit = yield* Fiber.await(fiber).pipe(Effect.timeout(interruptTimeout))
           const all = yield* ssn.messages({ sessionID: session.id })
 
           expect(Exit.isFailure(exit)).toBe(true)

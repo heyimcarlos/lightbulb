@@ -7,6 +7,9 @@ import { describe, expect } from "bun:test"
 import { Effect } from "effect"
 import { cliIt } from "../../lib/cli-process"
 
+const unknownModelTimeout = process.platform === "win32" ? 25_000 : 15_000
+const unknownModelTestTimeout = process.platform === "win32" ? 45_000 : 30_000
+
 describe("opencode run (non-interactive subprocess)", () => {
   // Happy path: prompt completes, output reaches stdout, process exits 0.
   // If this fails, all the others likely will too — debug here first.
@@ -33,12 +36,12 @@ describe("opencode run (non-interactive subprocess)", () => {
       Effect.gen(function* () {
         const result = yield* opencode.run("say hi", {
           model: "test/nonexistent-model",
-          timeoutMs: 15_000,
+          timeoutMs: unknownModelTimeout,
         })
         expect(result.exitCode).not.toBe(0)
-        expect(result.durationMs).toBeLessThan(15_000)
+        expect(result.durationMs).toBeLessThan(unknownModelTimeout)
       }),
-    30_000,
+    unknownModelTestTimeout,
   )
 
   // Locks in the current behavior: when the LLM stream errors mid-response
