@@ -613,8 +613,11 @@ describe("Lightbulb loop run admission", () => {
             .pipe(Effect.orDie)
 
           const dashboard = yield* lightbulb.readDashboard(created.goal.account_id)
+          const graph = yield* lightbulb.readAccountGraph(created.goal.account_id)
 
           expect(dashboard?.operations.schedulerTicks.map((tick) => tick.id)).toEqual(tickIDs.slice(1).reverse())
+          expect(graph?.events.filter((event) => event.type === "lightbulb.scheduler_tick.completed")).toHaveLength(6)
+          expect(graph?.events.map((event) => event.type)).toContain("lightbulb.loop_run.skipped")
         }).pipe(Effect.provide(layer(tmp.path))),
       ),
     ),

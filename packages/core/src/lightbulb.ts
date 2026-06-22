@@ -33,7 +33,7 @@ export * from "./lightbulb/run-ledger"
 export * from "./lightbulb/scheduler"
 export * from "./lightbulb/scheduler-tick"
 
-import { and, asc, desc, eq, or } from "drizzle-orm"
+import { and, asc, eq, or } from "drizzle-orm"
 import { Context, Effect, Layer, Schema } from "effect"
 import { Database } from "./database/database"
 import type { CreateGoalInput, CreateGoalResult, GoalLifecycle, GoalRunTree, GoalSummary, UpdateGoalStatusInput } from "./lightbulb/goal"
@@ -1015,9 +1015,8 @@ function readAccountGraphFromDb(db: Database.Interface["db"], accountID: Account
       events: yield* db
         .select()
         .from(LightbulbEventTable)
-        .where(and(eq(LightbulbEventTable.account_id, accountID), eq(LightbulbEventTable.type, "lightbulb.scheduler_tick.completed")))
-        .orderBy(desc(LightbulbEventTable.time_created))
-        .limit(5)
+        .where(eq(LightbulbEventTable.account_id, accountID))
+        .orderBy(asc(LightbulbEventTable.time_created))
         .all()
         .pipe(Effect.orDie),
     }
