@@ -92,8 +92,8 @@ export function toDashboard(graph: AccountGraph): Dashboard {
     operations: {
       schedulerTicks: graph.events
         .filter((event) => event.type === "lightbulb.scheduler_tick.completed")
-        .slice(-5)
-        .reverse()
+        .toSorted((a, b) => b.time_created - a.time_created)
+        .slice(0, 5)
         .map(toDashboardSchedulerTick),
     },
     artifactHandles: graph.artifacts.map((artifact) => toGraphArtifactHandle(artifact, graph)),

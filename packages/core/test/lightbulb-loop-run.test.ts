@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import { Database } from "@opencode-ai/core/database/database"
 import { Lightbulb } from "@opencode-ai/core/lightbulb"
-import { LightbulbEventTable, LightbulbRunTable } from "@opencode-ai/core/lightbulb/sql"
+import { LightbulbAccountTable, LightbulbEventTable, LightbulbRunTable } from "@opencode-ai/core/lightbulb/sql"
 import { tmpdir } from "./fixture/tmpdir"
 import { it } from "./lib/effect"
 
@@ -309,6 +309,87 @@ describe("Lightbulb loop run admission", () => {
     ),
   )
 
+  it.live("does not admit active loops for non-active accounts", () =>
+    Effect.acquireRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ).pipe(
+      Effect.flatMap((tmp) =>
+        Effect.gen(function* () {
+          const lightbulb = yield* Lightbulb.Service
+          const database = yield* Database.Service
+          const created = yield* lightbulb.createOrAdoptGoal({
+            accountName: "Paused Account",
+            title: "Paused account admission",
+            objective: "Do not restart work while the account is paused.",
+          })
+          const loopID = Lightbulb.loopIDForProfile(created.goal.id, "paused-account")
+          yield* lightbulb.bootstrapLoopProfiles({
+            accountID: created.goal.account_id,
+            goalID: created.goal.id,
+            profiles: [
+              {
+                profileID: "paused-account",
+                kind: "implementation",
+                summary: "Implementation loop on a paused account.",
+                schedule: {
+                  cadenceMs: 1_000,
+                },
+              },
+            ],
+            defaultPolicy,
+            now,
+          })
+          yield* database.db
+            .update(LightbulbAccountTable)
+            .set({ status: "paused", time_updated: now + 1_000 })
+            .where(eq(LightbulbAccountTable.id, created.goal.account_id))
+            .run()
+            .pipe(Effect.orDie)
+
+          const skipped = yield* lightbulb.admitLoopRun({
+            accountID: created.goal.account_id,
+            loopID,
+            trigger: "schedule",
+            now: now + 2_000,
+          })
+          const runs = yield* database.db
+            .select()
+            .from(LightbulbRunTable)
+            .where(eq(LightbulbRunTable.loop_id, loopID))
+            .all()
+            .pipe(Effect.orDie)
+          const events = yield* database.db
+            .select()
+            .from(LightbulbEventTable)
+            .where(eq(LightbulbEventTable.type, "lightbulb.loop_run.skipped"))
+            .all()
+            .pipe(Effect.orDie)
+
+          expect(skipped).toMatchObject({
+            outcome: "skipped",
+            reason: "account_not_active",
+            schedule: expect.objectContaining({ classification: "due" }),
+          })
+          expect(runs).toHaveLength(0)
+          expect(events).toHaveLength(1)
+          expect(events[0]).toMatchObject({
+            aggregate_type: "loop",
+            aggregate_id: loopID,
+            data: expect.objectContaining({
+              loop_id: loopID,
+              goal_id: created.goal.id,
+              profile_id: "paused-account",
+              classification: "due",
+              reason: "account_not_active",
+              account_status: "paused",
+            }),
+          })
+        }).pipe(Effect.provide(layer(tmp.path))),
+      ),
+    ),
+  )
+
   it.live("records scheduler tick outcomes for due, skipped, and empty wakeups", () =>
     Effect.acquireRelease(
       Effect.promise(() => tmpdir()),
@@ -478,6 +559,62 @@ describe("Lightbulb loop run admission", () => {
               ],
             }),
           ])
+        }).pipe(Effect.provide(layer(tmp.path))),
+      ),
+    ),
+  )
+
+  it.live("shows only the five newest scheduler tick events on the dashboard", () =>
+    Effect.acquireRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ).pipe(
+      Effect.flatMap((tmp) =>
+        Effect.gen(function* () {
+          const lightbulb = yield* Lightbulb.Service
+          const database = yield* Database.Service
+          const created = yield* lightbulb.createOrAdoptGoal({
+            accountName: "Scheduler Tick Window Account",
+            title: "Dashboard scheduler tick window",
+            objective: "Keep dashboard operations bounded to recent scheduler ticks.",
+          })
+          const tickIDs = Array.from({ length: 6 }, (_, index) => Lightbulb.EventID.create())
+          yield* database.db
+            .insert(LightbulbEventTable)
+            .values([
+              ...tickIDs.map((id, index) => ({
+                id,
+                account_id: created.goal.account_id,
+                aggregate_type: "account",
+                aggregate_id: created.goal.account_id,
+                type: "lightbulb.scheduler_tick.completed",
+                summary: "Scheduler tick " + index + ".",
+                data: {
+                  trigger: "schedule",
+                  admitted_count: index,
+                  skipped_count: 0,
+                  outcome_count: index,
+                  outcomes: [],
+                },
+                time_created: now + index,
+              })),
+              {
+                id: Lightbulb.EventID.create(),
+                account_id: created.goal.account_id,
+                aggregate_type: "account",
+                aggregate_id: created.goal.account_id,
+                type: "lightbulb.loop_run.skipped",
+                summary: "Non scheduler event.",
+                data: { reason: "not_for_dashboard" },
+                time_created: now + 10,
+              },
+            ])
+            .run()
+            .pipe(Effect.orDie)
+
+          const dashboard = yield* lightbulb.readDashboard(created.goal.account_id)
+
+          expect(dashboard?.operations.schedulerTicks.map((tick) => tick.id)).toEqual(tickIDs.slice(1).reverse())
         }).pipe(Effect.provide(layer(tmp.path))),
       ),
     ),

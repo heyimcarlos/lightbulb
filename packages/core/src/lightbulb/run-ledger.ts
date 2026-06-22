@@ -4,7 +4,7 @@ import type { Database } from "../database/database"
 import type { Lightbulb } from "../lightbulb"
 import { readLoopProfileMetadata } from "./loop-profile"
 import { classifyLoopSchedule, type LoopScheduleReadModel } from "./scheduler"
-import { LightbulbEventTable, LightbulbGoalTable, LightbulbLoopTable, LightbulbRunTable } from "./sql"
+import { LightbulbAccountTable, LightbulbEventTable, LightbulbGoalTable, LightbulbLoopTable, LightbulbRunTable } from "./sql"
 
 export type LoopRunTrigger = "schedule" | "manual" | "recovery"
 export type LoopRunAdmissionSourceValue = string | number | boolean | null
@@ -58,6 +58,13 @@ export function admitLoopRunInDb(
           .get()
         if (!goal) return { outcome: "skipped" as const, eventID: null, schedule: null, reason: "missing_goal" }
 
+        const account = yield* tx
+          .select()
+          .from(LightbulbAccountTable)
+          .where(eq(LightbulbAccountTable.id, input.accountID))
+          .get()
+        if (!account) return { outcome: "skipped" as const, eventID: null, schedule: null, reason: "missing_account" }
+
         const runs = yield* tx
           .select({
             loop_id: LightbulbRunTable.loop_id,
@@ -68,6 +75,12 @@ export function admitLoopRunInDb(
           .orderBy(asc(LightbulbRunTable.started_at))
           .all()
         const schedule = classifyLoopSchedule({ loop, runs, now: input.now })
+
+        if (account.status !== "active") {
+          return yield* insertSkippedEvent(tx, input, loop, schedule, ids.event(), "account_not_active", {
+            account_status: account.status,
+          })
+        }
 
         if (goal.status !== "active") {
           return yield* insertSkippedEvent(tx, input, loop, schedule, ids.event(), "goal_not_active", {

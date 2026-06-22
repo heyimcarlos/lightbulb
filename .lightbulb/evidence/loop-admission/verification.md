@@ -5,8 +5,9 @@
 This evidence packet covers the first traceable-loop runtime slice:
 
 - durable loop-run admission before worker/model execution
+- skipped admission trace events for paused accounts and held goals
 - scheduler tick event recording
-- dashboard read-model exposure through `operations.schedulerTicks`
+- dashboard read-model exposure through bounded `operations.schedulerTicks`
 - CLI text rendering of bounded scheduler operations state
 
 ## Verification Commands
@@ -15,7 +16,7 @@ This evidence packet covers the first traceable-loop runtime slice:
 cd packages/core && bun test test/lightbulb-loop-run.test.ts test/lightbulb-scheduler.test.ts && bun typecheck
 ```
 
-Result: pass. Five focused tests passed and `tsgo --noEmit` completed.
+Result: pass. Eight focused tests passed and `tsgo --noEmit` completed.
 
 ```text
 cd packages/opencode && bun test test/cli/lightbulb.test.ts && bun typecheck
@@ -28,6 +29,18 @@ git diff --check
 ```
 
 Result: pass.
+
+```text
+git diff --check origin/dev...HEAD
+```
+
+Result: pass.
+
+## Review Fixes
+
+- Admission now skips queued run creation when the parent Lightbulb account is not active, while preserving a `lightbulb.loop_run.skipped` event with `reason: account_not_active` and `account_status`.
+- The inactive-goal guard remains covered by `does not admit active loops for non-active goals`.
+- Dashboard account graph loading now reads only the five newest `lightbulb.scheduler_tick.completed` events for the account instead of materializing the full account event log.
 
 ## CLI Evidence
 
