@@ -83,31 +83,30 @@ export const LightbulbCommand = effectCmd({
 
 export function formatLightbulbDashboard(dashboard: Lightbulb.Dashboard) {
   return [
-    "Lightbulb Dashboard",
-    `Account ${dashboard.account.name} [${dashboard.account.status}] ${dashboard.account.id}`,
+    "Lightbulb Status",
+    `Account: ${dashboard.account.name} [${dashboard.account.status}] ${dashboard.account.id}`,
+    `Totals: ${dashboard.goals.length} goals, ${countLoops(dashboard)} loops, ${countRuns(dashboard)} runs, ${dashboard.inbox.gates.length} gates waiting`,
     "",
-    "Goals / Loops / Runs",
-    ...(
-      dashboard.goals.length === 0
-        ? ["  no goals"]
-        : dashboard.goals.flatMap((goal) => [
-            `  goal ${goal.id} [${goal.status}] ${goal.title}`,
-            `    ${goal.summary}`,
-            ...goal.loops.flatMap(formatLoop),
-          ])
-    ),
+    "Work",
+    ...(dashboard.goals.length === 0 ? ["- none"] : dashboard.goals.flatMap(formatGoal)),
     ...formatOperations(dashboard),
     "",
-    "Inbox",
+    "Queue",
     ...formatInbox(dashboard),
     "",
-    "Artifact Handles",
-    ...(
-      dashboard.artifactHandles.length === 0
-        ? ["  no artifacts"]
-        : dashboard.artifactHandles.map((artifact) => `  ${formatArtifactHandle(artifact)}`)
-    ),
+    "Artifacts",
+    ...(dashboard.artifactHandles.length === 0
+      ? ["- none"]
+      : dashboard.artifactHandles.map((artifact) => `- ${formatArtifactHandle(artifact)}`)),
   ].join(EOL)
+}
+
+function formatGoal(goal: Lightbulb.DashboardGoal) {
+  return [
+    `- ${goal.title} [${goal.status}]`,
+    `  ${goal.summary}`,
+    ...(goal.loops.length === 0 ? ["  loops: none"] : goal.loops.flatMap(formatLoop)),
+  ]
 }
 
 function formatOperations(dashboard: Lightbulb.Dashboard) {
@@ -131,63 +130,63 @@ function formatOperations(dashboard: Lightbulb.Dashboard) {
 
 function formatLoop(loop: Lightbulb.DashboardLoop) {
   return [
-    `    loop ${loop.id} ${loop.kind} [${loop.status}]`,
-    `      ${loop.summary}`,
+    `  - ${loop.kind} loop [${loop.status}] — ${loop.summary}`,
     ...(
       loop.runs.length === 0
-        ? ["      no runs"]
+        ? ["    runs: none"]
         : loop.runs.flatMap((run) => [
-            `      run ${run.id} [${run.status}] review=${run.reviewStatus} debug=${run.debugStatus} gate=${run.gateStatus}`,
-            `        ${run.summary}`,
-            "        workers",
-            ...(
-              run.workers.length === 0
-                ? ["          no workers"]
-                : run.workers.map((worker) => `          ${worker.id} ${worker.role} [${worker.status}]`)
-            ),
-            "        gates",
-            ...(run.gates.length === 0 ? ["          no gates"] : run.gates.map((gate) => formatGate(gate))),
-            "        artifacts",
-            ...(
-              run.artifacts.length === 0
-                ? ["          no artifacts"]
-                : run.artifacts.map((artifact) => `          ${formatArtifactHandle(artifact)}`)
-            ),
+            `    run ${run.id} [${run.status}] — ${run.summary}`,
+            `    checks: review ${run.reviewStatus}, debug ${run.debugStatus}, gate ${run.gateStatus}`,
+            `    workers: ${summarizeStatuses(run.workers)}`,
+            `    gates: ${summarizeStatuses(run.gates)}`,
+            `    artifacts: ${run.artifacts.length}`,
           ])
     ),
   ]
 }
 
 function formatInbox(dashboard: Lightbulb.Dashboard) {
-  if (dashboard.inbox.taskPackets.length === 0 && dashboard.inbox.gates.length === 0) return ["  empty"]
+  if (dashboard.inbox.taskPackets.length === 0 && dashboard.inbox.gates.length === 0) return ["- empty"]
   return [
-    ...dashboard.inbox.taskPackets.map(
-      (packet) => `  packet ${packet.id} [${packet.status}] ${packet.title} worker=${packet.workerID}`,
-    ),
-    ...dashboard.inbox.gates.map((gate) => formatGate(gate, "  ")),
+    ...dashboard.inbox.gates.map((gate) => `- gate ${gate.kind} [${gate.status}] — ${gate.summary}`),
+    ...dashboard.inbox.taskPackets.map((packet) => `- packet ${packet.title} [${packet.status}] worker=${packet.workerID}`),
   ]
 }
 
-function formatGate(gate: Lightbulb.DashboardGate, indent = "          ") {
-  return `${indent}gate ${gate.id} ${gate.kind} [${gate.status}] artifact=${gate.artifactID ?? "none"}`
-}
-
 function formatArtifactHandle(artifact: Lightbulb.ArtifactHandle) {
-  const source = formatArtifactSource(artifact)
   const decision = artifact.decision ? ` decision=${artifact.decision.status}` : ""
-  return `handle ${artifact.id} ${artifact.type} [${artifact.status}]${decision} ${artifact.uri}${source ? ` source=${source}` : ""}`
+  const source = formatArtifactSource(artifact)
+  return `${artifact.type} [${artifact.status}]${decision} ${artifact.uri}${source ? ` (${source})` : ""}`
 }
 
 function formatArtifactSource(artifact: Lightbulb.ArtifactHandle) {
   return [
-    artifact.source?.issueRef ? `issue:${artifact.source.issueRef}` : undefined,
-    artifact.source?.goalID ? `goal:${artifact.source.goalID}` : undefined,
-    artifact.source?.loopID ? `loop:${artifact.source.loopID}` : undefined,
-    artifact.source?.runID ? `run:${artifact.source.runID}` : undefined,
-    artifact.source?.gateID ? `gate:${artifact.source.gateID}` : undefined,
+    artifact.source?.issueRef ? `issue ${artifact.source.issueRef}` : undefined,
+    artifact.source?.goalID ? `goal ${artifact.source.goalID}` : undefined,
+    artifact.source?.loopID ? `loop ${artifact.source.loopID}` : undefined,
+    artifact.source?.runID ? `run ${artifact.source.runID}` : undefined,
+    artifact.source?.gateID ? `gate ${artifact.source.gateID}` : undefined,
   ]
     .filter((part): part is string => part !== undefined)
-    .join(",")
+    .join(", ")
+}
+
+function countLoops(dashboard: Lightbulb.Dashboard) {
+  return dashboard.goals.reduce((sum, goal) => sum + goal.loops.length, 0)
+}
+
+function countRuns(dashboard: Lightbulb.Dashboard) {
+  return dashboard.goals.reduce(
+    (sum, goal) => sum + goal.loops.reduce((loopSum, loop) => loopSum + loop.runs.length, 0),
+    0,
+  )
+}
+
+function summarizeStatuses(items: readonly { readonly status: string }[]) {
+  if (items.length === 0) return "none"
+  const counts = new Map<string, number>()
+  for (const item of items) counts.set(item.status, (counts.get(item.status) ?? 0) + 1)
+  return [...counts.entries()].map(([status, count]) => `${count} ${status}`).join(", ")
 }
 
 function formatOperationSource(source: Record<string, unknown>) {
