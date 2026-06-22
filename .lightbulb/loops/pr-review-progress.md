@@ -154,4 +154,4 @@
 - Fixed current-head Codex finding on PR #56: `lightbulb-delegate` and `/delegate-async` now require `OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true` or `OPENCODE_EXPERIMENTAL=true` before using `background: true`.
 - Pushed `735e7fd2e` to `automation-blueprint`, resolved the now-outdated review thread, and requested `@codex review` again: https://github.com/heyimcarlos/lightbulb/pull/56#issuecomment-4764399708
 - Local gates passed: `git diff --check origin/dev...HEAD`, `git diff --check`, flag-reference grep, `packages/opencode:bun typecheck`, and pre-push `bun turbo typecheck` (23 successful). Evidence files under `.lightbulb/evidence/pr-56/` are non-empty.
-- Blocked from merge: current-head Codex review is pending on `735e7fd2e`. PR standards checks passed; no current failed checks to debug. PR #55 remains blocked on queued CI with no logs.
+- Blocked from merge: current-head Codex review is pending on `735e7fd2e`; GitHub checks are queued/pending with no failure logs. PR #55 remains blocked on queued CI with no logs.

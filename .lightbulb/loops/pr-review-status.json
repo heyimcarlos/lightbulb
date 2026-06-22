@@ -36,7 +36,7 @@
       "head": "automation-blueprint",
       "base": "dev",
       "head_sha": "735e7fd2e3da385f30876e9ddd3f83a7b8200878",
-      "state": "pending_current_head_codex_review",
+      "state": "pending_ci_and_current_head_codex_review",
       "local_gates": {
         "git diff --check origin/dev...HEAD": "passed after background-subagent flag review fix",
         "git diff --check": "passed after background-subagent flag review fix",
@@ -57,7 +57,7 @@
       },
       "blockers": [
         "Current-head Codex review is pending after the review-fix commit.",
-        "PR standards checks passed; no current failed checks to debug."
+        "GitHub checks are queued/pending on the latest head; no failure logs are available."
       ]
     }
   ]
