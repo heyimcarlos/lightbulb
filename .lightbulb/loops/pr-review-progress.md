@@ -48,3 +48,9 @@
 - Local gates passed from isolated PR worktree: `git diff --check origin/dev...HEAD`, `packages/opencode bun test test/cli/lightbulb.test.ts --timeout 30000` (5 pass), `packages/opencode bun typecheck`, and `./bin/lightbulb` help/dashboard smokes.
 - Evidence packet `.lightbulb/evidence/pr-55/` is present and non-empty.
 - Merge remains blocked only on queued GitHub checks for current head; no failure logs were available, so no CI debug pass started.
+
+## 2026-06-22T01:07:57Z — PR #55 still pending CI; #47/#48 dependency holds corrected
+
+- PR #55 current head `3f49791e8d53eddfa6ed34ecd9852ea1b6b92dae` still has only queued GitHub checks; current-head Codex is clean and review threads are empty, so no CI debug pass started without logs.
+- Corrected #47 to `blocked-by-dependency` pending #46/PR #55 landing on `dev`; removed `ready-for-agent` and commented the parent review hold.
+- Corrected #48 to `blocked-by-dependency` pending #47 landing after #46; removed `ready-for-agent` and commented the parent review hold.
