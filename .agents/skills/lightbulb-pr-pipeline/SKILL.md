@@ -29,13 +29,13 @@ Use this under `lightbulb-maintainer-orchestrator` after queue triage chooses a 
 7. Parent records the current PR head SHA, requests external review using the available GitHub/Codex path for that head, then polls PR reviews, comments, checks, and merge state until a decision, timeout, or infrastructure blocker is clear. Stale reviews or comments from older head SHAs are context only.
 8. Feed actionable comments and failing checks back to the maker thread. Maker fixes in the same branch, reruns focused verification, pushes, and returns evidence plus the new head SHA.
 9. After every maker push, parent records the new head SHA, re-requests or refreshes external review for that head, and asks the reviewer thread to re-check the changed diff when needed.
-10. Repeat review polling plus maker fixes until approvals and required Codex/external review are tied to the current head SHA, no blocking reviewer findings remain, checks for the current head are green or explicitly infra-blocked, and visual evidence is attached.
+10. Repeat review polling plus maker fixes until approvals and required Codex/external review are tied to the current head SHA, no blocking reviewer findings remain, checks for the current head are green or explicitly owner-waived, and visual evidence is attached.
 11. Parent re-reads the PR, confirms the final head SHA matches the reviewed and checked head, verifies the merge gate, merges when authorized, posts issue proof comments when mutating GitHub, then starts the next queued slice in a new maker thread.
 
 ## Hard Stops
 
 - Conflicting user or worker changes touch the same files without a clear owner.
-- The PR has unresolved requested changes, unknown failing checks, merge conflicts, missing visual evidence, stale reviews or checks that are not tied to the current head SHA, or no approval path.
+- The PR has unresolved requested changes, unknown failing checks, infra-blocked checks without an explicit owner waiver, merge conflicts, missing visual evidence, stale reviews or checks that are not tied to the current head SHA, or no approval path.
 - The branch contains broad cleanup unrelated to the selected slice.
 - GitHub mutation or merge permission is absent.
 - Runtime proof is unavailable for a user-facing path and no acceptable rationale exists.
@@ -48,7 +48,7 @@ Include:
 - exact slice, allowed mutation boundary, and forbidden actions
 - focused verification commands and required visual evidence
 - instruction to loop on parent-provided comments until approval-ready
-- required output: result, files changed, verification, visual evidence, PR URL, blockers
+- required output: result, files changed, verification, visual evidence, PR URL, head SHA after push, blockers
 
 ## Reviewer Prompt Contract
 
