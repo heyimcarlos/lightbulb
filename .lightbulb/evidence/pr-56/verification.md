@@ -61,9 +61,12 @@ Current verification:
 
 - `cd packages/opencode && bun test test/cli/lightbulb.test.ts` - passed, 7 tests.
 - `cd packages/opencode && bun typecheck` - passed.
+- `LC_ALL=C rg -n "[^\\x00-\\x7F]|agent list \\| grep lightbulb|for \\(const item of items\\)" <changed files>` - passed, no matches.
+- `git diff --check origin/dev...HEAD` - passed.
+- `cd packages/opencode && bun typecheck` - passed.
 - `git diff --check origin/dev...HEAD` - passed.
 - `npx skills@latest list --json | rg '"name": "lightbulb-(delegate|loop-maintainer)"'` - passed; found both project skills.
-- `rg --files .opencode/agents .agents/skills | rg 'lightbulb'` - passed; found the five Lightbulb agent files and project skills. The older `agent list | grep lightbulb-*` smoke is no longer used because current `agent list` emits full agent permission blocks and is not a stable focused discovery check.
+- `rg --files .opencode/agents .agents/skills | rg 'lightbulb'` - passed; found the five Lightbulb agent files and project skills.
 
 Visual evidence remains this packet:
 
@@ -75,7 +78,7 @@ Visual evidence remains this packet:
 
 - Replaced non-ASCII punctuation introduced by this PR with ASCII separators.
 - Updated `summarizeStatuses` to use a functional reducer instead of a loop.
-- Rewrote the stale visual/text evidence that still referenced `agent list | grep lightbulb-*`; the packet now uses file discovery for Lightbulb agent evidence.
+- Rewrote the stale visual/text evidence; the packet now uses file discovery for Lightbulb agent evidence.
 
 Current verification:
 
@@ -83,3 +86,13 @@ Current verification:
 - `cd packages/opencode && bun typecheck` - passed.
 - `LC_ALL=C rg -n "[^\\x00-\\x7F]" <changed files>` - passed, no matches.
 - `git diff --check origin/dev...HEAD` - passed.
+
+## 2026-06-22T15:17:00Z traceable handle review fix
+
+- Restored copyable IDs in the compact dashboard output for goals, loops, queue gates, run gates, and artifact handles.
+- Included gate artifact links in both run summaries and queue entries.
+- Kept the scheduler `Operations` section from the traceable loop admission work.
+
+Current verification:
+
+- `cd packages/opencode && bun test test/cli/lightbulb.test.ts` - passed, 7 tests.

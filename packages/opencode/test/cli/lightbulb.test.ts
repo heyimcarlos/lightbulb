@@ -241,22 +241,22 @@ Account: Lightbulb Demo [active] lbacc_demo
 Totals: 1 goals, 1 loops, 1 runs, 1 gates waiting
 
 Work
-- Bootstrap loop harness [active]
+- Bootstrap loop harness [active] lbgoal_demo
   Create one durable account control graph.
-  - implementation loop [active] - Implementation loop owns the active tracer run.
+  - implementation loop [active] lbloop_demo - Implementation loop owns the active tracer run.
     run lbrun_demo [complete] - Worker returned a report artifact.
     checks: review requested, debug fixed, gate pending
     workers: 1 complete
-    gates: 1 pending
+    gates: lbgate_demo review [pending] artifact=lbartifact_demo
     artifacts: 1
 
 Queue
-- gate review [pending] - Parent review is pending.
+- gate lbgate_demo review [pending] artifact=lbartifact_demo - Parent review is pending.
 - packet Render Lightbulb dashboard [complete] worker=lbworker_demo
 
 Artifacts
-- report [registered] .lightbulb/runs/issue-3-dashboard.md
-- adr [registered] decision=pending docs/lightbulb/adr/0005-issue-24-routing.md (issue #24, goal lbgoal_demo)`)
+- handle lbartifact_demo report [registered] .lightbulb/runs/issue-3-dashboard.md
+- handle lbartifact_decision adr [registered] decision=pending docs/lightbulb/adr/0005-issue-24-routing.md (issue #24, goal lbgoal_demo)`)
   })
 
   test("renders recent scheduler ticks as bounded operations state", () => {

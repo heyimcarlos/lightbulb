@@ -103,7 +103,7 @@ export function formatLightbulbDashboard(dashboard: Lightbulb.Dashboard) {
 
 function formatGoal(goal: Lightbulb.DashboardGoal) {
   return [
-    `- ${goal.title} [${goal.status}]`,
+    `- ${goal.title} [${goal.status}] ${goal.id}`,
     `  ${goal.summary}`,
     ...(goal.loops.length === 0 ? ["  loops: none"] : goal.loops.flatMap(formatLoop)),
   ]
@@ -130,7 +130,7 @@ function formatOperations(dashboard: Lightbulb.Dashboard) {
 
 function formatLoop(loop: Lightbulb.DashboardLoop) {
   return [
-    `  - ${loop.kind} loop [${loop.status}] - ${loop.summary}`,
+    `  - ${loop.kind} loop [${loop.status}] ${loop.id} - ${loop.summary}`,
     ...(
       loop.runs.length === 0
         ? ["    runs: none"]
@@ -138,7 +138,7 @@ function formatLoop(loop: Lightbulb.DashboardLoop) {
             `    run ${run.id} [${run.status}] - ${run.summary}`,
             `    checks: review ${run.reviewStatus}, debug ${run.debugStatus}, gate ${run.gateStatus}`,
             `    workers: ${summarizeStatuses(run.workers)}`,
-            `    gates: ${summarizeStatuses(run.gates)}`,
+            `    gates: ${summarizeGates(run.gates)}`,
             `    artifacts: ${run.artifacts.length}`,
           ])
     ),
@@ -148,7 +148,7 @@ function formatLoop(loop: Lightbulb.DashboardLoop) {
 function formatInbox(dashboard: Lightbulb.Dashboard) {
   if (dashboard.inbox.taskPackets.length === 0 && dashboard.inbox.gates.length === 0) return ["- empty"]
   return [
-    ...dashboard.inbox.gates.map((gate) => `- gate ${gate.kind} [${gate.status}] - ${gate.summary}`),
+    ...dashboard.inbox.gates.map((gate) => `- gate ${formatGate(gate)} - ${gate.summary}`),
     ...dashboard.inbox.taskPackets.map((packet) => `- packet ${packet.title} [${packet.status}] worker=${packet.workerID}`),
   ]
 }
@@ -156,7 +156,7 @@ function formatInbox(dashboard: Lightbulb.Dashboard) {
 function formatArtifactHandle(artifact: Lightbulb.ArtifactHandle) {
   const decision = artifact.decision ? ` decision=${artifact.decision.status}` : ""
   const source = formatArtifactSource(artifact)
-  return `${artifact.type} [${artifact.status}]${decision} ${artifact.uri}${source ? ` (${source})` : ""}`
+  return `handle ${artifact.id} ${artifact.type} [${artifact.status}]${decision} ${artifact.uri}${source ? ` (${source})` : ""}`
 }
 
 function formatArtifactSource(artifact: Lightbulb.ArtifactHandle) {
@@ -191,6 +191,15 @@ function summarizeStatuses(items: readonly { readonly status: string }[]) {
   ]
     .map(([status, count]) => `${count} ${status}`)
     .join(", ")
+}
+
+function summarizeGates(gates: readonly Lightbulb.DashboardGate[]) {
+  if (gates.length === 0) return "none"
+  return gates.map(formatGate).join(", ")
+}
+
+function formatGate(gate: Lightbulb.DashboardGate) {
+  return `${gate.id} ${gate.kind} [${gate.status}] artifact=${gate.artifactID ?? "none"}`
 }
 
 function formatOperationSource(source: Record<string, unknown>) {
