@@ -90,6 +90,8 @@ import type {
   GlobalUpgradeResponses,
   InstanceDisposeErrors,
   InstanceDisposeResponses,
+  LightbulbPrReviewRoutesListErrors,
+  LightbulbPrReviewRoutesListResponses,
   LocationRef,
   LspStatusErrors,
   LspStatusResponses,
@@ -2221,6 +2223,28 @@ export class Formatter extends HeyApiClient {
       ...options,
       ...params,
     })
+  }
+}
+
+export class PrReviewRoutes extends HeyApiClient {
+  /**
+   * List active PR review routes
+   *
+   * Read the active Lightbulb PR-review route summaries without mutating route or GitHub state.
+   */
+  public list<ThrowOnError extends boolean = false>(options?: Options<never, ThrowOnError>) {
+    return (options?.client ?? this.client).get<
+      LightbulbPrReviewRoutesListResponses,
+      LightbulbPrReviewRoutesListErrors,
+      ThrowOnError
+    >({ url: "/lightbulb/pr-review/routes", ...options })
+  }
+}
+
+export class Lightbulb extends HeyApiClient {
+  private _prReviewRoutes?: PrReviewRoutes
+  get prReviewRoutes(): PrReviewRoutes {
+    return (this._prReviewRoutes ??= new PrReviewRoutes({ client: this.client }))
   }
 }
 
@@ -6777,6 +6801,11 @@ export class OpencodeClient extends HeyApiClient {
   private _formatter?: Formatter
   get formatter(): Formatter {
     return (this._formatter ??= new Formatter({ client: this.client }))
+  }
+
+  private _lightbulb?: Lightbulb
+  get lightbulb(): Lightbulb {
+    return (this._lightbulb ??= new Lightbulb({ client: this.client }))
   }
 
   private _mcp?: Mcp

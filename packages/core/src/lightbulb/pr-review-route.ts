@@ -380,6 +380,34 @@ export function recordPRReviewRouteWakeInDb(
     .pipe(Effect.orDie)
 }
 
+export function readActivePRReviewRoutesInDb(db: Database.Interface["db"]) {
+  return Effect.gen(function* () {
+    const routes = yield* db
+      .select()
+      .from(LightbulbPRReviewRouteTable)
+      .where(inArray(LightbulbPRReviewRouteTable.status, activeRouteStatuses))
+      .orderBy(asc(LightbulbPRReviewRouteTable.repository), asc(LightbulbPRReviewRouteTable.pr_number))
+      .all()
+      .pipe(Effect.orDie)
+    if (routes.length === 0) return []
+
+    const stops = yield* db
+      .select()
+      .from(LightbulbRouteStopTable)
+      .where(inArray(LightbulbRouteStopTable.route_id, routes.map((route) => route.id)))
+      .orderBy(asc(LightbulbRouteStopTable.sequence))
+      .all()
+      .pipe(Effect.orDie)
+
+    return routes.map((route) =>
+      toPRReviewRouteSummary(
+        route,
+        stops.filter((stop) => stop.route_id === route.id),
+      ),
+    )
+  })
+}
+
 export function toPRReviewRouteSummary(
   row: typeof LightbulbPRReviewRouteTable.$inferSelect | undefined,
   stops: readonly (typeof LightbulbRouteStopTable.$inferSelect)[],

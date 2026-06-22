@@ -207,6 +207,7 @@ describe("Lightbulb PR review routes", () => {
             mergeReady: true,
             data: { checkSuites: 9 },
           })
+          const activeRoutes = yield* lightbulb.readActivePRReviewRoutes()
           const dashboard = yield* lightbulb.readDashboard(accountID)
           const wakes = yield* database.db
             .select()
@@ -237,6 +238,7 @@ describe("Lightbulb PR review routes", () => {
           expect(ciWake.route.activeWorker).toBeNull()
           expect(ciWake.route.nextWakeSource).toBe("human_steering")
           expect(ciWake.route.mergeReady).toBe(true)
+          expect(activeRoutes).toEqual([ciWake.route])
           expect(dashboard?.inbox.prReviewRoutes[0]).toEqual(ciWake.route)
           expect(wakes.map((wake) => [wake.source, wake.summary, wake.next_wake_source, wake.merge_ready])).toEqual([
             ["schedule_tick", "Admitted heyimcarlos/lightbulb#71 into the read-only PR review route.", "worker_report", false],

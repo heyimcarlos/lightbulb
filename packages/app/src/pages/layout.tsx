@@ -2346,6 +2346,8 @@ export default function Layout(props: ParentProps) {
       settingsLabel={() => language.t("sidebar.settings")}
       settingsKeybind={() => command.keybind("settings.open")}
       onOpenSettings={openSettings}
+      lightbulbLabel={() => "Lightbulb"}
+      onOpenLightbulb={() => navigateWithSidebarReset("/lightbulb/pr-review")}
       browserLabel={() => "Computer Use"}
       onOpenBrowser={() => {
         const dir = currentProject()?.worktree

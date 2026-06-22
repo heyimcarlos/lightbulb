@@ -30,6 +30,8 @@ export const SidebarContent = (props: {
   onOpenSettings: () => void
   browserLabel: Accessor<string>
   onOpenBrowser: () => void
+  lightbulbLabel: Accessor<string>
+  onOpenLightbulb: () => void
   helpLabel: Accessor<string>
   onOpenHelp: () => void
   renderPanel: () => JSX.Element
@@ -92,6 +94,15 @@ export const SidebarContent = (props: {
           </DragDropProvider>
         </div>
         <div class="shrink-0 w-full pt-3 pb-6 flex flex-col items-center gap-2">
+          <Tooltip placement={placement()} value={props.lightbulbLabel()}>
+            <IconButton
+              icon="review"
+              variant="ghost"
+              size="large"
+              onClick={props.onOpenLightbulb}
+              aria-label={props.lightbulbLabel()}
+            />
+          </Tooltip>
           <Tooltip placement={placement()} value={props.browserLabel()}>
             <IconButton
               icon="window-cursor"

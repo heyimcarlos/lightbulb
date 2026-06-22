@@ -2400,6 +2400,53 @@ export type FormatterStatus = {
   enabled: boolean
 }
 
+export type LightbulbPrReviewRouteCurrentStop = {
+  id: string
+  kind: "discovery" | "implementation" | "debug" | "review" | "integration" | "verification" | "decision" | "cleanup"
+  title: string
+  status: "pending" | "active" | "complete" | "blocked" | "skipped"
+}
+
+export type LightbulbPrReviewRouteEvidence = {
+  observedAt: number
+  source: "worker_report" | "review_evidence" | "ci_evidence" | "schedule_tick" | "human_steering"
+  summary: string
+  artifactID?: string
+  status?: string
+  data?: {
+    [key: string]: unknown
+  }
+}
+
+export type LightbulbPrReviewRouteWorkerHandle = {
+  id: string
+  role: string
+  status: "queued" | "running" | "blocked" | "complete" | "failed"
+  summary: string
+}
+
+export type LightbulbPrReviewRouteSummary = {
+  id: string
+  goalID: string
+  candidateID: string
+  repository: string
+  pullNumber: number
+  title: string
+  url: string
+  status: "active" | "blocked" | "complete" | "held"
+  currentStop?: LightbulbPrReviewRouteCurrentStop
+  latestEvidence?: LightbulbPrReviewRouteEvidence
+  activeWorker?: LightbulbPrReviewRouteWorkerHandle
+  blockedReason?: string
+  nextWakeSource?: "worker_report" | "review_evidence" | "ci_evidence" | "schedule_tick" | "human_steering"
+  mergeReady: boolean
+  lastWokeAt?: number
+}
+
+export type LightbulbPrReviewRoutesResponse = {
+  routes: Array<LightbulbPrReviewRouteSummary>
+}
+
 export type McpStatusConnected = {
   status: "connected"
 }
@@ -6486,6 +6533,33 @@ export type FormatterStatusResponses = {
 }
 
 export type FormatterStatusResponse = FormatterStatusResponses[keyof FormatterStatusResponses]
+
+export type LightbulbPrReviewRoutesListData = {
+  body?: never
+  path?: never
+  query?: never
+  url: "/lightbulb/pr-review/routes"
+}
+
+export type LightbulbPrReviewRoutesListErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type LightbulbPrReviewRoutesListError =
+  LightbulbPrReviewRoutesListErrors[keyof LightbulbPrReviewRoutesListErrors]
+
+export type LightbulbPrReviewRoutesListResponses = {
+  /**
+   * Active PR review routes
+   */
+  200: LightbulbPrReviewRoutesResponse
+}
+
+export type LightbulbPrReviewRoutesListResponse =
+  LightbulbPrReviewRoutesListResponses[keyof LightbulbPrReviewRoutesListResponses]
 
 export type McpStatusData = {
   body?: never
