@@ -17,6 +17,6 @@ Follow the skill exactly:
 - poll external review/checks for the current head SHA
 - treat stale reviews/checks from older head SHAs as context only
 - after each maker push, record the new head SHA and re-poll review gates
-- loop maker fixes until current-head reviews are clear or explicitly infrastructure-blocked, and checks are green or explicitly owner-waived
+- loop maker fixes until required human-agent/Copilot/external review is tied to the current head SHA or explicitly infrastructure-blocked, no blocking reviewer findings remain, and checks are green or explicitly owner-waived
 - merge only from the parent thread when authorized
 - start the next slice in a new maker thread after merge
