@@ -14,6 +14,7 @@ Use this when work is too broad for the main context and should be split across 
 - Do not use OpenCode/Codex wording in user-facing output; call this Lightbulb.
 - Keep parent output short. Workers return compressed evidence, not transcripts.
 - No duplicate agents: use the `lightbulb-*` project subagents for delegation and the `.agents/skills/*` skills for reusable procedures.
+- Prefer Hermes async delegation for no-cron automation. Do not add a recurring cron job unless the trigger is genuinely time-based.
 
 ## Worker roles
 
@@ -64,6 +65,25 @@ Each worker prompt must include:
 
 Use parallel `task` calls only for non-overlapping work. Do not ask two workers to edit the same files.
 
+For Hermes-hosted automation, use async delegation instead of cron when the work is event/request driven:
+
+```python
+delegate_task(tasks=[
+  {
+    "goal": "Locate the Lightbulb files involved in the requested slice",
+    "context": "Repo: /home/cyberjanitor/worktrees/lightbulb-slice. Return file:line evidence only.",
+    "toolsets": ["file"]
+  },
+  {
+    "goal": "Review the current branch against origin/dev",
+    "context": "Repo: /home/cyberjanitor/worktrees/lightbulb-slice. No edits. Return blockers first.",
+    "toolsets": ["terminal", "file"]
+  }
+])
+```
+
+Current Hermes 0.17 delegation returns completion asynchronously to the parent session. Use this for no-cron maintainer/review/research work. Use `/goal` or Kanban when the work must survive beyond the active parent process.
+
 ### 4. Required worker output
 
 Every worker must return this shape:
@@ -104,6 +124,20 @@ If the user asked to proceed through PR:
 2. Push the branch.
 3. Open a PR against `dev`.
 4. Report PR URL, verification, and caveats.
+
+## Automation blueprint usage
+
+Use Hermes `/blueprint` for time-based or form-filled recurring automations. Do not use it as a generic "make a worker" primitive.
+
+Use Hermes async delegation for immediate automation:
+
+- request arrives in Discord/TUI/API
+- parent creates/selects an isolated worktree
+- parent dispatches `lightbulb-*` workers through `delegate_task`
+- workers return concise evidence asynchronously
+- parent verifies and decides whether to ship
+
+If the work must keep running after the parent process can die, promote it to `/goal` or Kanban. Add cron only for actual schedules.
 
 ## Example task prompts
 
