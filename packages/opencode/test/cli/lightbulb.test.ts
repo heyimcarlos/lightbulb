@@ -9,8 +9,8 @@ import { cliIt } from "../lib/cli-process"
 const lightbulbEnv = { OPENCODE_CLI_NAME: "lightbulb", COLUMNS: "120" }
 const packageRoot = path.resolve(import.meta.dir, "../..")
 
-async function runPackageBin(args: readonly string[]) {
-  const proc = Bun.spawn([...args], {
+async function runPackageBin(bin: "lightbulb" | "opencode", args: readonly string[]) {
+  const proc = Bun.spawn([process.execPath, path.join(packageRoot, "bin", bin), ...args], {
     cwd: packageRoot,
     env: {
       ...process.env,
@@ -32,8 +32,8 @@ async function runPackageBin(args: readonly string[]) {
 
 describe("lightbulb CLI entrypoint", () => {
   test("runs direct package binary wrappers for primary and compatibility command paths", async () => {
-    const lightbulb = await runPackageBin(["./bin/lightbulb", "dashboard", "--help"])
-    const opencode = await runPackageBin(["./bin/opencode", "lightbulb", "dashboard", "--help"])
+    const lightbulb = await runPackageBin("lightbulb", ["dashboard", "--help"])
+    const opencode = await runPackageBin("opencode", ["lightbulb", "dashboard", "--help"])
 
     expect(lightbulb.exitCode).toBe(0)
     expect(lightbulb.stderr).toContain("lightbulb dashboard")
