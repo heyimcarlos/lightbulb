@@ -29,6 +29,7 @@ export type {
   ContextBundleWorkItemSummary,
 } from "./lightbulb/context-bundle"
 export * from "./lightbulb/loop-profile"
+export * from "./lightbulb/pr-review-candidate"
 export * from "./lightbulb/run-ledger"
 export * from "./lightbulb/scheduler"
 export * from "./lightbulb/scheduler-supervisor"
@@ -50,6 +51,11 @@ import {
 import { assembleContextBundle, databaseContextBundleStorage } from "./lightbulb/context-bundle"
 import { toDashboard, toGoalRunTree } from "./lightbulb/dashboard"
 import { applyGatePolicyInDb, gateBlockedReason, type GatePolicyInput, type GatePolicyTransition } from "./lightbulb/policy"
+import {
+  discoverPRReviewCandidatesInDb,
+  type PRReviewCandidateDiscoveryInput,
+  type PRReviewCandidateDiscoveryResult,
+} from "./lightbulb/pr-review-candidate"
 import { planGoalRoute as planGoalRouteInDb, readGoalRoute as readGoalRouteFromDb, steerGoalRoute as steerGoalRouteInDb } from "./lightbulb/route"
 import {
   classifyIssueRouting,
@@ -75,6 +81,7 @@ import {
   LightbulbGateTable,
   LightbulbGoalTable,
   LightbulbLoopTable,
+  LightbulbPRReviewCandidateTable,
   LightbulbRouteSteerTable,
   LightbulbRouteStopTable,
   LightbulbRouteTable,
@@ -124,6 +131,8 @@ export type EventID = typeof EventID.Type
 export const RouteID = prefixedID("lbroute", "Lightbulb.RouteID"); export type RouteID = typeof RouteID.Type
 export const RouteStopID = prefixedID("lbstop", "Lightbulb.RouteStopID"); export type RouteStopID = typeof RouteStopID.Type
 export const RouteSteerID = prefixedID("lbsteer", "Lightbulb.RouteSteerID"); export type RouteSteerID = typeof RouteSteerID.Type
+export const PRReviewCandidateID = prefixedID("lbprcand", "Lightbulb.PRReviewCandidateID")
+export type PRReviewCandidateID = typeof PRReviewCandidateID.Type
 
 export type AccountStatus = "active" | "paused" | "archived"
 export type GoalStatus = "active" | "held" | "completed" | "cancelled" | "stopped"
@@ -159,6 +168,52 @@ export type RouteStatus = "active" | "rerouting" | "arrived" | "blocked" | "canc
 export type RouteStopKind = "discovery" | "implementation" | "debug" | "review" | "integration" | "verification" | "decision" | "cleanup"
 export type RouteStopStatus = "pending" | "active" | "complete" | "blocked" | "skipped"
 export type RouteSteerReason = "user" | "blocker" | "failed_gate" | "new_evidence" | "schedule" | "system"
+export type PRReviewCandidateState = "open" | "closed" | "merged" | "unknown"
+export type PRReviewCandidateStatus = "ready" | "stale" | "closed"
+
+export type PRReviewCandidateRouteSeed = {
+  readonly sourceRef: string
+  readonly repository: string
+  readonly pullNumber: number
+  readonly url: string
+  readonly baseRef: string
+  readonly headRef: string
+  readonly headSha: string | null
+}
+
+export type PRReviewCandidateEvidence = {
+  readonly observedAt: number
+  readonly source: Record<string, unknown>
+  readonly reason: "returned_by_scan" | "not_returned_by_scan"
+}
+
+export type PRReviewCandidateScanPull = {
+  readonly number: number
+  readonly title: string
+  readonly url: string
+  readonly state: Exclude<PRReviewCandidateState, "unknown">
+  readonly baseRef: string
+  readonly headRef: string
+  readonly headSha?: string | null
+  readonly metadata?: Record<string, unknown>
+}
+
+export type PRReviewCandidateSummary = {
+  readonly id: PRReviewCandidateID
+  readonly repository: string
+  readonly pullNumber: number
+  readonly title: string
+  readonly url: string
+  readonly state: PRReviewCandidateState
+  readonly status: PRReviewCandidateStatus
+  readonly baseRef: string
+  readonly headRef: string
+  readonly headSha: string | null
+  readonly lastSeenAt: number
+  readonly lastCheckedAt: number
+  readonly routeSeed: PRReviewCandidateRouteSeed
+  readonly evidence: PRReviewCandidateEvidence
+}
 
 export type ArtifactRetentionDecision =
   | "keep"
@@ -254,6 +309,7 @@ export type AccountGraph = {
   readonly routes: (typeof LightbulbRouteTable.$inferSelect)[]
   readonly routeStops: (typeof LightbulbRouteStopTable.$inferSelect)[]
   readonly routeSteers: (typeof LightbulbRouteSteerTable.$inferSelect)[]
+  readonly prReviewCandidates: (typeof LightbulbPRReviewCandidateTable.$inferSelect)[]
   readonly artifacts: (typeof LightbulbArtifactTable.$inferSelect)[]
   readonly artifactEdges: (typeof LightbulbArtifactEdgeTable.$inferSelect)[]
   readonly gates: (typeof LightbulbGateTable.$inferSelect)[]
@@ -371,6 +427,7 @@ export type Dashboard = {
       readonly status: TaskPacketStatus
     }[]
     readonly gates: DashboardGate[]
+    readonly prReviewCandidates: PRReviewCandidateSummary[]
   }
   readonly operations: {
     readonly schedulerTicks: DashboardSchedulerTick[]
@@ -461,6 +518,9 @@ export interface Interface {
   ) => Effect.Effect<DecisionArtifactHandle, ArtifactRegistrationRejected>
   readonly classifyIssueRouting: (input: IssueRoutingInput) => Effect.Effect<IssueRoutingClassification>
   readonly planWorkerDispatch: (input: { readonly issues: readonly IssueRoutingInput[] }) => Effect.Effect<WorkerDispatchPlan>
+  readonly discoverPRReviewCandidates: (
+    input: PRReviewCandidateDiscoveryInput,
+  ) => Effect.Effect<PRReviewCandidateDiscoveryResult>
   readonly assembleContextBundle: (
     input: ContextBundleAssemblyServiceInput,
   ) => Effect.Effect<ContextBundleAssemblyResult>
@@ -700,6 +760,12 @@ export const layer = Layer.effect(
       }),
       readLoopSchedules: Effect.fn("Lightbulb.readLoopSchedules")(function* (input) {
         return yield* readLoopSchedulesInDb(db, { accountID: input.accountID, now: input.now ?? Date.now() })
+      }),
+      discoverPRReviewCandidates: Effect.fn("Lightbulb.discoverPRReviewCandidates")(function* (input) {
+        return yield* discoverPRReviewCandidatesInDb(db, input, {
+          candidate: PRReviewCandidateID.create,
+          event: EventID.create,
+        })
       }),
       planGoalRoute: Effect.fn("Lightbulb.planGoalRoute")(function* (input) {
         return yield* planGoalRouteInDb(db, input, {
@@ -1006,6 +1072,13 @@ function readAccountGraphFromDb(
         .from(LightbulbRouteSteerTable)
         .where(eq(LightbulbRouteSteerTable.account_id, accountID))
         .orderBy(asc(LightbulbRouteSteerTable.time_created))
+        .all()
+        .pipe(Effect.orDie),
+      prReviewCandidates: yield* db
+        .select()
+        .from(LightbulbPRReviewCandidateTable)
+        .where(eq(LightbulbPRReviewCandidateTable.account_id, accountID))
+        .orderBy(asc(LightbulbPRReviewCandidateTable.repository), asc(LightbulbPRReviewCandidateTable.pr_number))
         .all()
         .pipe(Effect.orDie),
       artifacts: yield* db

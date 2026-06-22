@@ -242,6 +242,36 @@ describe("lightbulb dashboard display", () => {
               artifactID,
             },
           ],
+          prReviewCandidates: [
+            {
+              id: Lightbulb.PRReviewCandidateID.make("lbprcand_demo"),
+              repository: "heyimcarlos/lightbulb",
+              pullNumber: 65,
+              title: "Discover PR review goal candidates",
+              url: "https://github.com/heyimcarlos/lightbulb/pull/65",
+              state: "open",
+              status: "ready",
+              baseRef: "dev",
+              headRef: "pr-candidates",
+              headSha: "28c26c4a4",
+              lastSeenAt: Date.UTC(2026, 0, 1),
+              lastCheckedAt: Date.UTC(2026, 0, 1),
+              routeSeed: {
+                sourceRef: "github:heyimcarlos/lightbulb/pull/65",
+                repository: "heyimcarlos/lightbulb",
+                pullNumber: 65,
+                url: "https://github.com/heyimcarlos/lightbulb/pull/65",
+                baseRef: "dev",
+                headRef: "pr-candidates",
+                headSha: "28c26c4a4",
+              },
+              evidence: {
+                observedAt: Date.UTC(2026, 0, 1),
+                source: { provider: "fixture" },
+                reason: "returned_by_scan",
+              },
+            },
+          ],
         },
         operations: {
           schedulerTicks: [],
@@ -294,6 +324,7 @@ Work
 Queue
 - gate lbgate_demo review [pending] artifact=lbartifact_demo - Parent review is pending.
 - packet lbpacket_demo Render Lightbulb dashboard [complete] worker=lbworker_demo
+- pr-candidate heyimcarlos/lightbulb#65 [ready/open] Discover PR review goal candidates base=dev head=pr-candidates
 
 Artifacts
 - handle lbartifact_demo report [registered] .lightbulb/runs/issue-3-dashboard.md
@@ -312,6 +343,7 @@ Artifacts
         inbox: {
           taskPackets: [],
           gates: [],
+          prReviewCandidates: [],
         },
         operations: {
           schedulerTicks: [

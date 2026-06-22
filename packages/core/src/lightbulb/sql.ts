@@ -169,6 +169,37 @@ export const LightbulbRouteSteerTable = sqliteTable(
   ],
 )
 
+export const LightbulbPRReviewCandidateTable = sqliteTable(
+  "lightbulb_pr_review_candidate",
+  {
+    id: text().$type<Lightbulb.PRReviewCandidateID>().primaryKey(),
+    account_id: text()
+      .$type<Lightbulb.AccountID>()
+      .notNull()
+      .references(() => LightbulbAccountTable.id, { onDelete: "cascade" }),
+    repository: text().notNull(),
+    pr_number: integer().notNull(),
+    title: text().notNull(),
+    url: text().notNull(),
+    state: text().$type<Lightbulb.PRReviewCandidateState>().notNull(),
+    status: text().$type<Lightbulb.PRReviewCandidateStatus>().notNull(),
+    base_ref: text().notNull(),
+    head_ref: text().notNull(),
+    head_sha: text(),
+    last_seen_at: integer().notNull(),
+    last_checked_at: integer().notNull(),
+    route_seed: text({ mode: "json" }).$type<Lightbulb.PRReviewCandidateRouteSeed>().notNull(),
+    evidence: text({ mode: "json" }).$type<Lightbulb.PRReviewCandidateEvidence>().notNull(),
+    metadata: text({ mode: "json" }).$type<Record<string, unknown>>(),
+    ...Timestamps,
+  },
+  (table) => [
+    index("lightbulb_pr_review_candidate_account_idx").on(table.account_id),
+    index("lightbulb_pr_review_candidate_repository_idx").on(table.account_id, table.repository),
+    uniqueIndex("lightbulb_pr_review_candidate_identity_idx").on(table.account_id, table.repository, table.pr_number),
+  ],
+)
+
 export const LightbulbRunTable = sqliteTable(
   "lightbulb_run",
   {

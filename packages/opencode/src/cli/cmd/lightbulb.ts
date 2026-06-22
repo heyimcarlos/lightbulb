@@ -147,13 +147,27 @@ function formatLoop(loop: Lightbulb.DashboardLoop) {
 }
 
 function formatInbox(dashboard: Lightbulb.Dashboard) {
-  if (dashboard.inbox.taskPackets.length === 0 && dashboard.inbox.gates.length === 0) return ["- empty"]
+  if (
+    dashboard.inbox.taskPackets.length === 0 &&
+    dashboard.inbox.gates.length === 0 &&
+    dashboard.inbox.prReviewCandidates.length === 0
+  ) {
+    return ["- empty"]
+  }
   return [
     ...dashboard.inbox.gates.map((gate) => `- gate ${formatGate(gate)} - ${gate.summary}`),
     ...dashboard.inbox.taskPackets.map(
       (packet) => `- packet ${packet.id} ${packet.title} [${packet.status}] worker=${packet.workerID}`,
     ),
+    ...dashboard.inbox.prReviewCandidates.map(formatPRReviewCandidate),
   ]
+}
+
+function formatPRReviewCandidate(candidate: Lightbulb.PRReviewCandidateSummary) {
+  return (
+    `- pr-candidate ${candidate.repository}#${candidate.pullNumber} [${candidate.status}/${candidate.state}] ` +
+    `${candidate.title} base=${candidate.baseRef} head=${candidate.headRef}`
+  )
 }
 
 function formatArtifactHandle(artifact: Lightbulb.ArtifactHandle) {
