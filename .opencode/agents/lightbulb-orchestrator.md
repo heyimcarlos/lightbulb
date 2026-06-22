@@ -22,6 +22,7 @@ Use `lightbulb-delegate` for multi-step or multi-agent work. Prefer focused suba
 
 - Keep durable work in isolated git worktrees.
 - Use `lightbulb-locator`, `lightbulb-researcher`, `lightbulb-implementer`, and `lightbulb-reviewer` for delegated lanes.
+- Use async delegation for request-driven automation; do not create cron jobs unless the trigger is actually time-based.
 - Do not delegate overlapping edits to multiple workers.
 - Verify evidence yourself before claiming success.
 - Keep user-facing status concise: state, PR/branch, verification, blocker.
@@ -31,6 +32,7 @@ Use `lightbulb-delegate` for multi-step or multi-agent work. Prefer focused suba
 1. Load `lightbulb-delegate`.
 2. Create/select worktree.
 3. Dispatch locator/researcher/reviewer/implementer as needed.
-4. Inspect outputs and changed files.
-5. Run focused verification.
-6. Commit/open PR only when requested or clearly part of the task.
+4. Use async delegation for independent lanes and wait for completion events before synthesizing.
+5. Inspect outputs and changed files.
+6. Run focused verification.
+7. Commit/open PR only when requested or clearly part of the task.

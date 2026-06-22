@@ -236,30 +236,28 @@ describe("lightbulb dashboard display", () => {
           },
         ],
       }).replaceAll(EOL, "\n"),
-    ).toBe(`Lightbulb Dashboard
-Account Lightbulb Demo [active] lbacc_demo
+    ).toBe(`Lightbulb Status
+Account: Lightbulb Demo [active] lbacc_demo
+Totals: 1 goals, 1 loops, 1 runs, 1 gates waiting
 
-Goals / Loops / Runs
-  goal lbgoal_demo [active] Bootstrap loop harness
-    Create one durable account control graph.
-    loop lbloop_demo implementation [active]
-      Implementation loop owns the active tracer run.
-      run lbrun_demo [complete] review=requested debug=fixed gate=pending
-        Worker returned a report artifact.
-        workers
-          lbworker_demo bounded implementation worker [complete]
-        gates
-          gate lbgate_demo review [pending] artifact=lbartifact_demo
-        artifacts
-          handle lbartifact_demo report [registered] .lightbulb/runs/issue-3-dashboard.md
+Work
+- Bootstrap loop harness [active] lbgoal_demo
+  Create one durable account control graph.
+  - implementation loop [active] lbloop_demo - Implementation loop owns the active tracer run.
+    run lbrun_demo [complete] - Worker returned a report artifact.
+    checks: review requested, debug fixed, gate pending
+    workers: lbworker_demo [complete] bounded implementation worker
+    gates: lbgate_demo review [pending] artifact=lbartifact_demo
+    artifacts: 1
+    handle lbartifact_demo report [registered] .lightbulb/runs/issue-3-dashboard.md
 
-Inbox
-  packet lbpacket_demo [complete] Render Lightbulb dashboard worker=lbworker_demo
-  gate lbgate_demo review [pending] artifact=lbartifact_demo
+Queue
+- gate lbgate_demo review [pending] artifact=lbartifact_demo - Parent review is pending.
+- packet lbpacket_demo Render Lightbulb dashboard [complete] worker=lbworker_demo
 
-Artifact Handles
-  handle lbartifact_demo report [registered] .lightbulb/runs/issue-3-dashboard.md
-  handle lbartifact_decision adr [registered] decision=pending docs/lightbulb/adr/0005-issue-24-routing.md source=issue:#24,goal:lbgoal_demo`)
+Artifacts
+- handle lbartifact_demo report [registered] .lightbulb/runs/issue-3-dashboard.md
+- handle lbartifact_decision adr [registered] decision=pending docs/lightbulb/adr/0005-issue-24-routing.md (issue #24, goal lbgoal_demo)`)
   })
 
   test("renders recent scheduler ticks as bounded operations state", () => {
@@ -312,11 +310,12 @@ Artifact Handles
         },
         artifactHandles: [],
       }).replaceAll(EOL, "\n"),
-    ).toBe(`Lightbulb Dashboard
-Account Lightbulb Ops [active] lbacc_ops
+    ).toBe(`Lightbulb Status
+Account: Lightbulb Ops [active] lbacc_ops
+Totals: 0 goals, 0 loops, 0 runs, 0 gates waiting
 
-Goals / Loops / Runs
-  no goals
+Work
+- none
 
 Operations
   scheduler tick lbevent_ops trigger=schedule admitted=1 skipped=1 outcomes=2
@@ -324,10 +323,10 @@ Operations
     loop lbloop_ops implementation [admitted] classification=due reason=none run=lbrun_ops
     loop lbloop_wait status [skipped] classification=not_due reason=next_due_at_in_future run=none
 
-Inbox
-  empty
+Queue
+- empty
 
-Artifact Handles
-  no artifacts`)
+Artifacts
+- none`)
   })
 })

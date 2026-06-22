@@ -14,6 +14,8 @@ Use this when work is too broad for the main context and should be split across 
 - Do not use OpenCode/Codex wording in user-facing output; call this Lightbulb.
 - Keep parent output short. Workers return compressed evidence, not transcripts.
 - No duplicate agents: use the `lightbulb-*` project subagents for delegation and the `.agents/skills/*` skills for reusable procedures.
+- Prefer Hermes async delegation for no-cron automation. Do not add a recurring cron job unless the trigger is genuinely time-based.
+- Background `task` dispatch requires `OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true` or `OPENCODE_EXPERIMENTAL=true`; verify one is enabled before using `background: true`.
 
 ## Worker roles
 
@@ -64,6 +66,26 @@ Each worker prompt must include:
 
 Use parallel `task` calls only for non-overlapping work. Do not ask two workers to edit the same files.
 
+For Lightbulb/OpenCode-hosted automation, first verify background subagents are enabled, then use the real `task` tool with `background: true` instead of cron when the work is event/request driven:
+
+```bash
+test "${OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS:-${OPENCODE_EXPERIMENTAL:-}}" = "true"
+```
+
+If that check fails, enable `OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true` for the Lightbulb process before dispatching background workers, or omit `background: true` and keep the work in the foreground.
+
+```json
+{
+  "description": "Locate the files involved in the requested Lightbulb slice",
+  "prompt": "Repo: /home/cyberjanitor/worktrees/lightbulb-slice. Return file:line evidence only. Do not edit files.",
+  "subagent_type": "lightbulb-locator",
+  "background": true
+}
+```
+
+Dispatch additional independent lanes with separate `task` calls only when their file scopes do not overlap.
+Current Lightbulb background subagents return completion asynchronously to the parent session once the experimental background-subagent flag is enabled. Use this for no-cron maintainer/review/research work. Use `/goal` or Kanban when the work must survive beyond the active parent process.
+
 ### 4. Required worker output
 
 Every worker must return this shape:
@@ -73,13 +95,13 @@ Every worker must return this shape:
 [one paragraph]
 
 ## Evidence
-- `path:line` — finding or change
+- `path:line` - finding or change
 
 ## Files changed
-- `path` — why
+- `path` - why
 
 ## Verification
-- `command` — pass/fail and key output
+- `command` - pass/fail and key output
 
 ## Blockers
 - none, or concrete blocker
@@ -104,6 +126,20 @@ If the user asked to proceed through PR:
 2. Push the branch.
 3. Open a PR against `dev`.
 4. Report PR URL, verification, and caveats.
+
+## Automation blueprint usage
+
+Use Hermes `/blueprint` for time-based or form-filled recurring automations. Do not use it as a generic "make a worker" primitive.
+
+Use Lightbulb background subagents for immediate automation:
+
+- request arrives in Discord/TUI/API
+- parent creates/selects an isolated worktree
+- parent dispatches `lightbulb-*` workers through the `task` tool with `background: true`
+- workers return concise evidence asynchronously
+- parent verifies and decides whether to ship
+
+If the work must keep running after the parent process can die, promote it to `/goal` or Kanban. Add cron only for actual schedules.
 
 ## Example task prompts
 
