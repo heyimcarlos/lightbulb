@@ -29,9 +29,11 @@ export type {
   ContextBundleWorkItemSummary,
 } from "./lightbulb/context-bundle"
 export * from "./lightbulb/loop-profile"
+export * from "./lightbulb/run-ledger"
 export * from "./lightbulb/scheduler"
+export * from "./lightbulb/scheduler-tick"
 
-import { and, asc, eq, or } from "drizzle-orm"
+import { and, asc, desc, eq, or } from "drizzle-orm"
 import { Context, Effect, Layer, Schema } from "effect"
 import { Database } from "./database/database"
 import type { CreateGoalInput, CreateGoalResult, GoalLifecycle, GoalRunTree, GoalSummary, UpdateGoalStatusInput } from "./lightbulb/goal"
@@ -80,7 +82,14 @@ import {
   LightbulbWorkerTable,
 } from "./lightbulb/sql"
 import { bootstrapLoopProfiles, databaseLoopProfileStorage, type LoopProfileBootstrapServiceInput, type LoopProfileBootstrapSummary } from "./lightbulb/loop-profile"
+import { admitLoopRunInDb, type LoopRunAdmissionResult, type LoopRunAdmissionServiceInput } from "./lightbulb/run-ledger"
 import { readLoopSchedulesInDb, type LoopScheduleReadModel } from "./lightbulb/scheduler"
+import {
+  admitScheduledLoopRunsInDb,
+  type LoopSchedulerTickOutcome,
+  type LoopSchedulerTickResult,
+  type LoopSchedulerTickServiceInput,
+} from "./lightbulb/scheduler-tick"
 
 const prefixedID = <const Prefix extends string>(prefix: Prefix, brand: string) =>
   Schema.String.check(Schema.isStartsWith(`${prefix}_`)).pipe(
@@ -357,6 +366,9 @@ export type Dashboard = {
     }[]
     readonly gates: DashboardGate[]
   }
+  readonly operations: {
+    readonly schedulerTicks: DashboardSchedulerTick[]
+  }
   readonly artifactHandles: ArtifactHandle[]
 }
 
@@ -403,13 +415,24 @@ export type DashboardGate = {
   readonly artifactID: ArtifactID | null
 }
 
+export type DashboardSchedulerTick = {
+  readonly id: EventID
+  readonly timeCreated: number
+  readonly trigger: string
+  readonly admittedCount: number
+  readonly skippedCount: number
+  readonly outcomeCount: number
+  readonly source: Record<string, unknown> | null
+  readonly outcomes: LoopSchedulerTickOutcome[]
+}
+
 export interface Interface {
   readonly createOrAdoptGoal: (input: CreateGoalInput) => Effect.Effect<CreateGoalResult>
   readonly readGoal: (goalID: GoalID) => Effect.Effect<GoalLifecycle | undefined>
   readonly updateGoalStatus: (input: UpdateGoalStatusInput) => Effect.Effect<GoalLifecycle>
-  readonly bootstrapLoopProfiles: (
-    input: LoopProfileBootstrapServiceInput,
-  ) => Effect.Effect<LoopProfileBootstrapSummary>
+  readonly bootstrapLoopProfiles: (input: LoopProfileBootstrapServiceInput) => Effect.Effect<LoopProfileBootstrapSummary>
+  readonly admitLoopRun: (input: LoopRunAdmissionServiceInput) => Effect.Effect<LoopRunAdmissionResult>
+  readonly admitScheduledLoopRuns: (input: LoopSchedulerTickServiceInput) => Effect.Effect<LoopSchedulerTickResult>
   readonly readGoalRunTree: (goalID: GoalID) => Effect.Effect<GoalRunTree | undefined>
   readonly seedTracerBullet: (input?: {
     readonly accountName?: string
@@ -421,12 +444,8 @@ export interface Interface {
   readonly planGoalRoute: (input: PlanGoalRouteInput) => Effect.Effect<GoalRoute>
   readonly steerGoalRoute: (input: SteerGoalRouteInput) => Effect.Effect<GoalRoute>
   readonly readGoalRoute: (routeID: RouteID) => Effect.Effect<GoalRoute | undefined>
-  readonly registerHarnessArtifact: (
-    input: RegisterHarnessArtifactInput,
-  ) => Effect.Effect<ArtifactHandle, ArtifactRegistrationRejected>
-  readonly routeAdrDecisionArtifact: (
-    input: RouteAdrDecisionArtifactInput,
-  ) => Effect.Effect<ArtifactHandle, ArtifactRegistrationRejected>
+  readonly registerHarnessArtifact: (input: RegisterHarnessArtifactInput) => Effect.Effect<ArtifactHandle, ArtifactRegistrationRejected>
+  readonly routeAdrDecisionArtifact: (input: RouteAdrDecisionArtifactInput) => Effect.Effect<ArtifactHandle, ArtifactRegistrationRejected>
   readonly registerDecisionArtifact: (
     input: RegisterDecisionArtifactInput,
   ) => Effect.Effect<DecisionArtifactHandle, ArtifactRegistrationRejected>
@@ -494,6 +513,12 @@ export const layer = Layer.effect(
           ...input,
           storage: databaseLoopProfileStorage(db, { event: EventID.create }),
         })
+      }),
+      admitLoopRun: Effect.fn("Lightbulb.admitLoopRun")(function* (input) {
+        return yield* admitLoopRunInDb(db, { ...input, now: input.now ?? Date.now() }, { run: RunID.create, event: EventID.create })
+      }),
+      admitScheduledLoopRuns: Effect.fn("Lightbulb.admitScheduledLoopRuns")(function* (input) {
+        return yield* admitScheduledLoopRunsInDb(db, { ...input, now: input.now ?? Date.now() }, { run: RunID.create, event: EventID.create })
       }),
       readGoalRunTree: Effect.fn("Lightbulb.readGoalRunTree")(function* (goalID) {
         const goal = yield* db
@@ -682,9 +707,10 @@ export const layer = Layer.effect(
         return yield* readGoalRouteFromDb(db, routeID)
       }),
       readDashboard: Effect.fn("Lightbulb.readDashboard")(function* (accountID) {
-        const graph = yield* readAccountGraphFromDb(db, accountID)
+        const graph = yield* readAccountGraphFromDb(db, accountID, { events: "none" })
         if (!graph) return
-        return toDashboard(graph)
+        const schedulerTicks = yield* readRecentSchedulerTicksFromDb(db, accountID)
+        return toDashboard(graph, schedulerTicks)
       }),
       readIssueArtifacts: Effect.fn("Lightbulb.readIssueArtifacts")(function* (input) {
         return yield* readIssueArtifactsInDb(db, input)
@@ -897,7 +923,11 @@ export const layer = Layer.effect(
 
 export const defaultLayer = layer.pipe(Layer.provide(Database.defaultLayer))
 
-function readAccountGraphFromDb(db: Database.Interface["db"], accountID: AccountID) {
+function readAccountGraphFromDb(
+  db: Database.Interface["db"],
+  accountID: AccountID,
+  options?: { readonly events?: "all" | "none" },
+) {
   return Effect.gen(function* () {
     const account = yield* db
       .select()
@@ -987,13 +1017,31 @@ function readAccountGraphFromDb(db: Database.Interface["db"], accountID: Account
         .orderBy(asc(LightbulbGateTable.time_created))
         .all()
         .pipe(Effect.orDie),
-      events: yield* db
-        .select()
-        .from(LightbulbEventTable)
-        .where(eq(LightbulbEventTable.account_id, accountID))
-        .orderBy(asc(LightbulbEventTable.time_created))
-        .all()
-        .pipe(Effect.orDie),
+      events: yield* readAccountEventsFromDb(db, accountID, options?.events ?? "all"),
     }
   })
+}
+
+function readAccountEventsFromDb(db: Database.Interface["db"], accountID: AccountID, mode: "all" | "none") {
+  if (mode === "none") return Effect.succeed([])
+  return db
+    .select()
+    .from(LightbulbEventTable)
+    .where(eq(LightbulbEventTable.account_id, accountID))
+    .orderBy(asc(LightbulbEventTable.time_created))
+    .all()
+    .pipe(Effect.orDie)
+}
+
+function readRecentSchedulerTicksFromDb(db: Database.Interface["db"], accountID: AccountID) {
+  return db
+    .select()
+    .from(LightbulbEventTable)
+    .where(
+      and(eq(LightbulbEventTable.account_id, accountID), eq(LightbulbEventTable.type, "lightbulb.scheduler_tick.completed")),
+    )
+    .orderBy(desc(LightbulbEventTable.time_created))
+    .limit(5)
+    .all()
+    .pipe(Effect.orDie)
 }

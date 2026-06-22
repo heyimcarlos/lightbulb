@@ -1,8 +1,27 @@
-import type { AccountGraph, Dashboard, DashboardGate, DashboardLoop, DashboardRun, GoalStatus } from "../lightbulb"
+import type {
+  AccountGraph,
+  Dashboard,
+  DashboardGate,
+  DashboardLoop,
+  DashboardRun,
+  DashboardSchedulerTick,
+  EventID,
+  GoalStatus,
+  LoopID,
+  LoopKind,
+  RunID,
+} from "../lightbulb"
 import { retentionDecisionFor, storedArtifactIntegrity, toArtifactHandle } from "./artifact"
 import type { GoalLifecycle, GoalRunTree, GoalSummary } from "./goal"
 import { classifyLoopSchedule } from "./scheduler"
-import type { LightbulbArtifactTable, LightbulbGateTable, LightbulbLoopTable, LightbulbRunTable } from "./sql"
+import type {
+  LightbulbArtifactTable,
+  LightbulbEventTable,
+  LightbulbGateTable,
+  LightbulbLoopTable,
+  LightbulbRunTable,
+} from "./sql"
+import type { LoopScheduleClassification } from "./scheduler"
 
 export function toGoalRunTree(graph: AccountGraph, goal: GoalLifecycle): GoalRunTree {
   const loops = graph.loops.filter((loop) => loop.goal_id === goal.id)
@@ -45,7 +64,10 @@ export function toGoalRunTree(graph: AccountGraph, goal: GoalLifecycle): GoalRun
   }
 }
 
-export function toDashboard(graph: AccountGraph): Dashboard {
+export function toDashboard(
+  graph: AccountGraph,
+  schedulerTickEvents: readonly (typeof LightbulbEventTable.$inferSelect)[],
+): Dashboard {
   return {
     account: {
       id: graph.account.id,
@@ -69,6 +91,9 @@ export function toDashboard(graph: AccountGraph): Dashboard {
       gates: graph.gates
         .filter((gate) => gate.status === "pending" || gate.status === "blocked")
         .map(toDashboardGate),
+    },
+    operations: {
+      schedulerTicks: schedulerTickEvents.map(toDashboardSchedulerTick),
     },
     artifactHandles: graph.artifacts.map((artifact) => toGraphArtifactHandle(artifact, graph)),
   }
@@ -153,6 +178,49 @@ function toDashboardGate(row: typeof LightbulbGateTable.$inferSelect): Dashboard
   }
 }
 
+function toDashboardSchedulerTick(row: typeof LightbulbEventTable.$inferSelect): DashboardSchedulerTick {
+  return {
+    id: row.id,
+    timeCreated: row.time_created,
+    trigger: typeof row.data.trigger === "string" ? row.data.trigger : "schedule",
+    admittedCount: numberField(row.data, "admitted_count"),
+    skippedCount: numberField(row.data, "skipped_count"),
+    outcomeCount: numberField(row.data, "outcome_count"),
+    source: isRecord(row.data.source) ? row.data.source : null,
+    outcomes: Array.isArray(row.data.outcomes)
+      ? row.data.outcomes
+          .map(toDashboardSchedulerTickOutcome)
+          .filter((outcome): outcome is NonNullable<typeof outcome> => outcome !== undefined)
+      : [],
+  }
+}
+
+function toDashboardSchedulerTickOutcome(value: unknown): DashboardSchedulerTick["outcomes"][number] | undefined {
+  if (!isRecord(value)) return
+  if (typeof value.loopID !== "string") return
+  if (typeof value.kind !== "string") return
+  if (value.outcome !== "admitted" && value.outcome !== "skipped") return
+  return {
+    loopID: value.loopID as LoopID,
+    profileID: typeof value.profileID === "string" ? value.profileID : null,
+    kind: value.kind as LoopKind,
+    outcome: value.outcome,
+    runID: typeof value.runID === "string" ? (value.runID as RunID) : null,
+    eventID: typeof value.eventID === "string" ? (value.eventID as EventID) : null,
+    classification: schedulerTickClassification(value.classification),
+    reason: typeof value.reason === "string" ? value.reason : null,
+  }
+}
+
+function schedulerTickClassification(value: unknown): LoopScheduleClassification | null {
+  if (value === "due" || value === "not_due" || value === "disabled" || value === "budget_held") return value
+  return null
+}
+
+function numberField(data: Record<string, unknown>, key: string) {
+  return typeof data[key] === "number" ? data[key] : 0
+}
+
 function toGraphArtifactHandle(
   row: typeof LightbulbArtifactTable.$inferSelect,
   graph: AccountGraph,
@@ -173,4 +241,8 @@ function toGraphArtifactHandle(
       producerRun: retentionGraph.runs.find((run) => run.id === row.producer_run_id),
     }),
   })
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
 }

@@ -96,6 +96,7 @@ export function formatLightbulbDashboard(dashboard: Lightbulb.Dashboard) {
             ...goal.loops.flatMap(formatLoop),
           ])
     ),
+    ...formatOperations(dashboard),
     "",
     "Inbox",
     ...formatInbox(dashboard),
@@ -107,6 +108,25 @@ export function formatLightbulbDashboard(dashboard: Lightbulb.Dashboard) {
         : dashboard.artifactHandles.map((artifact) => `  ${formatArtifactHandle(artifact)}`)
     ),
   ].join(EOL)
+}
+
+function formatOperations(dashboard: Lightbulb.Dashboard) {
+  if (dashboard.operations.schedulerTicks.length === 0) return []
+  return [
+    "",
+    "Operations",
+    ...dashboard.operations.schedulerTicks.flatMap((tick) => [
+      `  scheduler tick ${tick.id} trigger=${tick.trigger} admitted=${tick.admittedCount} ` +
+        `skipped=${tick.skippedCount} outcomes=${tick.outcomeCount}`,
+      ...(tick.source ? [`    source ${formatOperationSource(tick.source)}`] : []),
+      ...tick.outcomes.map(
+        (outcome) =>
+          `    loop ${outcome.loopID} ${outcome.kind} [${outcome.outcome}] ` +
+          `classification=${outcome.classification ?? "unknown"} reason=${outcome.reason ?? "none"} ` +
+          `run=${outcome.runID ?? "none"}`,
+      ),
+    ]),
+  ]
 }
 
 function formatLoop(loop: Lightbulb.DashboardLoop) {
@@ -168,4 +188,10 @@ function formatArtifactSource(artifact: Lightbulb.ArtifactHandle) {
   ]
     .filter((part): part is string => part !== undefined)
     .join(",")
+}
+
+function formatOperationSource(source: Record<string, unknown>) {
+  return Object.entries(source)
+    .map(([key, value]) => `${key}=${String(value)}`)
+    .join(" ")
 }
