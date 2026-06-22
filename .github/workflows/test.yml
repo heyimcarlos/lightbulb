@@ -125,6 +125,7 @@ jobs:
       - name: Install Playwright browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         working-directory: packages/app
+        timeout-minutes: 30
         run: bunx playwright install chromium
 
       - name: Run app e2e tests
