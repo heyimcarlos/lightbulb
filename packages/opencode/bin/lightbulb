@@ -1,8 +1,5 @@
 #!/usr/bin/env node
 
-import { createRequire } from "node:module"
-
 process.env.OPENCODE_CLI_NAME = "lightbulb"
 
-const require = createRequire(import.meta.url)
-require("./opencode")
+await import("./opencode")

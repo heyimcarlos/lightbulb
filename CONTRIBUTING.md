@@ -76,9 +76,9 @@ Replace `<platform>` with your platform (e.g., `darwin-arm64`, `linux-x64`).
   - `packages/desktop`: The native desktop app, built with Electron (wraps `packages/app`)
   - `packages/plugin`: Source for `@opencode-ai/plugin`
 
-### Understanding bun dev vs opencode
+### Understanding bun dev vs lightbulb
 
-During development, `bun dev` is the local equivalent of the built `opencode` command. Both run the same CLI interface:
+During development, `bun dev` is the local equivalent of the built `lightbulb` command. Both run the same CLI interface:
 
 ```bash
 # Development (from project root)
@@ -88,11 +88,13 @@ bun dev web              # Start server + open web interface
 bun dev <directory>      # Start TUI in specific directory
 
 # Production
-opencode --help          # Show all available commands
-opencode serve           # Start headless API server
-opencode web             # Start server + open web interface
-opencode <directory>     # Start TUI in specific directory
+lightbulb --help         # Show all available commands
+lightbulb serve          # Start headless API server
+lightbulb web            # Start server + open web interface
+lightbulb <directory>    # Start TUI in specific directory
 ```
+
+The `opencode` executable remains available only as a compatibility wrapper while the fork finishes command and distribution migration work.
 
 ### Running the API Server
 
