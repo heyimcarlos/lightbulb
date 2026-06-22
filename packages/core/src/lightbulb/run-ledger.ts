@@ -4,7 +4,7 @@ import type { Database } from "../database/database"
 import type { Lightbulb } from "../lightbulb"
 import { readLoopProfileMetadata } from "./loop-profile"
 import { classifyLoopSchedule, type LoopScheduleReadModel } from "./scheduler"
-import { LightbulbEventTable, LightbulbLoopTable, LightbulbRunTable } from "./sql"
+import { LightbulbEventTable, LightbulbGoalTable, LightbulbLoopTable, LightbulbRunTable } from "./sql"
 
 export type LoopRunTrigger = "schedule" | "manual" | "recovery"
 export type LoopRunAdmissionSourceValue = string | number | boolean | null
@@ -51,6 +51,13 @@ export function admitLoopRunInDb(
           .get()
         if (!loop) return { outcome: "skipped" as const, eventID: null, schedule: null, reason: "missing_loop" }
 
+        const goal = yield* tx
+          .select()
+          .from(LightbulbGoalTable)
+          .where(and(eq(LightbulbGoalTable.account_id, input.accountID), eq(LightbulbGoalTable.id, loop.goal_id)))
+          .get()
+        if (!goal) return { outcome: "skipped" as const, eventID: null, schedule: null, reason: "missing_goal" }
+
         const runs = yield* tx
           .select({
             loop_id: LightbulbRunTable.loop_id,
@@ -61,6 +68,12 @@ export function admitLoopRunInDb(
           .orderBy(asc(LightbulbRunTable.started_at))
           .all()
         const schedule = classifyLoopSchedule({ loop, runs, now: input.now })
+
+        if (goal.status !== "active") {
+          return yield* insertSkippedEvent(tx, input, loop, schedule, ids.event(), "goal_not_active", {
+            goal_status: goal.status,
+          })
+        }
 
         if (schedule.classification !== "due" || !schedule.schedule || !schedule.budget) {
           return yield* insertSkippedEvent(tx, input, loop, schedule, ids.event(), schedule.reason ?? schedule.classification)
@@ -131,6 +144,7 @@ function insertSkippedEvent(
   schedule: LoopScheduleReadModel,
   eventID: Lightbulb.EventID,
   reason: string,
+  data?: Record<string, unknown>,
 ) {
   return Effect.gen(function* () {
     yield* tx
@@ -144,6 +158,7 @@ function insertSkippedEvent(
         summary: "Skipped Lightbulb loop run admission: " + reason + ".",
         data: {
           ...eventData(input, loop, schedule),
+          ...data,
           reason,
         },
         time_created: input.now,

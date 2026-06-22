@@ -229,6 +229,86 @@ describe("Lightbulb loop run admission", () => {
     ),
   )
 
+  it.live("does not admit active loops for non-active goals", () =>
+    Effect.acquireRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ).pipe(
+      Effect.flatMap((tmp) =>
+        Effect.gen(function* () {
+          const lightbulb = yield* Lightbulb.Service
+          const database = yield* Database.Service
+          const created = yield* lightbulb.createOrAdoptGoal({
+            accountName: "Held Goal Account",
+            title: "Held goal admission",
+            objective: "Do not restart work when a parent goal is held.",
+          })
+          const loopID = Lightbulb.loopIDForProfile(created.goal.id, "held-goal")
+          yield* lightbulb.bootstrapLoopProfiles({
+            accountID: created.goal.account_id,
+            goalID: created.goal.id,
+            profiles: [
+              {
+                profileID: "held-goal",
+                kind: "implementation",
+                summary: "Implementation loop on a held goal.",
+                schedule: {
+                  cadenceMs: 1_000,
+                },
+              },
+            ],
+            defaultPolicy,
+            now,
+          })
+          yield* lightbulb.updateGoalStatus({
+            goalID: created.goal.id,
+            status: "held",
+            reason: "Waiting for parent approval.",
+          })
+
+          const skipped = yield* lightbulb.admitLoopRun({
+            accountID: created.goal.account_id,
+            loopID,
+            trigger: "schedule",
+            now: now + 2_000,
+          })
+          const runs = yield* database.db
+            .select()
+            .from(LightbulbRunTable)
+            .where(eq(LightbulbRunTable.loop_id, loopID))
+            .all()
+            .pipe(Effect.orDie)
+          const events = yield* database.db
+            .select()
+            .from(LightbulbEventTable)
+            .where(eq(LightbulbEventTable.type, "lightbulb.loop_run.skipped"))
+            .all()
+            .pipe(Effect.orDie)
+
+          expect(skipped).toMatchObject({
+            outcome: "skipped",
+            reason: "goal_not_active",
+            schedule: expect.objectContaining({ classification: "due" }),
+          })
+          expect(runs).toHaveLength(0)
+          expect(events).toHaveLength(1)
+          expect(events[0]).toMatchObject({
+            aggregate_type: "loop",
+            aggregate_id: loopID,
+            data: expect.objectContaining({
+              loop_id: loopID,
+              goal_id: created.goal.id,
+              profile_id: "held-goal",
+              classification: "due",
+              reason: "goal_not_active",
+              goal_status: "held",
+            }),
+          })
+        }).pipe(Effect.provide(layer(tmp.path))),
+      ),
+    ),
+  )
+
   it.live("records scheduler tick outcomes for due, skipped, and empty wakeups", () =>
     Effect.acquireRelease(
       Effect.promise(() => tmpdir()),
