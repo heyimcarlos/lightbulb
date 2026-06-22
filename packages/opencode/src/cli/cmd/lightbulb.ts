@@ -137,9 +137,10 @@ function formatLoop(loop: Lightbulb.DashboardLoop) {
         : loop.runs.flatMap((run) => [
             `    run ${run.id} [${run.status}] - ${run.summary}`,
             `    checks: review ${run.reviewStatus}, debug ${run.debugStatus}, gate ${run.gateStatus}`,
-            `    workers: ${summarizeStatuses(run.workers)}`,
+            `    workers: ${summarizeWorkers(run.workers)}`,
             `    gates: ${summarizeGates(run.gates)}`,
             `    artifacts: ${run.artifacts.length}`,
+            ...run.artifacts.map((artifact) => `    ${formatArtifactHandle(artifact)}`),
           ])
     ),
   ]
@@ -149,7 +150,9 @@ function formatInbox(dashboard: Lightbulb.Dashboard) {
   if (dashboard.inbox.taskPackets.length === 0 && dashboard.inbox.gates.length === 0) return ["- empty"]
   return [
     ...dashboard.inbox.gates.map((gate) => `- gate ${formatGate(gate)} - ${gate.summary}`),
-    ...dashboard.inbox.taskPackets.map((packet) => `- packet ${packet.title} [${packet.status}] worker=${packet.workerID}`),
+    ...dashboard.inbox.taskPackets.map(
+      (packet) => `- packet ${packet.id} ${packet.title} [${packet.status}] worker=${packet.workerID}`,
+    ),
   ]
 }
 
@@ -191,6 +194,11 @@ function summarizeStatuses(items: readonly { readonly status: string }[]) {
   ]
     .map(([status, count]) => `${count} ${status}`)
     .join(", ")
+}
+
+function summarizeWorkers(workers: readonly { readonly id: string; readonly status: string; readonly role: string }[]) {
+  if (workers.length === 0) return "none"
+  return workers.map((worker) => `${worker.id} [${worker.status}] ${worker.role}`).join(", ")
 }
 
 function summarizeGates(gates: readonly Lightbulb.DashboardGate[]) {

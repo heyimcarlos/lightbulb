@@ -246,13 +246,14 @@ Work
   - implementation loop [active] lbloop_demo - Implementation loop owns the active tracer run.
     run lbrun_demo [complete] - Worker returned a report artifact.
     checks: review requested, debug fixed, gate pending
-    workers: 1 complete
+    workers: lbworker_demo [complete] bounded implementation worker
     gates: lbgate_demo review [pending] artifact=lbartifact_demo
     artifacts: 1
+    handle lbartifact_demo report [registered] .lightbulb/runs/issue-3-dashboard.md
 
 Queue
 - gate lbgate_demo review [pending] artifact=lbartifact_demo - Parent review is pending.
-- packet Render Lightbulb dashboard [complete] worker=lbworker_demo
+- packet lbpacket_demo Render Lightbulb dashboard [complete] worker=lbworker_demo
 
 Artifacts
 - handle lbartifact_demo report [registered] .lightbulb/runs/issue-3-dashboard.md

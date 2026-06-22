@@ -91,8 +91,15 @@ Current verification:
 
 - Restored copyable IDs in the compact dashboard output for goals, loops, queue gates, run gates, and artifact handles.
 - Included gate artifact links in both run summaries and queue entries.
+- Included task packet IDs in queue rows.
+- Included worker IDs in run summaries instead of only worker status counts.
+- Included produced artifact handles directly under each run while keeping the global Artifacts section.
 - Kept the scheduler `Operations` section from the traceable loop admission work.
 
 Current verification:
 
 - `cd packages/opencode && bun test test/cli/lightbulb.test.ts` - passed, 7 tests.
+- `cd packages/opencode && bun typecheck` - passed.
+- `git diff --check origin/dev...HEAD` - passed.
+- `LC_ALL=C rg -n "[^\\x00-\\x7F]|agent list \\| grep lightbulb|for \\(const item of items\\)" <changed files>` - passed, no matches.
+- `rg -n "lbpacket_demo|lbworker_demo" packages/opencode/test/cli/lightbulb.test.ts` - passed; both handles remain in the expected human dashboard output.
