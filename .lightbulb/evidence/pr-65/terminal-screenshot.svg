@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="520" viewBox="0 0 1120 520" role="img" aria-labelledby="title desc">
+  <title id="title">PR 65 terminal verification summary</title>
+  <desc id="desc">A terminal-style visual evidence card showing PR review candidate tests, typecheck, migration check, and diff check passing.</desc>
+  <rect width="1120" height="520" fill="#101418"/>
+  <rect x="24" y="24" width="1072" height="472" rx="8" fill="#171d23" stroke="#34404c"/>
+  <rect x="24" y="24" width="1072" height="42" rx="8" fill="#222a32"/>
+  <circle cx="52" cy="45" r="7" fill="#ff6b6b"/>
+  <circle cx="76" cy="45" r="7" fill="#ffd166"/>
+  <circle cx="100" cy="45" r="7" fill="#4ecdc4"/>
+  <text x="132" y="51" fill="#c9d1d9" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15">/home/ren/wt/lightbulb/pr-candidates</text>
+  <text x="48" y="112" fill="#7ee787" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="18">$ cd packages/core &amp;&amp; bun test test/lightbulb-pr-review-candidate.test.ts test/lightbulb.test.ts</text>
+  <text x="48" y="154" fill="#d0d7de" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="18">Core PR review candidate discovery and dashboard regressions: 25 pass, 0 fail</text>
+  <text x="48" y="188" fill="#d0d7de" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="18">Lightbulb CLI dashboard rendering tests: 9 pass, 0 fail</text>
+  <text x="48" y="222" fill="#7ee787" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="18">25 pass, 0 fail, 174 expect() calls</text>
+  <text x="48" y="284" fill="#7ee787" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="18">$ cd packages/core &amp;&amp; bun typecheck</text>
+  <text x="48" y="326" fill="#d0d7de" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="18">$ tsgo --noEmit</text>
+  <text x="48" y="360" fill="#7ee787" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="18">core and opencode typechecks passed</text>
+  <text x="48" y="418" fill="#7ee787" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="18">$ cd packages/core &amp;&amp; bun run script/migration.ts --check</text>
+  <text x="48" y="452" fill="#7ee787" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="18">migration check passed</text>
+  <text x="48" y="486" fill="#7ee787" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="18">$ git diff --check origin/dev...HEAD -&gt; passed</text>
+</svg>
