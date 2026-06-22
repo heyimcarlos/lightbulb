@@ -203,6 +203,9 @@ describe("lightbulb dashboard display", () => {
             },
           ],
         },
+        operations: {
+          schedulerTicks: [],
+        },
         artifactHandles: [
           artifactHandle,
           {
@@ -257,5 +260,74 @@ Inbox
 Artifact Handles
   handle lbartifact_demo report [registered] .lightbulb/runs/issue-3-dashboard.md
   handle lbartifact_decision adr [registered] decision=pending docs/lightbulb/adr/0005-issue-24-routing.md source=issue:#24,goal:lbgoal_demo`)
+  })
+
+  test("renders recent scheduler ticks as bounded operations state", () => {
+    expect(
+      formatLightbulbDashboard({
+        account: {
+          id: Lightbulb.AccountID.make("lbacc_ops"),
+          name: "Lightbulb Ops",
+          status: "active",
+        },
+        goals: [],
+        inbox: {
+          taskPackets: [],
+          gates: [],
+        },
+        operations: {
+          schedulerTicks: [
+            {
+              id: Lightbulb.EventID.make("lbevent_ops"),
+              timeCreated: Date.UTC(2026, 0, 1),
+              trigger: "schedule",
+              admittedCount: 1,
+              skippedCount: 1,
+              outcomeCount: 2,
+              source: { cron_id: "heartbeat" },
+              outcomes: [
+                {
+                  loopID: Lightbulb.LoopID.make("lbloop_ops"),
+                  profileID: "implementation",
+                  kind: "implementation",
+                  outcome: "admitted",
+                  runID: Lightbulb.RunID.make("lbrun_ops"),
+                  eventID: Lightbulb.EventID.make("lbevent_admitted"),
+                  classification: "due",
+                  reason: null,
+                },
+                {
+                  loopID: Lightbulb.LoopID.make("lbloop_wait"),
+                  profileID: "status",
+                  kind: "status",
+                  outcome: "skipped",
+                  runID: null,
+                  eventID: Lightbulb.EventID.make("lbevent_skipped"),
+                  classification: "not_due",
+                  reason: "next_due_at_in_future",
+                },
+              ],
+            },
+          ],
+        },
+        artifactHandles: [],
+      }).replaceAll(EOL, "\n"),
+    ).toBe(`Lightbulb Dashboard
+Account Lightbulb Ops [active] lbacc_ops
+
+Goals / Loops / Runs
+  no goals
+
+Operations
+  scheduler tick lbevent_ops trigger=schedule admitted=1 skipped=1 outcomes=2
+    source cron_id=heartbeat
+    loop lbloop_ops implementation [admitted] classification=due reason=none run=lbrun_ops
+    loop lbloop_wait status [skipped] classification=not_due reason=next_due_at_in_future run=none
+
+Inbox
+  empty
+
+Artifact Handles
+  no artifacts`)
   })
 })

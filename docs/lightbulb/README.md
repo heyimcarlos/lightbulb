@@ -36,3 +36,17 @@ Worker dispatch remains downstream of the scheduler. Discovery and status loops 
 summaries or task candidates. Implementation, debug, and review/integration loops may dispatch fresh child workers only
 after the loop handle is enabled, due, and inside budget. Parent/operator summaries expose created, adopted, skipped,
 held, and invalid profile handles without raw prompt or worker transcript content.
+
+## Traceable Loop Run Admission
+
+Scheduler wakeups must admit due loops into the durable run ledger before any model, worker, or external connector runs.
+Admission records the loop classification, trigger, schedule/budget snapshot, source metadata, and an append-only event.
+Skipped wakeups for existing loops record `lightbulb.loop_run.skipped`; due wakeups create a queued run, advance the next
+due time, and record `lightbulb.loop_run.admitted`. This keeps cron/Hermes activity traceable even when worker execution
+is delegated or later fails outside the parent context.
+
+Scheduler/controller ticks record their own account-level `lightbulb.scheduler_tick.completed` event after evaluating
+the account loops. The tick event stores admitted/skipped counts and compact per-loop outcomes, including empty wakeups
+where no loop exists yet. This gives paused cron, external scheduler, and recovery loops a durable trace before any
+worker process exists. The dashboard read model exposes the recent tick events under `operations.schedulerTicks`, and
+the text dashboard prints an `Operations` section when tick state exists.
