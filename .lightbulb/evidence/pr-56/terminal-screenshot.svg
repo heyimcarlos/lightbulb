@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720">
+  <rect width="1200" height="720" fill="#07101f"/>
+  <rect x="60" y="52" width="1080" height="616" rx="24" fill="#0f172a" stroke="#334155"/>
+  <text x="96" y="112" fill="#e5edff" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="28" font-weight="700">PR 56 terminal evidence</text>
+  <text x="96" y="165" fill="#93c5fd" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="20">$ bun typecheck</text>
+  <text x="118" y="204" fill="#bbf7d0" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18">$ tsgo --noEmit</text>
+  <text x="118" y="235" fill="#bbf7d0" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18">exit 0</text>
+  <text x="96" y="302" fill="#93c5fd" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="20">$ opencode agent list | grep lightbulb-*</text>
+  <text x="118" y="341" fill="#e2e8f0" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18">lightbulb-implementer (subagent)</text>
+  <text x="118" y="372" fill="#e2e8f0" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18">lightbulb-locator (subagent)</text>
+  <text x="118" y="403" fill="#e2e8f0" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18">lightbulb-orchestrator (primary)</text>
+  <text x="118" y="434" fill="#e2e8f0" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18">lightbulb-researcher (subagent)</text>
+  <text x="118" y="465" fill="#e2e8f0" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18">lightbulb-reviewer (subagent)</text>
+  <text x="96" y="532" fill="#93c5fd" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="20">$ npx skills@latest list --json | grep lightbulb</text>
+  <text x="118" y="571" fill="#e2e8f0" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18">"name": "lightbulb-delegate",</text>
+  <text x="118" y="602" fill="#e2e8f0" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18">"name": "lightbulb-loop-maintainer",</text>
+</svg>

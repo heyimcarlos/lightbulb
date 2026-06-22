@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>PR 56 evidence — no-cron delegation automation</title>
+  <style>
+    body { margin: 0; font-family: Inter, ui-sans-serif, system-ui, sans-serif; background: #0b1020; color: #edf2ff; }
+    main { display: grid; gap: 24px; padding: 40px; max-width: 1080px; margin: 0 auto; }
+    section { border: 1px solid #2f3b66; border-radius: 20px; padding: 28px; background: linear-gradient(135deg, #111936, #111827); box-shadow: 0 20px 60px #0008; }
+    h1, h2 { margin-top: 0; }
+    .flow { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; align-items: stretch; }
+    .box { border: 1px solid #4f65a5; border-radius: 14px; padding: 14px; background: #172040; text-align: center; }
+    .arrow { color: #8fb3ff; font-weight: 700; }
+    code { background: #050814; border: 1px solid #27345f; padding: 2px 6px; border-radius: 6px; }
+    li { margin: 8px 0; }
+  </style>
+</head>
+<body>
+  <main>
+    <section>
+      <h1>PR 56: no-cron delegation automation</h1>
+      <p>This PR adds request-driven Lightbulb delegation primitives without creating another recurring maintainer cron.</p>
+    </section>
+    <section>
+      <h2>Changed surfaces</h2>
+      <ul>
+        <li><code>lightbulb-delegate</code> skill: how parent agents dispatch isolated worker lanes.</li>
+        <li><code>lightbulb-loop-maintainer</code> skill: how loop repairs are inspected and fixed without cron creep.</li>
+        <li><code>/delegate-async</code> and <code>/maintain-loops</code> commands: entrypoints for request-driven automation.</li>
+        <li><code>lightbulb-orchestrator</code>: defaults to async delegation before durable goal/Kanban/cron escalation.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Loop path</h2>
+      <div class="flow">
+        <div class="box">Request arrives</div>
+        <div class="box">Parent loads Lightbulb skill</div>
+        <div class="box">Async worker lanes run</div>
+        <div class="box">Parent verifies evidence</div>
+        <div class="box">Only scheduled triggers use cron</div>
+      </div>
+    </section>
+    <section>
+      <h2>Verification evidence</h2>
+      <ul>
+        <li><code>bun typecheck</code> passed from <code>packages/opencode</code>.</li>
+        <li><code>agent list</code> found all five Lightbulb agents.</li>
+        <li><code>npx skills@latest list --json</code> found both new Lightbulb skills.</li>
+        <li><code>git diff --check origin/dev...HEAD</code> passed.</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>
