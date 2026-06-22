@@ -26,6 +26,16 @@ function eventResponse(events: EventV2.Interface) {
   return Effect.gen(function* () {
     const instance = yield* InstanceState.context
     const workspaceID = yield* InstanceState.workspaceID
+    const instanceLocation = {
+      directory: instance.directory,
+      ...(workspaceID ? { workspaceID } : {}),
+      project: { id: instance.project.id, directory: instance.worktree },
+    }
+    const eventLocation = (location?: EventV2.Payload["location"]) => ({
+      directory: location?.directory ?? instanceLocation.directory,
+      ...((location?.workspaceID ?? workspaceID) ? { workspaceID: location?.workspaceID ?? workspaceID } : {}),
+      project: instanceLocation.project,
+    })
     // Listener registration is eager, so events published after this point cannot
     // be lost while the HTTP body fiber is starting or emitting server.connected.
     const queue = yield* Queue.unbounded<EventV2.Payload>()
@@ -37,9 +47,21 @@ function eventResponse(events: EventV2.Interface) {
           event.location?.directory === instance.directory &&
           (event.location.workspaceID === undefined || event.location.workspaceID === workspaceID),
       ),
-      Stream.map((event) => ({ id: event.id, type: event.type, properties: event.data })),
+      Stream.map((event) => ({
+        id: event.id,
+        type: event.type,
+        location: eventLocation(event.location),
+        data: event.data,
+        properties: event.data,
+      })),
     )
-    const disposed = Stream.callback<{ id: string; type: string; properties: unknown }>((queue) => {
+    const disposed = Stream.callback<{
+      id: string
+      type: string
+      location: typeof instanceLocation
+      data: unknown
+      properties: unknown
+    }>((queue) => {
       const listener = (event: {
         directory?: string
         payload: { id?: string; type?: string; properties?: unknown }
@@ -48,6 +70,8 @@ function eventResponse(events: EventV2.Interface) {
         Queue.offerUnsafe(queue, {
           id: event.payload.id ?? eventID(),
           type: "server.instance.disposed",
+          location: instanceLocation,
+          data: event.payload.properties ?? {},
           properties: event.payload.properties ?? {},
         })
       }
@@ -62,12 +86,24 @@ function eventResponse(events: EventV2.Interface) {
     )
     const heartbeat = Stream.tick("10 seconds").pipe(
       Stream.drop(1),
-      Stream.map(() => ({ id: eventID(), type: "server.heartbeat", properties: {} })),
+      Stream.map(() => ({
+        id: eventID(),
+        type: "server.heartbeat",
+        location: instanceLocation,
+        data: {},
+        properties: {},
+      })),
     )
 
     yield* Effect.logInfo("event connected")
     return HttpServerResponse.stream(
-      Stream.make({ id: eventID(), type: "server.connected", properties: {} }).pipe(
+      Stream.make({
+        id: eventID(),
+        type: "server.connected",
+        location: instanceLocation,
+        data: {},
+        properties: {},
+      }).pipe(
         Stream.concat(output.pipe(Stream.merge(heartbeat, { haltStrategy: "left" }))),
         Stream.map(eventData),
         Stream.pipeThroughChannel(Sse.encode()),
