@@ -1,6 +1,6 @@
 ---
 name: lightbulb-pr-pipeline
-description: Drive each Lightbulb PR through triage, maker thread, independent reviewer thread, Codex/GitHub review polling, approval loop, merge, and next-slice dispatch. Use when the user asks for a PR workflow, autonomous PR conveyor, review loop, or maker/reviewer thread pipeline.
+description: Drive each Lightbulb PR through triage, maker thread, independent reviewer thread, Copilot/Codex/GitHub review polling, approval loop, merge, and next-slice dispatch. Use when the user asks for a PR workflow, autonomous PR conveyor, review loop, or maker/reviewer thread pipeline.
 ---
 
 # Lightbulb PR Pipeline
@@ -17,6 +17,11 @@ Use this under `lightbulb-maintainer-orchestrator` after queue triage chooses a 
 - Respect authorization gates: triage/read, local implementation, commit, push/open PR, CI rerun, merge/close, release/tag/publish.
 - Stop at the last authorized gate if permission is missing.
 - A maker may push or open a PR only when parent/root explicitly authorizes that mutation for the selected branch. Parent/root still owns merge, closeout, and next-slice dispatch.
+- Copilot code review is enabled automatically in repository settings. Parent/root should poll for Copilot review activity on each new PR/head and only use the CLI fallback once when no automatic Copilot review or pending request appears:
+  ```bash
+  gh pr edit <number> --add-reviewer @copilot
+  ```
+- Codex review is best-effort while account limits allow it. A Codex usage-limit response is an infrastructure caveat, not a reason to keep re-requesting Codex review.
 
 ## Workflow
 
@@ -26,10 +31,10 @@ Use this under `lightbulb-maintainer-orchestrator` after queue triage chooses a 
 4. Maker implements, verifies, commits, pushes, and opens a draft or ready PR against `dev` when parent/root has authorized that mutation.
 5. Parent records the PR URL, reads the diff, and runs or delegates `thermo-nuclear-code-quality-review` against the PR branch.
 6. Spin up a separate read-only reviewer thread; it reviews the filed PR diff against `origin/dev` for correctness, regression risk, missing tests, missing visual evidence, and duplicate agent/skill/command artifacts. Use `review` or `thermo-nuclear-code-quality-review` as inputs when the scope calls for them, but keep the reviewer thread separate from the maker.
-7. Parent records the current PR head SHA, requests external review using the available GitHub/Codex path for that head, then polls PR reviews, comments, checks, and merge state until a decision, timeout, or infrastructure blocker is clear. Stale reviews or comments from older head SHAs are context only.
+7. Parent records the current PR head SHA, polls for automatic Copilot review activity, uses one `gh pr edit <number> --add-reviewer @copilot` fallback only if Copilot did not appear, requests Codex review only when account limits allow it, then polls PR reviews, comments, checks, and merge state until a decision, timeout, or infrastructure blocker is clear. Stale reviews or comments from older head SHAs are context only.
 8. Feed actionable comments and failing checks back to the maker thread. Maker fixes in the same branch, reruns focused verification, pushes, and returns evidence plus the new head SHA.
-9. After every maker push, parent records the new head SHA, re-requests or refreshes external review for that head, and asks the reviewer thread to re-check the changed diff when needed.
-10. Repeat review polling plus maker fixes until approvals and required Codex/external review are tied to the current head SHA, no blocking reviewer findings remain, checks for the current head are green or explicitly owner-waived, and visual evidence is attached.
+9. After every maker push, parent records the new head SHA, re-checks automatic Copilot and available Codex review status for that head, and asks the reviewer thread to re-check the changed diff when needed.
+10. Repeat review polling plus maker fixes until required human-agent/Copilot/external review is tied to the current head SHA or explicitly infrastructure-blocked, no blocking reviewer findings remain, checks for the current head are green or explicitly owner-waived, and visual evidence is attached.
 11. Parent re-reads the PR, confirms the final head SHA matches the reviewed and checked head, verifies the merge gate, merges when authorized, posts issue proof comments when mutating GitHub, then starts the next queued slice in a new maker thread.
 
 ## Hard Stops
