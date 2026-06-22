@@ -65,24 +65,19 @@ Each worker prompt must include:
 
 Use parallel `task` calls only for non-overlapping work. Do not ask two workers to edit the same files.
 
-For Hermes-hosted automation, use async delegation instead of cron when the work is event/request driven:
+For Lightbulb/OpenCode-hosted automation, use the real `task` tool with `background: true` instead of cron when the work is event/request driven:
 
-```python
-delegate_task(tasks=[
-  {
-    "goal": "Locate the Lightbulb files involved in the requested slice",
-    "context": "Repo: /home/cyberjanitor/worktrees/lightbulb-slice. Return file:line evidence only.",
-    "toolsets": ["file"]
-  },
-  {
-    "goal": "Review the current branch against origin/dev",
-    "context": "Repo: /home/cyberjanitor/worktrees/lightbulb-slice. No edits. Return blockers first.",
-    "toolsets": ["terminal", "file"]
-  }
-])
+```json
+{
+  "description": "Locate the files involved in the requested Lightbulb slice",
+  "prompt": "Repo: /home/cyberjanitor/worktrees/lightbulb-slice. Return file:line evidence only. Do not edit files.",
+  "subagent_type": "lightbulb-locator",
+  "background": true
+}
 ```
 
-Current Hermes 0.17 delegation returns completion asynchronously to the parent session. Use this for no-cron maintainer/review/research work. Use `/goal` or Kanban when the work must survive beyond the active parent process.
+Dispatch additional independent lanes with separate `task` calls only when their file scopes do not overlap.
+Current Lightbulb background subagents return completion asynchronously to the parent session. Use this for no-cron maintainer/review/research work. Use `/goal` or Kanban when the work must survive beyond the active parent process.
 
 ### 4. Required worker output
 
@@ -129,11 +124,11 @@ If the user asked to proceed through PR:
 
 Use Hermes `/blueprint` for time-based or form-filled recurring automations. Do not use it as a generic "make a worker" primitive.
 
-Use Hermes async delegation for immediate automation:
+Use Lightbulb background subagents for immediate automation:
 
 - request arrives in Discord/TUI/API
 - parent creates/selects an isolated worktree
-- parent dispatches `lightbulb-*` workers through `delegate_task`
+- parent dispatches `lightbulb-*` workers through the `task` tool with `background: true`
 - workers return concise evidence asynchronously
 - parent verifies and decides whether to ship
 
