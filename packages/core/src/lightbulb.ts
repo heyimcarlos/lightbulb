@@ -33,7 +33,7 @@ export * from "./lightbulb/run-ledger"
 export * from "./lightbulb/scheduler"
 export * from "./lightbulb/scheduler-tick"
 
-import { and, asc, eq, or } from "drizzle-orm"
+import { and, asc, desc, eq, or } from "drizzle-orm"
 import { Context, Effect, Layer, Schema } from "effect"
 import { Database } from "./database/database"
 import type { CreateGoalInput, CreateGoalResult, GoalLifecycle, GoalRunTree, GoalSummary, UpdateGoalStatusInput } from "./lightbulb/goal"
@@ -707,9 +707,10 @@ export const layer = Layer.effect(
         return yield* readGoalRouteFromDb(db, routeID)
       }),
       readDashboard: Effect.fn("Lightbulb.readDashboard")(function* (accountID) {
-        const graph = yield* readAccountGraphFromDb(db, accountID)
+        const graph = yield* readAccountGraphFromDb(db, accountID, { events: "none" })
         if (!graph) return
-        return toDashboard(graph)
+        const schedulerTicks = yield* readRecentSchedulerTicksFromDb(db, accountID)
+        return toDashboard(graph, schedulerTicks)
       }),
       readIssueArtifacts: Effect.fn("Lightbulb.readIssueArtifacts")(function* (input) {
         return yield* readIssueArtifactsInDb(db, input)
@@ -922,7 +923,11 @@ export const layer = Layer.effect(
 
 export const defaultLayer = layer.pipe(Layer.provide(Database.defaultLayer))
 
-function readAccountGraphFromDb(db: Database.Interface["db"], accountID: AccountID) {
+function readAccountGraphFromDb(
+  db: Database.Interface["db"],
+  accountID: AccountID,
+  options?: { readonly events?: "all" | "none" },
+) {
   return Effect.gen(function* () {
     const account = yield* db
       .select()
@@ -1012,13 +1017,31 @@ function readAccountGraphFromDb(db: Database.Interface["db"], accountID: Account
         .orderBy(asc(LightbulbGateTable.time_created))
         .all()
         .pipe(Effect.orDie),
-      events: yield* db
-        .select()
-        .from(LightbulbEventTable)
-        .where(eq(LightbulbEventTable.account_id, accountID))
-        .orderBy(asc(LightbulbEventTable.time_created))
-        .all()
-        .pipe(Effect.orDie),
+      events: yield* readAccountEventsFromDb(db, accountID, options?.events ?? "all"),
     }
   })
+}
+
+function readAccountEventsFromDb(db: Database.Interface["db"], accountID: AccountID, mode: "all" | "none") {
+  if (mode === "none") return Effect.succeed([])
+  return db
+    .select()
+    .from(LightbulbEventTable)
+    .where(eq(LightbulbEventTable.account_id, accountID))
+    .orderBy(asc(LightbulbEventTable.time_created))
+    .all()
+    .pipe(Effect.orDie)
+}
+
+function readRecentSchedulerTicksFromDb(db: Database.Interface["db"], accountID: AccountID) {
+  return db
+    .select()
+    .from(LightbulbEventTable)
+    .where(
+      and(eq(LightbulbEventTable.account_id, accountID), eq(LightbulbEventTable.type, "lightbulb.scheduler_tick.completed")),
+    )
+    .orderBy(desc(LightbulbEventTable.time_created))
+    .limit(5)
+    .all()
+    .pipe(Effect.orDie)
 }

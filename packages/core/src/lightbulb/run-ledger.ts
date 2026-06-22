@@ -71,7 +71,7 @@ export function admitLoopRunInDb(
             started_at: LightbulbRunTable.started_at,
           })
           .from(LightbulbRunTable)
-          .where(eq(LightbulbRunTable.account_id, input.accountID))
+          .where(and(eq(LightbulbRunTable.account_id, input.accountID), eq(LightbulbRunTable.loop_id, input.loopID)))
           .orderBy(asc(LightbulbRunTable.started_at))
           .all()
         const schedule = classifyLoopSchedule({ loop, runs, now: input.now })

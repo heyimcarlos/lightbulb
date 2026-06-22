@@ -64,7 +64,10 @@ export function toGoalRunTree(graph: AccountGraph, goal: GoalLifecycle): GoalRun
   }
 }
 
-export function toDashboard(graph: AccountGraph): Dashboard {
+export function toDashboard(
+  graph: AccountGraph,
+  schedulerTickEvents: readonly (typeof LightbulbEventTable.$inferSelect)[],
+): Dashboard {
   return {
     account: {
       id: graph.account.id,
@@ -90,11 +93,7 @@ export function toDashboard(graph: AccountGraph): Dashboard {
         .map(toDashboardGate),
     },
     operations: {
-      schedulerTicks: graph.events
-        .filter((event) => event.type === "lightbulb.scheduler_tick.completed")
-        .toSorted((a, b) => b.time_created - a.time_created)
-        .slice(0, 5)
-        .map(toDashboardSchedulerTick),
+      schedulerTicks: schedulerTickEvents.map(toDashboardSchedulerTick),
     },
     artifactHandles: graph.artifacts.map((artifact) => toGraphArtifactHandle(artifact, graph)),
   }
