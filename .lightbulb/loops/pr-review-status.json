@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-06-22T00:55:42Z",
+  "updated_at": "2026-06-22T02:52:27Z",
   "prs": [
     {
       "pr": 55,
@@ -28,6 +28,35 @@
       "blockers": [
         "GitHub checks are still queued/pending on the latest head; no failure logs are available.",
         "GitHub reports zero repository-hosted runners via actions/runners; queued jobs have no steps/logs yet."
+      ]
+    },
+    {
+      "pr": 56,
+      "url": "https://github.com/heyimcarlos/lightbulb/pull/56",
+      "head": "automation-blueprint",
+      "base": "dev",
+      "head_sha": "d12f0295e301b1d5796b2b4379d98e654265214d",
+      "state": "pending_ci_and_current_head_codex_review",
+      "local_gates": {
+        "git diff --check origin/dev...HEAD": "passed after evidence review-state refresh",
+        "packages/opencode:bun typecheck": "passed",
+        "repo:agent list grep lightbulb-*": "passed; found orchestrator, locator, researcher, implementer, reviewer",
+        "repo:npx skills@latest list --json grep lightbulb-delegate/lightbulb-loop-maintainer": "passed; found both skills",
+        "pre-push:bun turbo typecheck": "passed: 23 successful, 0 failed"
+      },
+      "review_fixes": [
+        "Corrected PR evidence verification.md so it no longer claimed Codex review was still EYES-only after the prior current-head clean response.",
+        "Pushed evidence correction d12f0295e and requested @codex review on the new head."
+      ],
+      "external_codex_review": {
+        "requested": true,
+        "pending": true,
+        "reason": "Latest @codex review request on d12f0295e currently has only an EYES reaction and no submitted connector result."
+      },
+      "blockers": [
+        "GitHub checks are queued/pending on the latest head; no failure logs are available.",
+        "GitHub reports zero repository-hosted runners via actions/runners.",
+        "Current-head Codex review is pending after the evidence correction commit."
       ]
     }
   ]

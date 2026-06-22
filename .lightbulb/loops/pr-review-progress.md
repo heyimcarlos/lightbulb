@@ -141,3 +141,10 @@
 - PR #55 current head `3f49791e8d` still has current-head Codex clean response and no review threads or inline comments.
 - PR checks remain queued with no job steps/logs: `nix-eval`, `storybook build`, `typecheck`, `unit/e2e linux/windows`.
 - Parent-side GitHub Actions inspection reports `runners=0`, so there is no CI failure to fix in the branch yet; merge remains blocked by pending checks.
+
+## 2026-06-22T02:52:27Z — PR #56 evidence review-state fix pushed
+
+- Fixed PR #56 evidence drift: `verification.md` still said the latest Codex review was EYES-only even though the previous head had a clean connector response.
+- Pushed `d12f0295e` to `automation-blueprint` and requested `@codex review` on the new head.
+- Parent gates passed: `git diff --check`, `packages/opencode:bun typecheck`, Lightbulb agent discovery, Lightbulb skill discovery, no review threads, and pre-push `bun turbo typecheck` (23 successful).
+- Blocked from merge: PR #56 current-head Codex review is now EYES-only pending after the new evidence commit; GitHub checks are queued/pending and repo-hosted runners report `0`.
