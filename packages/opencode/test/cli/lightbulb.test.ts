@@ -124,6 +124,8 @@ describe("lightbulb dashboard display", () => {
     const workerID = Lightbulb.WorkerID.make("lbworker_demo")
     const artifactID = Lightbulb.ArtifactID.make("lbartifact_demo")
     const decisionArtifactID = Lightbulb.ArtifactID.make("lbartifact_decision")
+    const prReviewRouteID = Lightbulb.RouteID.make("lbroute_pr_review")
+    const prReviewStopID = Lightbulb.RouteStopID.make("lbstop_pr_review")
     const lineage = [
       {
         relation: "produced_by" as const,
@@ -272,6 +274,34 @@ describe("lightbulb dashboard display", () => {
               },
             },
           ],
+          prReviewRoutes: [
+            {
+              id: prReviewRouteID,
+              goalID,
+              candidateID: Lightbulb.PRReviewCandidateID.make("lbprcand_demo"),
+              repository: "heyimcarlos/lightbulb",
+              pullNumber: 65,
+              title: "Discover PR review goal candidates",
+              url: "https://github.com/heyimcarlos/lightbulb/pull/65",
+              status: "active",
+              currentStop: {
+                id: prReviewStopID,
+                kind: "review",
+                title: "Collect review evidence",
+                status: "active",
+              },
+              latestEvidence: {
+                observedAt: Date.UTC(2026, 0, 1),
+                source: "schedule_tick",
+                summary: "Admitted PR review route.",
+              },
+              activeWorker: null,
+              blockedReason: null,
+              nextWakeSource: "worker_report",
+              mergeReady: false,
+              lastWokeAt: Date.UTC(2026, 0, 1),
+            },
+          ],
         },
         operations: {
           schedulerTicks: [],
@@ -325,6 +355,7 @@ Queue
 - gate lbgate_demo review [pending] artifact=lbartifact_demo - Parent review is pending.
 - packet lbpacket_demo Render Lightbulb dashboard [complete] worker=lbworker_demo
 - pr-candidate heyimcarlos/lightbulb#65 [ready/open] Discover PR review goal candidates base=dev head=pr-candidates
+- pr-route heyimcarlos/lightbulb#65 [active] Discover PR review goal candidates stop=review:active next=worker_report mergeReady=no
 
 Artifacts
 - handle lbartifact_demo report [registered] .lightbulb/runs/issue-3-dashboard.md
@@ -344,6 +375,7 @@ Artifacts
           taskPackets: [],
           gates: [],
           prReviewCandidates: [],
+          prReviewRoutes: [],
         },
         operations: {
           schedulerTicks: [

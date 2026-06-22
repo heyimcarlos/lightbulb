@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "f8764cb8-bc16-4f1d-b691-3260ddd64280",
+  "id": "98d0fc2e-49d1-4060-8dc6-1c754326c775",
   "prevIds": [
-    "481eb7f8-5b97-4aa5-8c4d-5a56dc413c31"
+    "94c8131e-0e86-4366-89e7-9f81f668f52d"
   ],
   "ddl": [
     {
@@ -68,6 +68,14 @@
     },
     {
       "name": "lightbulb_pr_review_candidate",
+      "entityType": "tables"
+    },
+    {
+      "name": "lightbulb_pr_review_route",
+      "entityType": "tables"
+    },
+    {
+      "name": "lightbulb_pr_review_route_wake",
       "entityType": "tables"
     },
     {
@@ -1521,6 +1529,346 @@
       "name": "time_updated",
       "entityType": "columns",
       "table": "lightbulb_pr_review_candidate"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "lightbulb_pr_review_route"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "account_id",
+      "entityType": "columns",
+      "table": "lightbulb_pr_review_route"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "candidate_id",
+      "entityType": "columns",
+      "table": "lightbulb_pr_review_route"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "goal_id",
+      "entityType": "columns",
+      "table": "lightbulb_pr_review_route"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "repository",
+      "entityType": "columns",
+      "table": "lightbulb_pr_review_route"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "active_repository_key",
+      "entityType": "columns",
+      "table": "lightbulb_pr_review_route"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "pr_number",
+      "entityType": "columns",
+      "table": "lightbulb_pr_review_route"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "title",
+      "entityType": "columns",
+      "table": "lightbulb_pr_review_route"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "url",
+      "entityType": "columns",
+      "table": "lightbulb_pr_review_route"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "lightbulb_pr_review_route"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "current_stop_id",
+      "entityType": "columns",
+      "table": "lightbulb_pr_review_route"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "latest_evidence",
+      "entityType": "columns",
+      "table": "lightbulb_pr_review_route"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "active_worker",
+      "entityType": "columns",
+      "table": "lightbulb_pr_review_route"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "blocked_reason",
+      "entityType": "columns",
+      "table": "lightbulb_pr_review_route"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "next_wake_source",
+      "entityType": "columns",
+      "table": "lightbulb_pr_review_route"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "merge_ready",
+      "entityType": "columns",
+      "table": "lightbulb_pr_review_route"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "last_wake_at",
+      "entityType": "columns",
+      "table": "lightbulb_pr_review_route"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "metadata",
+      "entityType": "columns",
+      "table": "lightbulb_pr_review_route"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "lightbulb_pr_review_route"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_updated",
+      "entityType": "columns",
+      "table": "lightbulb_pr_review_route"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "lightbulb_pr_review_route_wake"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "account_id",
+      "entityType": "columns",
+      "table": "lightbulb_pr_review_route_wake"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "route_id",
+      "entityType": "columns",
+      "table": "lightbulb_pr_review_route_wake"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "source",
+      "entityType": "columns",
+      "table": "lightbulb_pr_review_route_wake"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "summary",
+      "entityType": "columns",
+      "table": "lightbulb_pr_review_route_wake"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "evidence",
+      "entityType": "columns",
+      "table": "lightbulb_pr_review_route_wake"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "active_worker",
+      "entityType": "columns",
+      "table": "lightbulb_pr_review_route_wake"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "blocked_reason",
+      "entityType": "columns",
+      "table": "lightbulb_pr_review_route_wake"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "next_wake_source",
+      "entityType": "columns",
+      "table": "lightbulb_pr_review_route_wake"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "current_stop_id",
+      "entityType": "columns",
+      "table": "lightbulb_pr_review_route_wake"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "merge_ready",
+      "entityType": "columns",
+      "table": "lightbulb_pr_review_route_wake"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "metadata",
+      "entityType": "columns",
+      "table": "lightbulb_pr_review_route_wake"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "lightbulb_pr_review_route_wake"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_updated",
+      "entityType": "columns",
+      "table": "lightbulb_pr_review_route_wake"
     },
     {
       "type": "text",
@@ -3654,6 +4002,166 @@
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
+      "name": "fk_lightbulb_pr_review_route_account_id_lightbulb_account_id_fk",
+      "entityType": "fks",
+      "table": "lightbulb_pr_review_route"
+    },
+    {
+      "columns": [
+        "candidate_id"
+      ],
+      "tableTo": "lightbulb_pr_review_candidate",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_lightbulb_pr_review_route_candidate_id_lightbulb_pr_review_candidate_id_fk",
+      "entityType": "fks",
+      "table": "lightbulb_pr_review_route"
+    },
+    {
+      "columns": [
+        "goal_id"
+      ],
+      "tableTo": "lightbulb_goal",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_lightbulb_pr_review_route_goal_id_lightbulb_goal_id_fk",
+      "entityType": "fks",
+      "table": "lightbulb_pr_review_route"
+    },
+    {
+      "columns": [
+        "account_id",
+        "id"
+      ],
+      "tableTo": "lightbulb_route",
+      "columnsTo": [
+        "account_id",
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": true,
+      "name": "lightbulb_pr_review_route_account_route_fk",
+      "entityType": "fks",
+      "table": "lightbulb_pr_review_route"
+    },
+    {
+      "columns": [
+        "account_id",
+        "goal_id"
+      ],
+      "tableTo": "lightbulb_goal",
+      "columnsTo": [
+        "account_id",
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": true,
+      "name": "lightbulb_pr_review_route_account_goal_fk",
+      "entityType": "fks",
+      "table": "lightbulb_pr_review_route"
+    },
+    {
+      "columns": [
+        "account_id",
+        "current_stop_id"
+      ],
+      "tableTo": "lightbulb_route_stop",
+      "columnsTo": [
+        "account_id",
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": true,
+      "name": "lightbulb_pr_review_route_account_current_stop_fk",
+      "entityType": "fks",
+      "table": "lightbulb_pr_review_route"
+    },
+    {
+      "columns": [
+        "account_id"
+      ],
+      "tableTo": "lightbulb_account",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_lightbulb_pr_review_route_wake_account_id_lightbulb_account_id_fk",
+      "entityType": "fks",
+      "table": "lightbulb_pr_review_route_wake"
+    },
+    {
+      "columns": [
+        "route_id"
+      ],
+      "tableTo": "lightbulb_pr_review_route",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_lightbulb_pr_review_route_wake_route_id_lightbulb_pr_review_route_id_fk",
+      "entityType": "fks",
+      "table": "lightbulb_pr_review_route_wake"
+    },
+    {
+      "columns": [
+        "account_id",
+        "route_id"
+      ],
+      "tableTo": "lightbulb_pr_review_route",
+      "columnsTo": [
+        "account_id",
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": true,
+      "name": "lightbulb_pr_review_route_wake_account_route_fk",
+      "entityType": "fks",
+      "table": "lightbulb_pr_review_route_wake"
+    },
+    {
+      "columns": [
+        "account_id",
+        "current_stop_id"
+      ],
+      "tableTo": "lightbulb_route_stop",
+      "columnsTo": [
+        "account_id",
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": true,
+      "name": "lightbulb_pr_review_route_wake_account_current_stop_fk",
+      "entityType": "fks",
+      "table": "lightbulb_pr_review_route_wake"
+    },
+    {
+      "columns": [
+        "account_id"
+      ],
+      "tableTo": "lightbulb_account",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
       "name": "fk_lightbulb_route_steer_account_id_lightbulb_account_id_fk",
       "entityType": "fks",
       "table": "lightbulb_route_steer"
@@ -4322,6 +4830,24 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "lightbulb_pr_review_route_pk",
+      "table": "lightbulb_pr_review_route",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "lightbulb_pr_review_route_wake_pk",
+      "table": "lightbulb_pr_review_route_wake",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "lightbulb_route_steer_pk",
       "table": "lightbulb_route_steer",
       "entityType": "pks"
@@ -4863,6 +5389,128 @@
       "name": "lightbulb_pr_review_candidate_identity_idx",
       "entityType": "indexes",
       "table": "lightbulb_pr_review_candidate"
+    },
+    {
+      "columns": [
+        {
+          "value": "account_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "lightbulb_pr_review_route_account_idx",
+      "entityType": "indexes",
+      "table": "lightbulb_pr_review_route"
+    },
+    {
+      "columns": [
+        {
+          "value": "account_id",
+          "isExpression": false
+        },
+        {
+          "value": "repository",
+          "isExpression": false
+        },
+        {
+          "value": "status",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "lightbulb_pr_review_route_repository_idx",
+      "entityType": "indexes",
+      "table": "lightbulb_pr_review_route"
+    },
+    {
+      "columns": [
+        {
+          "value": "account_id",
+          "isExpression": false
+        },
+        {
+          "value": "active_repository_key",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "lightbulb_pr_review_route_active_repository_idx",
+      "entityType": "indexes",
+      "table": "lightbulb_pr_review_route"
+    },
+    {
+      "columns": [
+        {
+          "value": "account_id",
+          "isExpression": false
+        },
+        {
+          "value": "candidate_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "lightbulb_pr_review_route_candidate_idx",
+      "entityType": "indexes",
+      "table": "lightbulb_pr_review_route"
+    },
+    {
+      "columns": [
+        {
+          "value": "account_id",
+          "isExpression": false
+        },
+        {
+          "value": "id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "lightbulb_pr_review_route_account_id_idx",
+      "entityType": "indexes",
+      "table": "lightbulb_pr_review_route"
+    },
+    {
+      "columns": [
+        {
+          "value": "account_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "lightbulb_pr_review_route_wake_account_idx",
+      "entityType": "indexes",
+      "table": "lightbulb_pr_review_route_wake"
+    },
+    {
+      "columns": [
+        {
+          "value": "route_id",
+          "isExpression": false
+        },
+        {
+          "value": "time_created",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "lightbulb_pr_review_route_wake_route_idx",
+      "entityType": "indexes",
+      "table": "lightbulb_pr_review_route_wake"
     },
     {
       "columns": [
