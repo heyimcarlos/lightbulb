@@ -11,7 +11,9 @@ Follow the skill exactly:
 - triage the live queue first
 - spin up one maker thread in an isolated worktree
 - spin up a separate read-only reviewer thread after the PR is filed
-- request and poll external review/checks
-- loop maker fixes until approvals and gates are clean
+- request and poll external review/checks for the current head SHA
+- treat stale reviews/checks from older head SHAs as context only
+- after each maker push, record the new head SHA and re-request/re-poll review gates
+- loop maker fixes until current-head approvals and gates are clean
 - merge only from the parent thread when authorized
 - start the next slice in a new maker thread after merge

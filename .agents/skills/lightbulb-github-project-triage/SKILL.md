@@ -47,7 +47,7 @@ Return these buckets:
 - `Autonomous`: bounded implementation or cleanup, clear owner intent, safe verification path, no missing credentials.
 - `Needs human`: product choice, security/privacy decision, missing live access, release authorization, or destructive action.
 - `Blocked`: real dependency, red CI without fix permission, merge conflict, missing branch, or unavailable environment.
-- `Ready to close/merge`: merged or mergeable with direct evidence and passing focused verification.
+- `Ready to close/merge`: merged, or mergeable with direct evidence, passing focused verification, current-head green or explicitly waived checks, current-head approval/Codex review when required by the active workflow, and no unresolved requested changes.
 - `Defer/wontfix candidate`: duplicate, obsolete, superseded, or outside Lightbulb direction.
 
 Use labels consistently: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, and `wontfix`.
