@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="760" viewBox="0 0 1280 760" role="img" aria-labelledby="title desc">
+  <title id="title">PR 48 terminal evidence</title>
+  <desc id="desc">Terminal-style evidence showing Lightbulb as the package command and the opencode wrapper removed.</desc>
+  <rect width="1280" height="760" fill="#111827"/>
+  <rect x="32" y="32" width="1216" height="696" rx="8" fill="#020617" stroke="#334155" stroke-width="2"/>
+  <circle cx="72" cy="70" r="10" fill="#ef4444"/>
+  <circle cx="104" cy="70" r="10" fill="#f59e0b"/>
+  <circle cx="136" cy="70" r="10" fill="#22c55e"/>
+  <text x="64" y="126" fill="#93c5fd" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="24">$ cd packages/opencode &amp;&amp; bun test test/cli/lightbulb.test.ts</text>
+  <text x="96" y="170" fill="#86efac" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="24">9 pass, 0 fail</text>
+  <text x="64" y="230" fill="#93c5fd" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="24">$ cd packages/opencode &amp;&amp; ./bin/lightbulb dashboard --help</text>
+  <text x="96" y="274" fill="#e5e7eb" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="24">lightbulb dashboard</text>
+  <text x="96" y="318" fill="#e5e7eb" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="24">show the Lightbulb account work graph</text>
+  <text x="64" y="378" fill="#93c5fd" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="24">$ test ! -e packages/opencode/bin/opencode</text>
+  <text x="96" y="422" fill="#86efac" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="24">packages/opencode/bin/opencode absent</text>
+  <text x="64" y="482" fill="#93c5fd" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="24">$ git grep -n &quot;\&quot;opencode\&quot;&quot; -- package.json 'packages/**/package.json'</text>
+  <text x="96" y="526" fill="#e5e7eb" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="22">packages/opencode/package.json:4:  &quot;name&quot;: &quot;opencode&quot;,</text>
+  <text x="96" y="566" fill="#e5e7eb" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="22">packages/web/package.json:39:    &quot;opencode&quot;: &quot;workspace:*&quot;,</text>
+  <text x="96" y="626" fill="#86efac" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="24">remaining package hits are substrate names, not executable bins</text>
+</svg>

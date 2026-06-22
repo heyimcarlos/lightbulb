@@ -9,8 +9,8 @@ import { cliIt } from "../lib/cli-process"
 const lightbulbEnv = { OPENCODE_CLI_NAME: "lightbulb", COLUMNS: "120" }
 const packageRoot = path.resolve(import.meta.dir, "../..")
 
-async function runPackageBin(bin: "lightbulb" | "opencode", args: readonly string[]) {
-  const proc = Bun.spawn([process.execPath, path.join(packageRoot, "bin", bin), ...args], {
+async function runPackageBin(args: readonly string[]) {
+  const proc = Bun.spawn([process.execPath, path.join(packageRoot, "bin", "lightbulb"), ...args], {
     cwd: packageRoot,
     env: {
       ...process.env,
@@ -31,16 +31,21 @@ async function runPackageBin(bin: "lightbulb" | "opencode", args: readonly strin
 }
 
 describe("lightbulb CLI entrypoint", () => {
-  test("runs direct package binary wrappers for primary and compatibility command paths", async () => {
-    const lightbulb = await runPackageBin("lightbulb", ["dashboard", "--help"])
-    const opencode = await runPackageBin("opencode", ["lightbulb", "dashboard", "--help"])
+  test("runs the direct package binary wrapper for the primary command path", async () => {
+    const lightbulb = await runPackageBin(["dashboard", "--help"])
 
     expect(lightbulb.exitCode).toBe(0)
     expect(lightbulb.stderr).toContain("lightbulb dashboard")
     expect(lightbulb.stderr).not.toContain("opencode lightbulb dashboard")
-    expect(opencode.exitCode).toBe(0)
-    expect(opencode.stderr).toContain("opencode lightbulb dashboard")
-    expect(opencode.stderr).toContain("show the Lightbulb account work graph")
+  })
+
+  test("does not expose opencode as a package binary", async () => {
+    const packageJson = (await Bun.file(path.join(packageRoot, "package.json")).json()) as {
+      bin?: Record<string, string>
+    }
+
+    expect(packageJson.bin).toEqual({ lightbulb: "./bin/lightbulb" })
+    expect(await Bun.file(path.join(packageRoot, "bin", "opencode")).exists()).toBe(false)
   })
 
   cliIt.live(
@@ -87,14 +92,14 @@ describe("lightbulb CLI entrypoint", () => {
   )
 
   cliIt.live(
-    "keeps the opencode lightbulb dashboard compatibility path",
+    "rejects the retired nested Lightbulb dashboard compatibility path",
     ({ opencode }) =>
       Effect.gen(function* () {
         const result = yield* opencode.spawn(["lightbulb", "dashboard", "--help"], { env: { COLUMNS: "120" } })
 
-        opencode.expectExit(result, 0, "opencode lightbulb dashboard --help")
-        expect(result.stderr).toContain("opencode lightbulb dashboard")
-        expect(result.stderr).toContain("show the Lightbulb account work graph")
+        opencode.expectExit(result, 1, "lightbulb lightbulb dashboard --help")
+        expect(result.stderr).toContain("Nested Lightbulb command has been retired. Use: lightbulb dashboard --help")
+        expect(result.stderr).not.toContain("opencode lightbulb dashboard")
       }),
     60_000,
   )
@@ -103,9 +108,9 @@ describe("lightbulb CLI entrypoint", () => {
     "fails fast for the inherited GitHub runner",
     ({ opencode }) =>
       Effect.gen(function* () {
-        const result = yield* opencode.spawn(["github", "run"])
+        const result = yield* opencode.spawn(["github", "run"], { env: lightbulbEnv })
 
-        opencode.expectExit(result, 1, "opencode github run")
+        opencode.expectExit(result, 1, "lightbulb github run")
         expect(result.stderr).toContain("The inherited OpenCode GitHub runner is disabled in Lightbulb")
       }),
     60_000,
