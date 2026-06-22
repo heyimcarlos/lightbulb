@@ -1,13 +1,48 @@
 import { describe, expect, test } from "bun:test"
 import { Effect } from "effect"
 import { EOL } from "os"
+import path from "node:path"
 import { Lightbulb } from "@opencode-ai/core/lightbulb"
 import { formatLightbulbDashboard } from "../../src/cli/cmd/lightbulb"
 import { cliIt } from "../lib/cli-process"
 
 const lightbulbEnv = { OPENCODE_CLI_NAME: "lightbulb", COLUMNS: "120" }
+const packageRoot = path.resolve(import.meta.dir, "../..")
+
+async function runPackageBin(args: readonly string[]) {
+  const proc = Bun.spawn([...args], {
+    cwd: packageRoot,
+    env: {
+      ...process.env,
+      COLUMNS: "120",
+      OPENCODE_BIN_PATH: "",
+      OPENCODE_CLI_NAME: "",
+    },
+    stdin: "ignore",
+    stdout: "pipe",
+    stderr: "pipe",
+  })
+  const [stdout, stderr, exitCode] = await Promise.all([
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+    proc.exited,
+  ])
+  return { stdout, stderr, exitCode }
+}
 
 describe("lightbulb CLI entrypoint", () => {
+  test("runs direct package binary wrappers for primary and compatibility command paths", async () => {
+    const lightbulb = await runPackageBin(["./bin/lightbulb", "dashboard", "--help"])
+    const opencode = await runPackageBin(["./bin/opencode", "lightbulb", "dashboard", "--help"])
+
+    expect(lightbulb.exitCode).toBe(0)
+    expect(lightbulb.stderr).toContain("lightbulb dashboard")
+    expect(lightbulb.stderr).not.toContain("opencode lightbulb dashboard")
+    expect(opencode.exitCode).toBe(0)
+    expect(opencode.stderr).toContain("opencode lightbulb dashboard")
+    expect(opencode.stderr).toContain("show the Lightbulb account work graph")
+  })
+
   cliIt.live(
     "shows Lightbulb help at the binary root",
     ({ opencode }) =>
