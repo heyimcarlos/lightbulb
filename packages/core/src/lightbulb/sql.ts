@@ -200,6 +200,101 @@ export const LightbulbPRReviewCandidateTable = sqliteTable(
   ],
 )
 
+export const LightbulbPRReviewRouteTable = sqliteTable(
+  "lightbulb_pr_review_route",
+  {
+    id: text().$type<Lightbulb.RouteID>().primaryKey(),
+    account_id: text()
+      .$type<Lightbulb.AccountID>()
+      .notNull()
+      .references(() => LightbulbAccountTable.id, { onDelete: "cascade" }),
+    candidate_id: text()
+      .$type<Lightbulb.PRReviewCandidateID>()
+      .notNull()
+      .references(() => LightbulbPRReviewCandidateTable.id, { onDelete: "cascade" }),
+    goal_id: text()
+      .$type<Lightbulb.GoalID>()
+      .notNull()
+      .references(() => LightbulbGoalTable.id, { onDelete: "cascade" }),
+    repository: text().notNull(),
+    active_repository_key: text(),
+    pr_number: integer().notNull(),
+    title: text().notNull(),
+    url: text().notNull(),
+    status: text().$type<Lightbulb.PRReviewRouteStatus>().notNull(),
+    current_stop_id: text().$type<Lightbulb.RouteStopID>(),
+    latest_evidence: text({ mode: "json" }).$type<Lightbulb.PRReviewRouteEvidence>(),
+    active_worker: text({ mode: "json" }).$type<Lightbulb.PRReviewRouteWorkerHandle>(),
+    blocked_reason: text(),
+    next_wake_source: text().$type<Lightbulb.PRReviewRouteWakeSource>(),
+    merge_ready: integer({ mode: "boolean" }).notNull(),
+    last_wake_at: integer(),
+    metadata: text({ mode: "json" }).$type<Record<string, unknown>>(),
+    ...Timestamps,
+  },
+  (table) => [
+    index("lightbulb_pr_review_route_account_idx").on(table.account_id),
+    index("lightbulb_pr_review_route_repository_idx").on(table.account_id, table.repository, table.status),
+    uniqueIndex("lightbulb_pr_review_route_active_repository_idx").on(table.account_id, table.active_repository_key),
+    uniqueIndex("lightbulb_pr_review_route_candidate_idx").on(table.account_id, table.candidate_id),
+    uniqueIndex("lightbulb_pr_review_route_account_id_idx").on(table.account_id, table.id),
+    foreignKey({
+      columns: [table.account_id, table.id],
+      foreignColumns: [LightbulbRouteTable.account_id, LightbulbRouteTable.id],
+      name: "lightbulb_pr_review_route_account_route_fk",
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [table.account_id, table.goal_id],
+      foreignColumns: [LightbulbGoalTable.account_id, LightbulbGoalTable.id],
+      name: "lightbulb_pr_review_route_account_goal_fk",
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [table.account_id, table.current_stop_id],
+      foreignColumns: [LightbulbRouteStopTable.account_id, LightbulbRouteStopTable.id],
+      name: "lightbulb_pr_review_route_account_current_stop_fk",
+    }).onDelete("set null"),
+  ],
+)
+
+export const LightbulbPRReviewRouteWakeTable = sqliteTable(
+  "lightbulb_pr_review_route_wake",
+  {
+    id: text().$type<Lightbulb.PRReviewRouteWakeID>().primaryKey(),
+    account_id: text()
+      .$type<Lightbulb.AccountID>()
+      .notNull()
+      .references(() => LightbulbAccountTable.id, { onDelete: "cascade" }),
+    route_id: text()
+      .$type<Lightbulb.RouteID>()
+      .notNull()
+      .references(() => LightbulbPRReviewRouteTable.id, { onDelete: "cascade" }),
+    source: text().$type<Lightbulb.PRReviewRouteWakeSource>().notNull(),
+    summary: text().notNull(),
+    evidence: text({ mode: "json" }).$type<Lightbulb.PRReviewRouteEvidence>().notNull(),
+    active_worker: text({ mode: "json" }).$type<Lightbulb.PRReviewRouteWorkerHandle>(),
+    blocked_reason: text(),
+    next_wake_source: text().$type<Lightbulb.PRReviewRouteWakeSource>(),
+    current_stop_id: text().$type<Lightbulb.RouteStopID>(),
+    merge_ready: integer({ mode: "boolean" }).notNull(),
+    metadata: text({ mode: "json" }).$type<Record<string, unknown>>(),
+    ...Timestamps,
+  },
+  (table) => [
+    index("lightbulb_pr_review_route_wake_account_idx").on(table.account_id),
+    index("lightbulb_pr_review_route_wake_route_idx").on(table.route_id, table.time_created),
+    foreignKey({
+      columns: [table.account_id, table.route_id],
+      foreignColumns: [LightbulbPRReviewRouteTable.account_id, LightbulbPRReviewRouteTable.id],
+      name: "lightbulb_pr_review_route_wake_account_route_fk",
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [table.account_id, table.current_stop_id],
+      foreignColumns: [LightbulbRouteStopTable.account_id, LightbulbRouteStopTable.id],
+      name: "lightbulb_pr_review_route_wake_account_current_stop_fk",
+    }).onDelete("set null"),
+  ],
+)
+
 export const LightbulbRunTable = sqliteTable(
   "lightbulb_run",
   {

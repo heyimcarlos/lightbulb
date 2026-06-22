@@ -150,7 +150,8 @@ function formatInbox(dashboard: Lightbulb.Dashboard) {
   if (
     dashboard.inbox.taskPackets.length === 0 &&
     dashboard.inbox.gates.length === 0 &&
-    dashboard.inbox.prReviewCandidates.length === 0
+    dashboard.inbox.prReviewCandidates.length === 0 &&
+    dashboard.inbox.prReviewRoutes.length === 0
   ) {
     return ["- empty"]
   }
@@ -160,6 +161,7 @@ function formatInbox(dashboard: Lightbulb.Dashboard) {
       (packet) => `- packet ${packet.id} ${packet.title} [${packet.status}] worker=${packet.workerID}`,
     ),
     ...dashboard.inbox.prReviewCandidates.map(formatPRReviewCandidate),
+    ...dashboard.inbox.prReviewRoutes.map(formatPRReviewRoute),
   ]
 }
 
@@ -167,6 +169,16 @@ function formatPRReviewCandidate(candidate: Lightbulb.PRReviewCandidateSummary) 
   return (
     `- pr-candidate ${candidate.repository}#${candidate.pullNumber} [${candidate.status}/${candidate.state}] ` +
     `${candidate.title} base=${candidate.baseRef} head=${candidate.headRef}`
+  )
+}
+
+function formatPRReviewRoute(route: Lightbulb.PRReviewRouteSummary) {
+  return (
+    `- pr-route ${route.repository}#${route.pullNumber} [${route.status}] ${route.title} ` +
+    `stop=${route.currentStop ? `${route.currentStop.kind}:${route.currentStop.status}` : "none"} ` +
+    `next=${route.nextWakeSource ?? "none"} mergeReady=${route.mergeReady ? "yes" : "no"}` +
+    `${route.blockedReason ? ` blocked=${route.blockedReason}` : ""}` +
+    `${route.activeWorker ? ` worker=${route.activeWorker.id}` : ""}`
   )
 }
 

@@ -14,6 +14,7 @@ import type {
 import { retentionDecisionFor, storedArtifactIntegrity, toArtifactHandle } from "./artifact"
 import type { GoalLifecycle, GoalRunTree, GoalSummary } from "./goal"
 import { toPRReviewCandidateSummary } from "./pr-review-candidate"
+import { toPRReviewRouteSummary } from "./pr-review-route"
 import { classifyLoopSchedule } from "./scheduler"
 import type {
   LightbulbArtifactTable,
@@ -93,6 +94,12 @@ export function toDashboard(
         .filter((gate) => gate.status === "pending" || gate.status === "blocked")
         .map(toDashboardGate),
       prReviewCandidates: graph.prReviewCandidates.map(toPRReviewCandidateSummary),
+      prReviewRoutes: graph.prReviewRoutes.map((route) =>
+        toPRReviewRouteSummary(
+          route,
+          graph.routeStops.filter((stop) => stop.route_id === route.id),
+        ),
+      ),
     },
     operations: {
       schedulerTicks: schedulerTickEvents.map(toDashboardSchedulerTick),

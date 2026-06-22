@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1320" height="620" viewBox="0 0 1320 620">
+  <rect width="1320" height="620" fill="#101418"/>
+  <rect x="24" y="24" width="1272" height="572" rx="8" fill="#151b20" stroke="#2a343d"/>
+  <circle cx="54" cy="54" r="8" fill="#ff5f57"/>
+  <circle cx="80" cy="54" r="8" fill="#ffbd2e"/>
+  <circle cx="106" cy="54" r="8" fill="#28c840"/>
+  <text x="44" y="104" fill="#d8dee9" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="22">
+    <tspan x="44" dy="0">$ cd packages/core &amp;&amp; bun test test/lightbulb-pr-review-route.test.ts</tspan>
+    <tspan x="44" dy="36">(pass) admits a PR review candidate into a visible read-only route</tspan>
+    <tspan x="44" dy="36">(pass) adopts existing routes and holds additional active PRs in the same repository</tspan>
+    <tspan x="44" dy="36">(pass) records compact route wakes and coalesces the read model to the latest decision</tspan>
+    <tspan x="44" dy="54">3 pass, 0 fail</tspan>
+    <tspan x="44" dy="60">$ lightbulb dashboard --account lbacc_demo</tspan>
+    <tspan x="44" dy="42">Queue</tspan>
+    <tspan x="44" dy="36">- pr-route heyimcarlos/lightbulb#65 [active] Discover PR review goal candidates</tspan>
+    <tspan x="68" dy="36">stop=review:active next=worker_report mergeReady=no</tspan>
+    <tspan x="44" dy="60">$ cd packages/opencode &amp;&amp; bun test test/cli/lightbulb.test.ts</tspan>
+    <tspan x="44" dy="36">9 pass, 0 fail</tspan>
+  </text>
+</svg>
