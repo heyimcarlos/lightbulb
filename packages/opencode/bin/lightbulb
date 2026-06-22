@@ -53,7 +53,7 @@ const scriptPath = fs.realpathSync(__filename)
 const scriptDir = path.dirname(scriptPath)
 
 //
-const cached = path.join(scriptDir, ".opencode")
+const cached = path.join(scriptDir, ".lightbulb")
 
 const platformMap = {
   darwin: "darwin",
@@ -75,7 +75,7 @@ if (!arch) {
   arch = os.arch()
 }
 const base = "opencode-" + platform + "-" + arch
-const binary = platform === "windows" ? "opencode.exe" : "opencode"
+const binary = platform === "windows" ? "lightbulb.exe" : "lightbulb"
 
 function supportsAvx2() {
   if (arch !== "x64") return false
@@ -204,7 +204,7 @@ function main() {
   }
 
   console.error(
-    "It seems that your package manager failed to install the right version of the opencode CLI for your platform. You can try manually installing " +
+    "It seems that your package manager failed to install the right version of the Lightbulb CLI for your platform. You can try manually installing " +
       names.map((n) => `\"${n}\"`).join(" or ") +
       " package",
   )

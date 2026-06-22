@@ -11,10 +11,10 @@
   <text x="64" y="230" fill="#93c5fd" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="24">$ cd packages/opencode &amp;&amp; ./bin/lightbulb dashboard --help</text>
   <text x="96" y="274" fill="#e5e7eb" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="24">lightbulb dashboard</text>
   <text x="96" y="318" fill="#e5e7eb" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="24">show the Lightbulb account work graph</text>
-  <text x="64" y="378" fill="#93c5fd" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="24">$ test ! -e packages/opencode/bin/opencode</text>
-  <text x="96" y="422" fill="#86efac" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="24">packages/opencode/bin/opencode absent</text>
-  <text x="64" y="482" fill="#93c5fd" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="24">$ git grep -n &quot;\&quot;opencode\&quot;&quot; -- package.json 'packages/**/package.json'</text>
-  <text x="96" y="526" fill="#e5e7eb" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="22">packages/opencode/package.json:4:  &quot;name&quot;: &quot;opencode&quot;,</text>
-  <text x="96" y="566" fill="#e5e7eb" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="22">packages/web/package.json:39:    &quot;opencode&quot;: &quot;workspace:*&quot;,</text>
-  <text x="96" y="626" fill="#86efac" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="24">remaining package hits are substrate names, not executable bins</text>
+  <text x="64" y="378" fill="#93c5fd" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="24">$ cd packages/opencode &amp;&amp; bun run build --single --skip-embed-web-ui --skip-install</text>
+  <text x="96" y="422" fill="#86efac" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="24">Smoke test passed: dist/opencode-linux-x64/bin/lightbulb --version</text>
+  <text x="64" y="482" fill="#93c5fd" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="24">$ test ! -e packages/opencode/bin/opencode</text>
+  <text x="96" y="526" fill="#86efac" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="24">packages/opencode/bin/opencode absent</text>
+  <text x="64" y="586" fill="#93c5fd" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="24">$ git grep -n &quot;\&quot;opencode\&quot;&quot; -- package.json 'packages/**/package.json'</text>
+  <text x="96" y="630" fill="#e5e7eb" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="22">remaining package hits are substrate names, not executable bins</text>
 </svg>
