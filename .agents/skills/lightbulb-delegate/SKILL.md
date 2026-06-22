@@ -15,6 +15,7 @@ Use this when work is too broad for the main context and should be split across 
 - Keep parent output short. Workers return compressed evidence, not transcripts.
 - No duplicate agents: use the `lightbulb-*` project subagents for delegation and the `.agents/skills/*` skills for reusable procedures.
 - Prefer Hermes async delegation for no-cron automation. Do not add a recurring cron job unless the trigger is genuinely time-based.
+- Background `task` dispatch requires `OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true` or `OPENCODE_EXPERIMENTAL=true`; verify one is enabled before using `background: true`.
 
 ## Worker roles
 
@@ -65,7 +66,13 @@ Each worker prompt must include:
 
 Use parallel `task` calls only for non-overlapping work. Do not ask two workers to edit the same files.
 
-For Lightbulb/OpenCode-hosted automation, use the real `task` tool with `background: true` instead of cron when the work is event/request driven:
+For Lightbulb/OpenCode-hosted automation, first verify background subagents are enabled, then use the real `task` tool with `background: true` instead of cron when the work is event/request driven:
+
+```bash
+test "${OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS:-${OPENCODE_EXPERIMENTAL:-}}" = "true"
+```
+
+If that check fails, enable `OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true` for the Lightbulb process before dispatching background workers, or omit `background: true` and keep the work in the foreground.
 
 ```json
 {
@@ -77,7 +84,7 @@ For Lightbulb/OpenCode-hosted automation, use the real `task` tool with `backgro
 ```
 
 Dispatch additional independent lanes with separate `task` calls only when their file scopes do not overlap.
-Current Lightbulb background subagents return completion asynchronously to the parent session. Use this for no-cron maintainer/review/research work. Use `/goal` or Kanban when the work must survive beyond the active parent process.
+Current Lightbulb background subagents return completion asynchronously to the parent session once the experimental background-subagent flag is enabled. Use this for no-cron maintainer/review/research work. Use `/goal` or Kanban when the work must survive beyond the active parent process.
 
 ### 4. Required worker output
 

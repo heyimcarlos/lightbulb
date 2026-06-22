@@ -42,3 +42,9 @@ lightbulb-reviewer (subagent)
 - Fix commit before this evidence refresh: `874eb1b2d6b732796cdaed7433c65179b916de97`.
 - Passed after fix: `git diff --check origin/dev...HEAD`, `git diff --check`, `git grep -n "delegate_task" -- . ':!node_modules'`, `packages/opencode bun typecheck`, Lightbulb agent discovery smoke, and project skill discovery smoke.
 - Current head after this evidence-only update requires a fresh `@codex review`.
+
+## 2026-06-22T03:16:34Z parent review fix
+
+- Fixed current-head Codex finding on `f0be284ec2`: background `task` examples now require `OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true` or `OPENCODE_EXPERIMENTAL=true` before using `background: true`.
+- Updated `/delegate-async` to make the flag check part of the command contract.
+- Verification for this update: `git diff --check origin/dev...HEAD`, `git diff --check`, focused grep for the flag references, and `packages/opencode bun typecheck`.
