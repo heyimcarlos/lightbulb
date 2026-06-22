@@ -26,6 +26,9 @@ const baseCtx: Omit<Tool.Context, "ask"> = {
 const glob = (p: string) =>
   process.platform === "win32" ? Filesystem.normalizePathPattern(p) : p.replaceAll("\\", "/")
 
+const windowsAlias = (p: string) =>
+  p.replace(/^([A-Za-z]):[\\/]/, (_match, drive) => `/${drive.toLowerCase()}/`).replaceAll("\\", "/")
+
 function makeCtx() {
   const requests: Array<Omit<PermissionV1.Request, "id" | "sessionID" | "tool">> = []
   const ctx: Tool.Context = {
@@ -115,10 +118,7 @@ describe("tool.assertExternalDirectory", () => {
           yield* Effect.promise(() => Bun.write(path.join(outerTmp, "outside.txt"), "x"))
 
           const target = path.join(outerTmp, "outside.txt")
-          const alt = target
-            .replace(/^[A-Za-z]:/, "")
-            .replaceAll("\\", "/")
-            .toLowerCase()
+          const alt = windowsAlias(target)
 
           yield* assertExternalDirectoryEffect(ctx, alt)
 

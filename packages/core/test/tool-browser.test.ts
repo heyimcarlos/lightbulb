@@ -1,4 +1,5 @@
 import path from "path"
+import fs from "fs/promises"
 import { describe, expect } from "bun:test"
 import { Effect, Layer } from "effect"
 import { AppProcess } from "@opencode-ai/core/process"
@@ -25,7 +26,11 @@ const permission = Layer.succeed(
   }),
 )
 const registry = ToolRegistry.defaultLayer.pipe(Layer.provide(permission))
-const browser = BrowserTool.layer.pipe(Layer.provide(registry), Layer.provide(permission), Layer.provide(AppProcess.defaultLayer))
+const browser = BrowserTool.layer.pipe(
+  Layer.provide(registry),
+  Layer.provide(permission),
+  Layer.provide(AppProcess.defaultLayer),
+)
 const it = testEffect(Layer.mergeAll(registry, permission, AppProcess.defaultLayer, browser))
 
 const call = (input: typeof BrowserTool.Input.Type, id = "call-browser") => ({
@@ -36,6 +41,27 @@ const call = (input: typeof BrowserTool.Input.Type, id = "call-browser") => ({
 
 const reset = () => {
   assertions.length = 0
+}
+
+function prependPath(bin: string) {
+  const previousPath = process.env.PATH
+  process.env.PATH = `${bin}${path.delimiter}${previousPath ?? ""}`
+  return () => {
+    process.env.PATH = previousPath
+  }
+}
+
+async function writeAgentBrowser(bin: string) {
+  await fs.mkdir(bin, { recursive: true })
+  const script =
+    'const fs = require("fs")\nconst args = process.argv.slice(2)\nconsole.log("agent-browser:" + args.join(" "))\nif (args[0] === "screenshot") fs.writeFileSync(args[1], "png")\n'
+  if (process.platform === "win32") {
+    await Bun.write(path.join(bin, "agent-browser.cjs"), script)
+    await Bun.write(path.join(bin, "agent-browser.cmd"), '@echo off\r\nnode "%~dp0agent-browser.cjs" %*\r\n')
+    return
+  }
+  await Bun.write(path.join(bin, "agent-browser"), `#!/usr/bin/env node\n${script}`)
+  await fs.chmod(path.join(bin, "agent-browser"), 0o755)
 }
 
 describe("BrowserTool", () => {
@@ -54,24 +80,21 @@ describe("BrowserTool", () => {
         Effect.gen(function* () {
           reset()
           const bin = path.join(tmp.path, "bin")
-          yield* Effect.promise(() => Bun.$`mkdir -p ${bin}`.quiet())
-          yield* Effect.promise(() =>
-            Bun.write(
-              path.join(bin, "agent-browser"),
-              '#!/usr/bin/env bash\nset -euo pipefail\necho "agent-browser:$*"\nif [ "${1:-}" = "screenshot" ]; then printf png > "$2"; fi\n',
-            ),
-          )
-          yield* Effect.promise(() => Bun.$`chmod +x ${path.join(bin, "agent-browser")}`.quiet())
-          const previousPath = process.env.PATH
-          process.env.PATH = `${bin}:${previousPath ?? ""}`
+          yield* Effect.promise(() => writeAgentBrowser(bin))
+          const restorePath = prependPath(bin)
+          const previousCwd = process.cwd()
+          process.chdir(tmp.path)
           const registry = yield* ToolRegistry.Service
-          const screenshot = path.join(tmp.path, "shot.png")
-          const result = yield* executeTool(registry, call({ provider: "local", action: "screenshot", path: screenshot }))
-          process.env.PATH = previousPath
+          const result = yield* executeTool(
+            registry,
+            call({ provider: "local", action: "screenshot", path: "shot.png" }),
+          )
+          process.chdir(previousCwd)
+          restorePath()
 
           expect(result).toEqual({ type: "text", value: expect.stringContaining("agent-browser:screenshot") })
-          expect(yield* Effect.promise(() => Bun.file(screenshot).text())).toBe("png")
-          expect(assertions).toMatchObject([{ action: "browser", resources: ["local:screenshot"] }])
+          expect(yield* Effect.promise(() => Bun.file(path.join(tmp.path, "shot.png")).text())).toBe("png")
+          expect(assertions).toMatchObject([{ action: "browser", resources: ["local:screenshot:shot.png"] }])
         }),
       (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
     ),
@@ -105,7 +128,9 @@ describe("BrowserTool", () => {
 
           expect(result).toEqual({
             type: "text",
-            value: expect.stringContaining("Interactive live view: https://liveview.firecrawl.dev/fc-session?interactive=true"),
+            value: expect.stringContaining(
+              "Interactive live view: https://liveview.firecrawl.dev/fc-session?interactive=true",
+            ),
           })
           expect(result.value).not.toContain("secret")
           expect(assertions).toMatchObject([
@@ -138,7 +163,10 @@ describe("BrowserTool", () => {
               ),
             )) as unknown as typeof fetch
           const registry = yield* ToolRegistry.Service
-          const result = yield* executeTool(registry, call({ provider: "firecrawl", action: "sessions", apiKey: "fc-secret" }))
+          const result = yield* executeTool(
+            registry,
+            call({ provider: "firecrawl", action: "sessions", apiKey: "fc-secret" }),
+          )
           globalThis.fetch = originalFetch
 
           expect(result.value).toContain("[REDACTED]")

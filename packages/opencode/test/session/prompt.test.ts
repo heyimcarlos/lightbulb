@@ -242,6 +242,7 @@ const noLLMServer = testEffect(makeHttpNoLLMServer())
 const raceNoLLMServer = testEffect(makeHttpNoLLMServer({ processor: "blocking" }))
 const unix = process.platform !== "win32" ? it.instance : it.instance.skip
 const unixNoLLMServer = process.platform !== "win32" ? noLLMServer.instance : noLLMServer.instance.skip
+const hostedWindowsTimeout = process.platform === "win32" ? 30_000 : 3_000
 
 // Config that registers a custom "test" provider with a "test-model" model
 // so provider model lookup succeeds inside the loop.
@@ -1242,7 +1243,7 @@ it.instance(
       }
     }),
   { git: true },
-  3_000,
+  hostedWindowsTimeout,
 )
 
 // Queue semantics
@@ -1630,7 +1631,7 @@ it.instance(
       expect(yield* llm.calls).toBe(1)
     }),
   { git: true },
-  3_000,
+  hostedWindowsTimeout,
 )
 
 it.instance(
@@ -1669,7 +1670,7 @@ it.instance(
       expect(yield* llm.calls).toBe(1)
     }),
   { git: true },
-  3_000,
+  hostedWindowsTimeout,
 )
 
 unix(

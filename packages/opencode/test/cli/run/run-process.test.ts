@@ -7,6 +7,11 @@ import { describe, expect } from "bun:test"
 import { Effect } from "effect"
 import { cliIt } from "../../lib/cli-process"
 
+const unknownModelTimeout = process.platform === "win32" ? 25_000 : 15_000
+const unknownModelTestTimeout = process.platform === "win32" ? 45_000 : 30_000
+const runTimeout = process.platform === "win32" ? 60_000 : 30_000
+const runTestTimeout = process.platform === "win32" ? 90_000 : 60_000
+
 describe("opencode run (non-interactive subprocess)", () => {
   // Happy path: prompt completes, output reaches stdout, process exits 0.
   // If this fails, all the others likely will too — debug here first.
@@ -15,11 +20,11 @@ describe("opencode run (non-interactive subprocess)", () => {
     ({ llm, opencode }) =>
       Effect.gen(function* () {
         yield* llm.text("hello from the test llm")
-        const result = yield* opencode.run("say hi")
+        const result = yield* opencode.run("say hi", { timeoutMs: runTimeout })
         opencode.expectExit(result, 0)
         expect(result.stdout).toContain("hello from the test llm")
       }),
-    60_000,
+    runTestTimeout,
   )
 
   // Regression for #27371: an unknown model used to hang the process forever
@@ -33,12 +38,12 @@ describe("opencode run (non-interactive subprocess)", () => {
       Effect.gen(function* () {
         const result = yield* opencode.run("say hi", {
           model: "test/nonexistent-model",
-          timeoutMs: 15_000,
+          timeoutMs: unknownModelTimeout,
         })
         expect(result.exitCode).not.toBe(0)
-        expect(result.durationMs).toBeLessThan(15_000)
+        expect(result.durationMs).toBeLessThan(unknownModelTimeout)
       }),
-    30_000,
+    unknownModelTestTimeout,
   )
 
   // Locks in the current behavior: when the LLM stream errors mid-response
@@ -52,10 +57,10 @@ describe("opencode run (non-interactive subprocess)", () => {
     ({ llm, opencode }) =>
       Effect.gen(function* () {
         yield* llm.fail("upstream provider exploded mid-stream")
-        const result = yield* opencode.run("trigger midstream error", { timeoutMs: 30_000 })
+        const result = yield* opencode.run("trigger midstream error", { timeoutMs: runTimeout })
         expect(result.exitCode).toBe(0)
       }),
-    60_000,
+    runTestTimeout,
   )
 
   // --format json puts one JSON object per line on stdout for each emitted
@@ -66,7 +71,7 @@ describe("opencode run (non-interactive subprocess)", () => {
     ({ llm, opencode }) =>
       Effect.gen(function* () {
         yield* llm.text("structured output")
-        const result = yield* opencode.run("say hi", { format: "json" })
+        const result = yield* opencode.run("say hi", { format: "json", timeoutMs: runTimeout })
         opencode.expectExit(result, 0)
 
         const events = opencode.parseJsonEvents(result.stdout)
@@ -79,6 +84,6 @@ describe("opencode run (non-interactive subprocess)", () => {
         const text = events.find((e) => e.type === "text")
         expect(text).toBeDefined()
       }),
-    60_000,
+    runTestTimeout,
   )
 })
