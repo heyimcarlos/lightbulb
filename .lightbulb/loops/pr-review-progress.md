@@ -60,3 +60,11 @@
 - PR #55 remains open at `3f49791e8d53eddfa6ed34ecd9852ea1b6b92dae`; merge state is `UNSTABLE` because GitHub checks are still queued, while Codex is clean and review threads are empty.
 - Restored #47 to `blocked-by-dependency` after a stale unblocked comment removed the hold; kept `agent-done` and rewrote `## Blocked by` to wait for #46/PR #55 landing on `dev`.
 - Restored #48 to `blocked-by-dependency` after the same stale unblocked path; kept `agent-done` and rewrote `## Blocked by` to wait for #47 landing after #46.
+
+## 2026-06-22T03:09:22Z — PR #56 review finding fixed; #47/#48 dependency labels restored
+
+- PR #56 current-head Codex found one actionable inline issue: the delegation skill used nonexistent `delegate_task` instead of the real `task` tool.
+- Fixed `.agents/skills/lightbulb-delegate/SKILL.md`, pushed `f0be284ec2c271120a94c8a1bdd8cb20b2147b9a` to `automation-blueprint`, resolved the now-outdated review thread, and posted fresh `@codex review`.
+- Passed: `git diff --check origin/dev...HEAD`, `git diff --check`, `git grep -n "delegate_task" -- . ':!node_modules'`, `packages/opencode bun typecheck`, Lightbulb agent discovery smoke, and project skill discovery smoke.
+- PR #56 is blocked on current-head Codex response and queued GitHub checks.
+- Restored missing `blocked-by-dependency` labels on #47 and #48; both remain `agent-done` but held until their prerequisites land.

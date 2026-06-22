@@ -1,6 +1,6 @@
 {
-  "updated_at": "2026-06-22T02:06:59Z",
-  "state": "pending_ci",
+  "updated_at": "2026-06-22T03:09:22Z",
+  "state": "pending_ci_and_current_head_codex_review",
   "merged_prs": [
     {
       "pr": 54,
@@ -45,6 +45,40 @@
       "evidence": ".lightbulb/evidence/pr-55/",
       "merge_blockers": [
         "waiting for queued GitHub checks on 3f49791e8d53eddfa6ed34ecd9852ea1b6b92dae"
+      ]
+    },
+    {
+      "pr": 56,
+      "url": "https://github.com/heyimcarlos/lightbulb/pull/56",
+      "head": "automation-blueprint",
+      "head_sha": "f0be284ec2c271120a94c8a1bdd8cb20b2147b9a",
+      "base": "dev",
+      "state": "pending_ci_and_current_head_codex_review",
+      "issue": null,
+      "external_codex_review": {
+        "requested": true,
+        "cleared": false,
+        "requested_at": "2026-06-22T03:09:03Z",
+        "comment_url": "https://github.com/heyimcarlos/lightbulb/pull/56#issuecomment-4764355313",
+        "reviewed_commit": null,
+        "blocked": "latest @codex review has only EYES reaction so far"
+      },
+      "review_threads": {
+        "unresolved_actionable": 0,
+        "note": "Current-head d12f0295e3 thread was fixed, resolved, and is now outdated."
+      },
+      "local_gates": [
+        "git diff --check origin/dev...HEAD",
+        "git diff --check",
+        "git grep -n \"delegate_task\" -- . ':!node_modules'",
+        "packages/opencode bun typecheck",
+        "Lightbulb agent discovery smoke",
+        "project skill discovery smoke"
+      ],
+      "evidence": ".lightbulb/evidence/pr-56/",
+      "merge_blockers": [
+        "waiting for current-head Codex review on f0be284ec2c271120a94c8a1bdd8cb20b2147b9a",
+        "waiting for queued GitHub checks on f0be284ec2c271120a94c8a1bdd8cb20b2147b9a"
       ]
     }
   ],
