@@ -50,3 +50,25 @@ the account loops. The tick event stores admitted/skipped counts and compact per
 where no loop exists yet. This gives paused cron, external scheduler, and recovery loops a durable trace before any
 worker process exists. The dashboard read model exposes the recent tick events under `operations.schedulerTicks`, and
 the text dashboard prints an `Operations` section when tick state exists.
+
+## Scheduler Supervisor Passes
+
+The recurring scheduler supervisor is the account-level controller above loop admission. A supervisor pass reads loop
+schedules, budget state, active run ownership, dependency holds, recovery holds, and stale worker heartbeat state through
+a fakeable storage seam. It may inspect every loop, but it admits at most one eligible loop per pass. Other loops are
+recorded with bounded operator reasons such as `no_due_loops`, `budget_held`, `disabled`, `already_active`,
+`dependency_held`, `stale_worker`, `recovery_required`, or `one_loop_per_pass`.
+
+Each pass has a stable pass ID. Retrying the same pass returns the existing supervisor event and does not duplicate run
+admission or worker launch state. When a loop is selected, the supervisor delegates to durable loop-run admission, which
+creates a queued run, advances that loop's next due time, and stores the supervisor pass ID in the admission source. The
+supervisor then records a compact `lightbulb.scheduler_supervisor.completed` event with the selected loop, selected run,
+next wake time, skipped loop reasons, and compact active run, worker, and artifact handles. Raw worker prompts, model
+transcripts, and logs stay out of supervisor event metadata.
+
+After a selected loop completes normally, the next pass sees the advanced `next_due_at` and waits until that time unless
+another loop is due first. If a prior run is still queued or running, the loop is held as `already_active`. If a running
+worker heartbeat is stale, the loop is held as `stale_worker` so a recovery/debug pass can reconcile the existing run
+before any duplicate work is admitted. Explicit dependency or recovery holds live in loop supervisor metadata until the
+responsible gate clears them; once cleared, the next supervisor pass can select the loop again when its schedule and
+budget are open.

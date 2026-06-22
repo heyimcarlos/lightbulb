@@ -42,5 +42,6 @@ export const migrations = (
     import("./migration/20260621090000_lightbulb_goal_lifecycle"),
     import("./migration/20260621093000_lightbulb_harness_artifacts"),
     import("./migration/20260621133548_lightbulb_route_steering"),
+    import("./migration/20260622201812_lightbulb_scheduler_supervisor_pass"),
   ])
 ).map((module) => module.default) satisfies DatabaseMigration.Migration[]
