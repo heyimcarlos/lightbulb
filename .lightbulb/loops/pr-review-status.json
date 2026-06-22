@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-06-21T23:06:55Z",
+  "updated_at": "2026-06-22T00:06:52Z",
   "state": "pending_ci",
   "merged_prs": [
     {
@@ -20,24 +20,31 @@
       "pr": 55,
       "url": "https://github.com/heyimcarlos/lightbulb/pull/55",
       "head": "repo-identity",
-      "head_sha": "c5ab88fff65d7e587b59aea0677aed1349e73210",
+      "head_sha": "3f49791e8d53eddfa6ed34ecd9852ea1b6b92dae",
       "base": "dev",
       "state": "pending_ci",
       "issue": 46,
       "external_codex_review": {
         "requested": true,
         "cleared": true,
-        "cleared_at": "2026-06-21T19:40:47Z",
-        "comment_url": "https://github.com/heyimcarlos/lightbulb/pull/55#issuecomment-4763085368",
-        "reviewed_commit": "c5ab88fff6",
+        "cleared_at": "2026-06-21T23:15:23Z",
+        "comment_url": "https://github.com/heyimcarlos/lightbulb/pull/55#issuecomment-4763591644",
+        "reviewed_commit": "3f49791e8d",
         "blocked": false
       },
       "review_threads": {
         "unresolved_actionable": 0,
         "note": "GraphQL reviewThreads check returned no review threads."
       },
+      "local_gates": [
+        "git diff --check origin/dev...HEAD",
+        "packages/opencode bun test test/cli/lightbulb.test.ts --timeout 30000",
+        "packages/opencode bun typecheck",
+        "packages/opencode lightbulb help/dashboard smokes"
+      ],
+      "evidence": ".lightbulb/evidence/pr-55/",
       "merge_blockers": [
-        "waiting for queued GitHub checks on c5ab88fff65d7e587b59aea0677aed1349e73210"
+        "waiting for queued GitHub checks on 3f49791e8d53eddfa6ed34ecd9852ea1b6b92dae"
       ]
     }
   ]
