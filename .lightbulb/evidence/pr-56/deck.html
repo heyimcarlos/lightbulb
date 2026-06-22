@@ -44,7 +44,7 @@
       <h2>Verification evidence</h2>
       <ul>
         <li><code>bun typecheck</code> passed from <code>packages/opencode</code>.</li>
-        <li><code>agent list</code> found all five Lightbulb agents.</li>
+        <li><code>rg --files .opencode/agents .agents/skills | rg 'lightbulb'</code> found the Lightbulb agents and project skills.</li>
         <li><code>npx skills@latest list --json</code> found both new Lightbulb skills.</li>
         <li><code>git diff --check origin/dev...HEAD</code> passed.</li>
       </ul>
