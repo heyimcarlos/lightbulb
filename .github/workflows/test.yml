@@ -94,6 +94,7 @@ jobs:
     env:
       PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.playwright-browsers
       PLAYWRIGHT_CHROMIUM_CHANNEL: chrome
+      PLAYWRIGHT_DISABLE_VIDEO: "1"
     defaults:
       run:
         shell: bash
