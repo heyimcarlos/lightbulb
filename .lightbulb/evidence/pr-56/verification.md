@@ -32,5 +32,13 @@ lightbulb-reviewer (subagent)
 
 - GitHub PR standards checks passed.
 - Long-running CI jobs were still queued, with no failure logs available yet.
-- Current-head Codex connector review cleared `4af106b6eb` with no major issues.
-- Parent review reran the listed local gates on current head and found no review threads.
+- Earlier Codex connector review cleared `4af106b6eb` with no major issues.
+- Later current-head Codex review on `d12f0295e3` found one actionable inline comment: the delegation example used nonexistent `delegate_task` instead of the real Lightbulb/OpenCode `task` tool.
+
+## 2026-06-22T03:08:11Z parent review fix
+
+- Fixed `.agents/skills/lightbulb-delegate/SKILL.md` to show the real `task` tool shape with `subagent_type` and `background: true`.
+- Removed the remaining `delegate_task` reference from the skill.
+- Fix commit before this evidence refresh: `874eb1b2d6b732796cdaed7433c65179b916de97`.
+- Passed after fix: `git diff --check origin/dev...HEAD`, `git diff --check`, `git grep -n "delegate_task" -- . ':!node_modules'`, `packages/opencode bun typecheck`, Lightbulb agent discovery smoke, and project skill discovery smoke.
+- Current head after this evidence-only update requires a fresh `@codex review`.
