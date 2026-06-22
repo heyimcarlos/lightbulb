@@ -241,9 +241,6 @@
     "packages/core": {
       "name": "@opencode-ai/core",
       "version": "1.17.8",
-      "bin": {
-        "opencode": "./bin/opencode",
-      },
       "dependencies": {
         "@ai-sdk/alibaba": "1.0.17",
         "@ai-sdk/amazon-bedrock": "4.0.112",
@@ -497,7 +494,6 @@
       "name": "opencode",
       "version": "1.17.8",
       "bin": {
-        "opencode": "./bin/opencode",
         "lightbulb": "./bin/lightbulb",
       },
       "dependencies": {

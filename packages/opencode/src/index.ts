@@ -27,13 +27,14 @@ import { WebCommand } from "./cli/cmd/web"
 import { PrCommand } from "./cli/cmd/pr"
 import { SessionCommand } from "./cli/cmd/session"
 import { DbCommand } from "./cli/cmd/db"
-import { LightbulbCommand, LightbulbDashboardCommand } from "./cli/cmd/lightbulb"
+import { LightbulbDashboardCommand } from "./cli/cmd/lightbulb"
 import { errorMessage } from "./util/error"
 import { PluginCommand } from "./cli/cmd/plug"
 import { Heap } from "./cli/heap"
 
 const args = hideBin(process.argv)
 const scriptName = cliScriptName()
+const retiredNestedLightbulbCommand = scriptName !== "lightbulb" && args[0] === "lightbulb"
 
 function cliScriptName() {
   if (process.env.OPENCODE_CLI_NAME === "lightbulb") return "lightbulb"
@@ -117,8 +118,7 @@ const cli = yargs(args)
   .command(PluginCommand)
   .command(DbCommand)
 
-const cliWithLightbulb =
-  scriptName === "lightbulb" ? cli.command(LightbulbDashboardCommand) : cli.command(LightbulbCommand)
+const cliWithLightbulb = scriptName === "lightbulb" ? cli.command(LightbulbDashboardCommand) : cli
 
 cliWithLightbulb
   .fail((msg, err) => {
@@ -136,6 +136,9 @@ cliWithLightbulb
   .strict()
 
 try {
+  if (retiredNestedLightbulbCommand) {
+    throw new Error(`Nested Lightbulb command has been retired. Use: ${["lightbulb", ...args.slice(1)].join(" ")}`)
+  }
   if (args.includes("-h") || args.includes("--help")) {
     await cliWithLightbulb.parse(args, (err: Error | undefined, _argv: unknown, out: string) => {
       if (err) throw err
