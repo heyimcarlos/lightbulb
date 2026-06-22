@@ -126,17 +126,23 @@ jobs:
       - name: Install Playwright system dependencies
         if: runner.os == 'Linux'
         working-directory: packages/app
-        run: node ../../node_modules/@playwright/test/cli.js install-deps chromium
+        run: |
+          playwright_cli=$(node -p "require.resolve('@playwright/test/cli')")
+          node "$playwright_cli" install-deps chromium
 
       - name: Install Playwright browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         working-directory: packages/app
         timeout-minutes: 30
-        run: node ../../node_modules/@playwright/test/cli.js install chromium
+        run: |
+          playwright_cli=$(node -p "require.resolve('@playwright/test/cli')")
+          node "$playwright_cli" install chromium
 
       - name: Run app e2e tests
         working-directory: packages/app
-        run: node ../../node_modules/@playwright/test/cli.js test
+        run: |
+          playwright_cli=$(node -p "require.resolve('@playwright/test/cli')")
+          node "$playwright_cli" test
         env:
           CI: true
         timeout-minutes: 30
