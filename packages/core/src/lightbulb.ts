@@ -31,6 +31,7 @@ export type {
 export * from "./lightbulb/loop-profile"
 export * from "./lightbulb/run-ledger"
 export * from "./lightbulb/scheduler"
+export * from "./lightbulb/scheduler-supervisor"
 export * from "./lightbulb/scheduler-tick"
 
 import { and, asc, desc, eq, or } from "drizzle-orm"
@@ -84,6 +85,11 @@ import {
 import { bootstrapLoopProfiles, databaseLoopProfileStorage, type LoopProfileBootstrapServiceInput, type LoopProfileBootstrapSummary } from "./lightbulb/loop-profile"
 import { admitLoopRunInDb, type LoopRunAdmissionResult, type LoopRunAdmissionServiceInput } from "./lightbulb/run-ledger"
 import { readLoopSchedulesInDb, type LoopScheduleReadModel } from "./lightbulb/scheduler"
+import {
+  superviseScheduledLoopsInDb,
+  type SchedulerSupervisorResult,
+  type SchedulerSupervisorServiceInput,
+} from "./lightbulb/scheduler-supervisor"
 import {
   admitScheduledLoopRunsInDb,
   type LoopSchedulerTickOutcome,
@@ -432,6 +438,7 @@ export interface Interface {
   readonly updateGoalStatus: (input: UpdateGoalStatusInput) => Effect.Effect<GoalLifecycle>
   readonly bootstrapLoopProfiles: (input: LoopProfileBootstrapServiceInput) => Effect.Effect<LoopProfileBootstrapSummary>
   readonly admitLoopRun: (input: LoopRunAdmissionServiceInput) => Effect.Effect<LoopRunAdmissionResult>
+  readonly superviseScheduledLoops: (input: SchedulerSupervisorServiceInput) => Effect.Effect<SchedulerSupervisorResult>
   readonly admitScheduledLoopRuns: (input: LoopSchedulerTickServiceInput) => Effect.Effect<LoopSchedulerTickResult>
   readonly readGoalRunTree: (goalID: GoalID) => Effect.Effect<GoalRunTree | undefined>
   readonly seedTracerBullet: (input?: {
@@ -516,6 +523,13 @@ export const layer = Layer.effect(
       }),
       admitLoopRun: Effect.fn("Lightbulb.admitLoopRun")(function* (input) {
         return yield* admitLoopRunInDb(db, { ...input, now: input.now ?? Date.now() }, { run: RunID.create, event: EventID.create })
+      }),
+      superviseScheduledLoops: Effect.fn("Lightbulb.superviseScheduledLoops")(function* (input) {
+        return yield* superviseScheduledLoopsInDb(
+          db,
+          { ...input, now: input.now ?? Date.now() },
+          { run: RunID.create, event: EventID.create },
+        )
       }),
       admitScheduledLoopRuns: Effect.fn("Lightbulb.admitScheduledLoopRuns")(function* (input) {
         return yield* admitScheduledLoopRunsInDb(db, { ...input, now: input.now ?? Date.now() }, { run: RunID.create, event: EventID.create })

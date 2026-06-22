@@ -442,3 +442,24 @@ export const LightbulbEventTable = sqliteTable(
     index("lightbulb_event_aggregate_idx").on(table.aggregate_type, table.aggregate_id, table.time_created),
   ],
 )
+
+export const LightbulbSchedulerSupervisorPassTable = sqliteTable(
+  "lightbulb_scheduler_supervisor_pass",
+  {
+    account_id: text()
+      .$type<Lightbulb.AccountID>()
+      .notNull()
+      .references(() => LightbulbAccountTable.id, { onDelete: "cascade" }),
+    pass_id: text().notNull(),
+    event_id: text()
+      .$type<Lightbulb.EventID>()
+      .references(() => LightbulbEventTable.id, { onDelete: "set null" }),
+    metadata: text({ mode: "json" }).$type<Record<string, unknown>>(),
+    ...Timestamps,
+  },
+  (table) => [
+    primaryKey({ columns: [table.account_id, table.pass_id] }),
+    index("lightbulb_scheduler_supervisor_pass_account_idx").on(table.account_id),
+    index("lightbulb_scheduler_supervisor_pass_event_idx").on(table.event_id),
+  ],
+)

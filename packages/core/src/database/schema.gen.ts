@@ -302,6 +302,19 @@ export default {
         );
       `)
       yield* tx.run(`
+        CREATE TABLE \`lightbulb_scheduler_supervisor_pass\` (
+          \`account_id\` text NOT NULL,
+          \`pass_id\` text NOT NULL,
+          \`event_id\` text,
+          \`metadata\` text,
+          \`time_created\` integer NOT NULL,
+          \`time_updated\` integer NOT NULL,
+          CONSTRAINT \`lightbulb_scheduler_supervisor_pass_pk\` PRIMARY KEY(\`account_id\`, \`pass_id\`),
+          CONSTRAINT \`fk_lightbulb_scheduler_supervisor_pass_account_id_lightbulb_account_id_fk\` FOREIGN KEY (\`account_id\`) REFERENCES \`lightbulb_account\`(\`id\`) ON DELETE CASCADE,
+          CONSTRAINT \`fk_lightbulb_scheduler_supervisor_pass_event_id_lightbulb_event_id_fk\` FOREIGN KEY (\`event_id\`) REFERENCES \`lightbulb_event\`(\`id\`) ON DELETE SET NULL
+        );
+      `)
+      yield* tx.run(`
         CREATE TABLE \`lightbulb_task_packet\` (
           \`id\` text PRIMARY KEY,
           \`account_id\` text NOT NULL,
@@ -521,6 +534,8 @@ export default {
       yield* tx.run(`CREATE INDEX \`lightbulb_run_account_idx\` ON \`lightbulb_run\` (\`account_id\`);`)
       yield* tx.run(`CREATE INDEX \`lightbulb_run_loop_idx\` ON \`lightbulb_run\` (\`loop_id\`);`)
       yield* tx.run(`CREATE UNIQUE INDEX \`lightbulb_run_account_id_idx\` ON \`lightbulb_run\` (\`account_id\`,\`id\`);`)
+      yield* tx.run(`CREATE INDEX \`lightbulb_scheduler_supervisor_pass_account_idx\` ON \`lightbulb_scheduler_supervisor_pass\` (\`account_id\`);`)
+      yield* tx.run(`CREATE INDEX \`lightbulb_scheduler_supervisor_pass_event_idx\` ON \`lightbulb_scheduler_supervisor_pass\` (\`event_id\`);`)
       yield* tx.run(`CREATE INDEX \`lightbulb_task_packet_account_idx\` ON \`lightbulb_task_packet\` (\`account_id\`);`)
       yield* tx.run(`CREATE INDEX \`lightbulb_task_packet_worker_idx\` ON \`lightbulb_task_packet\` (\`worker_id\`);`)
       yield* tx.run(`CREATE UNIQUE INDEX \`lightbulb_task_packet_account_id_idx\` ON \`lightbulb_task_packet\` (\`account_id\`,\`id\`);`)

@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "4e5d1e0f-e3d5-41e1-a0a4-b591f963338f",
+  "id": "481eb7f8-5b97-4aa5-8c4d-5a56dc413c31",
   "prevIds": [
-    "bb9df4bc-4d86-4f9a-9f5a-d8b53eec5068"
+    "4e5d1e0f-e3d5-41e1-a0a4-b591f963338f"
   ],
   "ddl": [
     {
@@ -80,6 +80,10 @@
     },
     {
       "name": "lightbulb_run",
+      "entityType": "tables"
+    },
+    {
+      "name": "lightbulb_scheduler_supervisor_pass",
       "entityType": "tables"
     },
     {
@@ -1793,6 +1797,66 @@
       "name": "time_updated",
       "entityType": "columns",
       "table": "lightbulb_run"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "account_id",
+      "entityType": "columns",
+      "table": "lightbulb_scheduler_supervisor_pass"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "pass_id",
+      "entityType": "columns",
+      "table": "lightbulb_scheduler_supervisor_pass"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "event_id",
+      "entityType": "columns",
+      "table": "lightbulb_scheduler_supervisor_pass"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "metadata",
+      "entityType": "columns",
+      "table": "lightbulb_scheduler_supervisor_pass"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "lightbulb_scheduler_supervisor_pass"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_updated",
+      "entityType": "columns",
+      "table": "lightbulb_scheduler_supervisor_pass"
     },
     {
       "type": "text",
@@ -3613,6 +3677,36 @@
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
+      "name": "fk_lightbulb_scheduler_supervisor_pass_account_id_lightbulb_account_id_fk",
+      "entityType": "fks",
+      "table": "lightbulb_scheduler_supervisor_pass"
+    },
+    {
+      "columns": [
+        "event_id"
+      ],
+      "tableTo": "lightbulb_event",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_lightbulb_scheduler_supervisor_pass_event_id_lightbulb_event_id_fk",
+      "entityType": "fks",
+      "table": "lightbulb_scheduler_supervisor_pass"
+    },
+    {
+      "columns": [
+        "account_id"
+      ],
+      "tableTo": "lightbulb_account",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
       "name": "fk_lightbulb_task_packet_account_id_lightbulb_account_id_fk",
       "entityType": "fks",
       "table": "lightbulb_task_packet"
@@ -3867,6 +3961,16 @@
       "name": "lightbulb_artifact_edge_pk",
       "entityType": "pks",
       "table": "lightbulb_artifact_edge"
+    },
+    {
+      "columns": [
+        "account_id",
+        "pass_id"
+      ],
+      "nameExplicit": false,
+      "name": "lightbulb_scheduler_supervisor_pass_pk",
+      "entityType": "pks",
+      "table": "lightbulb_scheduler_supervisor_pass"
     },
     {
       "columns": [
@@ -4681,6 +4785,34 @@
       "name": "lightbulb_run_account_id_idx",
       "entityType": "indexes",
       "table": "lightbulb_run"
+    },
+    {
+      "columns": [
+        {
+          "value": "account_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "lightbulb_scheduler_supervisor_pass_account_idx",
+      "entityType": "indexes",
+      "table": "lightbulb_scheduler_supervisor_pass"
+    },
+    {
+      "columns": [
+        {
+          "value": "event_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "lightbulb_scheduler_supervisor_pass_event_idx",
+      "entityType": "indexes",
+      "table": "lightbulb_scheduler_supervisor_pass"
     },
     {
       "columns": [
