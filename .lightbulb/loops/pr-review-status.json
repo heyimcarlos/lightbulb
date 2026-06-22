@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-06-21T23:46:56Z",
+  "updated_at": "2026-06-22T00:55:42Z",
   "prs": [
     {
       "pr": 55,
@@ -26,7 +26,8 @@
         "reason": "Codex connector reported no major issues on current head 3f49791e8d after evidence refresh."
       },
       "blockers": [
-        "GitHub checks are still queued/pending on the latest head; no failure logs are available."
+        "GitHub checks are still queued/pending on the latest head; no failure logs are available.",
+        "GitHub reports zero repository-hosted runners via actions/runners; queued jobs have no steps/logs yet."
       ]
     }
   ]

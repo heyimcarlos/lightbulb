@@ -135,3 +135,9 @@
 - PR #55 current head `3f49791e8d` is mergeable and current-head Codex review is clean.
 - No inline comments or review threads exist on PR #55.
 - Blocked from merge: GitHub checks are still queued/pending with no failure logs available.
+
+## 2026-06-22T00:55:42Z — PR #55 queued CI runner blocker confirmed
+
+- PR #55 current head `3f49791e8d` still has current-head Codex clean response and no review threads or inline comments.
+- PR checks remain queued with no job steps/logs: `nix-eval`, `storybook build`, `typecheck`, `unit/e2e linux/windows`.
+- Parent-side GitHub Actions inspection reports `runners=0`, so there is no CI failure to fix in the branch yet; merge remains blocked by pending checks.
