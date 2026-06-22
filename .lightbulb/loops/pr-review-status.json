@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-06-22T02:52:27Z",
+  "updated_at": "2026-06-22T03:18:49Z",
   "prs": [
     {
       "pr": 55,
@@ -26,7 +26,7 @@
         "reason": "Codex connector reported no major issues on current head 3f49791e8d after evidence refresh."
       },
       "blockers": [
-        "GitHub checks are still queued/pending on the latest head; no failure logs are available.",
+        "GitHub checks remain queued/pending on the latest head; no failure logs are available.",
         "GitHub reports zero repository-hosted runners via actions/runners; queued jobs have no steps/logs yet."
       ]
     },
@@ -35,28 +35,29 @@
       "url": "https://github.com/heyimcarlos/lightbulb/pull/56",
       "head": "automation-blueprint",
       "base": "dev",
-      "head_sha": "d12f0295e301b1d5796b2b4379d98e654265214d",
-      "state": "pending_ci_and_current_head_codex_review",
+      "head_sha": "735e7fd2e3da385f30876e9ddd3f83a7b8200878",
+      "state": "pending_current_head_codex_review",
       "local_gates": {
-        "git diff --check origin/dev...HEAD": "passed after evidence review-state refresh",
+        "git diff --check origin/dev...HEAD": "passed after background-subagent flag review fix",
+        "git diff --check": "passed after background-subagent flag review fix",
         "packages/opencode:bun typecheck": "passed",
-        "repo:agent list grep lightbulb-*": "passed; found orchestrator, locator, researcher, implementer, reviewer",
-        "repo:npx skills@latest list --json grep lightbulb-delegate/lightbulb-loop-maintainer": "passed; found both skills",
-        "pre-push:bun turbo typecheck": "passed: 23 successful, 0 failed"
+        "pre-push:bun turbo typecheck": "passed: 23 successful, 0 failed",
+        "evidence artifact byte check": "passed: deck.html, terminal-screenshot.svg, verification.md non-empty"
       },
       "review_fixes": [
-        "Corrected PR evidence verification.md so it no longer claimed Codex review was still EYES-only after the prior current-head clean response.",
-        "Pushed evidence correction d12f0295e and requested @codex review on the new head."
+        "Resolved current-head Codex finding by documenting the required OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS/OPENCODE_EXPERIMENTAL opt-in before using background task dispatch.",
+        "Updated /delegate-async so the flag check is part of the command contract.",
+        "Resolved the outdated review thread after pushing 735e7fd2e and requested @codex review on the new head."
       ],
       "external_codex_review": {
         "requested": true,
         "pending": true,
-        "reason": "Latest @codex review request on d12f0295e currently has only an EYES reaction and no submitted connector result."
+        "request_url": "https://github.com/heyimcarlos/lightbulb/pull/56#issuecomment-4764399708",
+        "reason": "Latest @codex review request is for current head 735e7fd2e; no submitted connector result exists for this head yet."
       },
       "blockers": [
-        "GitHub checks are queued/pending on the latest head; no failure logs are available.",
-        "GitHub reports zero repository-hosted runners via actions/runners.",
-        "Current-head Codex review is pending after the evidence correction commit."
+        "Current-head Codex review is pending after the review-fix commit.",
+        "PR standards checks passed; no current failed checks to debug."
       ]
     }
   ]
