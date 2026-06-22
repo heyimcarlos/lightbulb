@@ -93,6 +93,7 @@ jobs:
     runs-on: ${{ matrix.settings.host }}
     env:
       PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.playwright-browsers
+      PLAYWRIGHT_CHROMIUM_CHANNEL: chrome
     defaults:
       run:
         shell: bash
@@ -131,7 +132,7 @@ jobs:
           node "$playwright_cli" install-deps chromium
 
       - name: Install Playwright browsers
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        if: env.PLAYWRIGHT_CHROMIUM_CHANNEL == '' && steps.playwright-cache.outputs.cache-hit != 'true'
         working-directory: packages/app
         timeout-minutes: 30
         run: |
