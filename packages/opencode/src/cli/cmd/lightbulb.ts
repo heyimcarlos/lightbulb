@@ -185,17 +185,6 @@ function countRuns(dashboard: Lightbulb.Dashboard) {
   )
 }
 
-function summarizeStatuses(items: readonly { readonly status: string }[]) {
-  if (items.length === 0) return "none"
-  return [
-    ...items
-      .reduce((counts, item) => counts.set(item.status, (counts.get(item.status) ?? 0) + 1), new Map<string, number>())
-      .entries(),
-  ]
-    .map(([status, count]) => `${count} ${status}`)
-    .join(", ")
-}
-
 function summarizeWorkers(workers: readonly { readonly id: string; readonly status: string; readonly role: string }[]) {
   if (workers.length === 0) return "none"
   return workers.map((worker) => `${worker.id} [${worker.status}] ${worker.role}`).join(", ")

@@ -77,7 +77,7 @@ Visual evidence remains this packet:
 ## 2026-06-22T15:06:00Z parent review cleanup
 
 - Replaced non-ASCII punctuation introduced by this PR with ASCII separators.
-- Updated `summarizeStatuses` to use a functional reducer instead of a loop.
+- Replaced the old worker status counter with copyable worker handle output.
 - Rewrote the stale visual/text evidence; the packet now uses file discovery for Lightbulb agent evidence.
 
 Current verification:
