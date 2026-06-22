@@ -15,13 +15,13 @@
 
 From the repository root unless noted:
 
-- `git diff --check` — passed.
-- `git grep -n "opencode.ai\|anomalyco/opencode\|OpenCode" -- README.md README.*.md package.json docs/lightbulb` — only intentional substrate/inventory references remain.
-- `packages/opencode`: `OPENCODE_DB=/tmp/lightbulb-issue46-smoke.sqlite ./bin/lightbulb --help` — passed.
-- `packages/opencode`: `OPENCODE_DB=/tmp/lightbulb-issue46-smoke.sqlite ./bin/lightbulb dashboard --help` — passed.
-- `packages/opencode`: `OPENCODE_DB=/tmp/lightbulb-pr55-refresh.sqlite ./bin/lightbulb dashboard --seed --format json` — passed with current operations state.
-- `packages/opencode`: `bun test test/cli/lightbulb.test.ts --timeout 30000` — 7 pass, 0 fail.
-- `packages/opencode`: `bun typecheck` — passed.
+- `git diff --check` - passed.
+- `git grep -n "opencode.ai\|anomalyco/opencode\|OpenCode" -- README.md README.*.md package.json docs/lightbulb` - only intentional substrate/inventory references remain.
+- `packages/opencode`: `OPENCODE_DB=/tmp/lightbulb-issue46-smoke.sqlite ./bin/lightbulb --help` - passed.
+- `packages/opencode`: `OPENCODE_DB=/tmp/lightbulb-issue46-smoke.sqlite ./bin/lightbulb dashboard --help` - passed.
+- `packages/opencode`: `OPENCODE_DB=/tmp/lightbulb-pr55-refresh.sqlite ./bin/lightbulb dashboard --seed --format json` - passed with current operations state.
+- `packages/opencode`: `bun test test/cli/lightbulb.test.ts --timeout 30000` - 7 pass, 0 fail.
+- `packages/opencode`: `bun typecheck` - passed.
 
 ## Evidence artifacts
 
