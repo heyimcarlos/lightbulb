@@ -21,6 +21,14 @@ This is a request-driven maintainer. Do not create a recurring cron job. Use Her
 
 ## Delegation lanes
 
+Before dispatching background lanes, verify the Lightbulb/OpenCode process has enabled background subagents:
+
+```bash
+test "${OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS:-${OPENCODE_EXPERIMENTAL:-}}" = "true"
+```
+
+If the check fails, enable `OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true` for the process before using `background: true`, or run the lane in the foreground without `background: true`.
+
 Dispatch non-overlapping lanes through async delegation:
 
 - config lane: inspect Hermes job/tool/skill configuration and return exact broken references.
