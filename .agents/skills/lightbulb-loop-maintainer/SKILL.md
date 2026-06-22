@@ -62,5 +62,5 @@ Not allowed:
 - none, or exact blocker
 
 ## Evidence
-- `command/file` — what was checked
+- `command/file` - what was checked
 ```

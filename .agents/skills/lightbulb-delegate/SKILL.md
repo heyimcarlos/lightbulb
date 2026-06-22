@@ -95,13 +95,13 @@ Every worker must return this shape:
 [one paragraph]
 
 ## Evidence
-- `path:line` — finding or change
+- `path:line` - finding or change
 
 ## Files changed
-- `path` — why
+- `path` - why
 
 ## Verification
-- `command` — pass/fail and key output
+- `command` - pass/fail and key output
 
 ## Blockers
 - none, or concrete blocker

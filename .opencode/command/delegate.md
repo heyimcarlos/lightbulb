@@ -17,6 +17,6 @@ Follow the skill exactly:
 
 Routing rule:
 
-- Immediate/request-driven work → async delegation to `lightbulb-*` workers.
-- Long-lived durable objective → `/goal` or Kanban.
-- Scheduled recurring check → automation blueprint or cron.
+- Immediate/request-driven work -> async delegation to `lightbulb-*` workers.
+- Long-lived durable objective -> `/goal` or Kanban.
+- Scheduled recurring check -> automation blueprint or cron.

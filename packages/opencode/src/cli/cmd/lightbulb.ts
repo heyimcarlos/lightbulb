@@ -130,12 +130,12 @@ function formatOperations(dashboard: Lightbulb.Dashboard) {
 
 function formatLoop(loop: Lightbulb.DashboardLoop) {
   return [
-    `  - ${loop.kind} loop [${loop.status}] — ${loop.summary}`,
+    `  - ${loop.kind} loop [${loop.status}] - ${loop.summary}`,
     ...(
       loop.runs.length === 0
         ? ["    runs: none"]
         : loop.runs.flatMap((run) => [
-            `    run ${run.id} [${run.status}] — ${run.summary}`,
+            `    run ${run.id} [${run.status}] - ${run.summary}`,
             `    checks: review ${run.reviewStatus}, debug ${run.debugStatus}, gate ${run.gateStatus}`,
             `    workers: ${summarizeStatuses(run.workers)}`,
             `    gates: ${summarizeStatuses(run.gates)}`,
@@ -148,7 +148,7 @@ function formatLoop(loop: Lightbulb.DashboardLoop) {
 function formatInbox(dashboard: Lightbulb.Dashboard) {
   if (dashboard.inbox.taskPackets.length === 0 && dashboard.inbox.gates.length === 0) return ["- empty"]
   return [
-    ...dashboard.inbox.gates.map((gate) => `- gate ${gate.kind} [${gate.status}] — ${gate.summary}`),
+    ...dashboard.inbox.gates.map((gate) => `- gate ${gate.kind} [${gate.status}] - ${gate.summary}`),
     ...dashboard.inbox.taskPackets.map((packet) => `- packet ${packet.title} [${packet.status}] worker=${packet.workerID}`),
   ]
 }
@@ -184,9 +184,13 @@ function countRuns(dashboard: Lightbulb.Dashboard) {
 
 function summarizeStatuses(items: readonly { readonly status: string }[]) {
   if (items.length === 0) return "none"
-  const counts = new Map<string, number>()
-  for (const item of items) counts.set(item.status, (counts.get(item.status) ?? 0) + 1)
-  return [...counts.entries()].map(([status, count]) => `${count} ${status}`).join(", ")
+  return [
+    ...items
+      .reduce((counts, item) => counts.set(item.status, (counts.get(item.status) ?? 0) + 1), new Map<string, number>())
+      .entries(),
+  ]
+    .map(([status, count]) => `${count} ${status}`)
+    .join(", ")
 }
 
 function formatOperationSource(source: Record<string, unknown>) {

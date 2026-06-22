@@ -243,15 +243,15 @@ Totals: 1 goals, 1 loops, 1 runs, 1 gates waiting
 Work
 - Bootstrap loop harness [active]
   Create one durable account control graph.
-  - implementation loop [active] — Implementation loop owns the active tracer run.
-    run lbrun_demo [complete] — Worker returned a report artifact.
+  - implementation loop [active] - Implementation loop owns the active tracer run.
+    run lbrun_demo [complete] - Worker returned a report artifact.
     checks: review requested, debug fixed, gate pending
     workers: 1 complete
     gates: 1 pending
     artifacts: 1
 
 Queue
-- gate review [pending] — Parent review is pending.
+- gate review [pending] - Parent review is pending.
 - packet Render Lightbulb dashboard [complete] worker=lbworker_demo
 
 Artifacts

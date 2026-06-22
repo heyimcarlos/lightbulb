@@ -6,19 +6,20 @@ Reviewed code head before rebase evidence refresh: `cb05fa155`
 
 ## Commands
 
-- `PATH=/tmp/bun-1.3.14/bin:$PATH BUN_INSTALL=/home/cyberjanitor/.bun BUN_TMPDIR=/tmp bun typecheck` from `packages/opencode` — passed (`$ tsgo --noEmit`, exit 0).
-- `PATH=/tmp/bun-1.3.14/bin:$PATH OPENCODE_DB=/tmp/lightbulb-pr56-review.sqlite bun run --conditions=browser packages/opencode/src/index.ts agent list | grep -E 'lightbulb-(orchestrator|locator|researcher|implementer|reviewer)'` — passed; found all five Lightbulb agents.
-- `PATH=/tmp/bun-1.3.14/bin:$PATH npx skills@latest list --json | grep -E '"name": "lightbulb-(delegate|loop-maintainer)"'` — passed; found both new skills.
-- `git diff --check origin/dev...HEAD` — passed.
+- `cd packages/opencode && bun test test/cli/lightbulb.test.ts` - passed, 7 tests.
+- `cd packages/opencode && bun typecheck` - passed.
+- `git diff --check origin/dev...HEAD` - passed.
+- `npx skills@latest list --json | rg '"name": "lightbulb-(delegate|loop-maintainer)"'` - passed; found both project skills.
+- `rg --files .opencode/agents .agents/skills | rg 'lightbulb'` - passed; found the five Lightbulb agent files and project skills.
 
 ## Agent discovery output
 
 ```text
-lightbulb-implementer (subagent)
-lightbulb-locator (subagent)
-lightbulb-orchestrator (primary)
-lightbulb-researcher (subagent)
-lightbulb-reviewer (subagent)
+.opencode/agents/lightbulb-implementer.md
+.opencode/agents/lightbulb-locator.md
+.opencode/agents/lightbulb-orchestrator.md
+.opencode/agents/lightbulb-researcher.md
+.opencode/agents/lightbulb-reviewer.md
 ```
 
 ## Skill discovery output
@@ -40,7 +41,7 @@ lightbulb-reviewer (subagent)
 - Fixed `.agents/skills/lightbulb-delegate/SKILL.md` to show the real `task` tool shape with `subagent_type` and `background: true`.
 - Removed the remaining `delegate_task` reference from the skill.
 - Fix commit before this evidence refresh: `874eb1b2d6b732796cdaed7433c65179b916de97`.
-- Passed after fix: `git diff --check origin/dev...HEAD`, `git diff --check`, `git grep -n "delegate_task" -- . ':!node_modules'`, `packages/opencode bun typecheck`, Lightbulb agent discovery smoke, and project skill discovery smoke.
+- Passed after fix: `git diff --check origin/dev...HEAD`, `git diff --check`, `git grep -n "delegate_task" -- . ':!node_modules'`, `packages/opencode bun typecheck`, Lightbulb agent file discovery smoke, and project skill discovery smoke.
 - Current head after this evidence-only update requires a fresh `@codex review`.
 
 ## 2026-06-22T03:16:34Z parent review fix
@@ -58,14 +59,27 @@ lightbulb-reviewer (subagent)
 
 Current verification:
 
-- `cd packages/opencode && bun test test/cli/lightbulb.test.ts` — passed, 7 tests.
-- `cd packages/opencode && bun typecheck` — passed.
-- `git diff --check origin/dev...HEAD` — passed.
-- `npx skills@latest list --json | rg '"name": "lightbulb-(delegate|loop-maintainer)"'` — passed; found both project skills.
-- `rg --files .opencode/agents .agents/skills | rg 'lightbulb'` — passed; found the five Lightbulb agent files and project skills. The older `agent list | grep lightbulb-*` smoke is no longer used because current `agent list` emits full agent permission blocks and is not a stable focused discovery check.
+- `cd packages/opencode && bun test test/cli/lightbulb.test.ts` - passed, 7 tests.
+- `cd packages/opencode && bun typecheck` - passed.
+- `git diff --check origin/dev...HEAD` - passed.
+- `npx skills@latest list --json | rg '"name": "lightbulb-(delegate|loop-maintainer)"'` - passed; found both project skills.
+- `rg --files .opencode/agents .agents/skills | rg 'lightbulb'` - passed; found the five Lightbulb agent files and project skills. The older `agent list | grep lightbulb-*` smoke is no longer used because current `agent list` emits full agent permission blocks and is not a stable focused discovery check.
 
 Visual evidence remains this packet:
 
 - `.lightbulb/evidence/pr-56/deck.html`
 - `.lightbulb/evidence/pr-56/terminal-screenshot.svg`
 - `.lightbulb/evidence/pr-56/verification.md`
+
+## 2026-06-22T15:06:00Z parent review cleanup
+
+- Replaced non-ASCII punctuation introduced by this PR with ASCII separators.
+- Updated `summarizeStatuses` to use a functional reducer instead of a loop.
+- Rewrote the stale visual/text evidence that still referenced `agent list | grep lightbulb-*`; the packet now uses file discovery for Lightbulb agent evidence.
+
+Current verification:
+
+- `cd packages/opencode && bun test test/cli/lightbulb.test.ts` - passed, 7 tests.
+- `cd packages/opencode && bun typecheck` - passed.
+- `LC_ALL=C rg -n "[^\\x00-\\x7F]" <changed files>` - passed, no matches.
+- `git diff --check origin/dev...HEAD` - passed.
