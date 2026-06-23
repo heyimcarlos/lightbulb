@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Lightbulb context gate policy evidence</title>
+    <style>
+      body { margin: 0; font-family: Inter, system-ui, sans-serif; background: #0b1020; color: #eef2ff; }
+      main { display: grid; gap: 24px; padding: 48px; }
+      section { border: 1px solid #334155; border-radius: 24px; padding: 32px; background: #111827; box-shadow: 0 18px 60px #0008; }
+      h1, h2 { margin: 0 0 16px; }
+      .flow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+      .card { padding: 18px; border-radius: 16px; background: #1e293b; border: 1px solid #475569; }
+      .ok { color: #86efac; }
+      .hold { color: #facc15; }
+      code { color: #93c5fd; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section>
+        <h1>Slice #5: context and gate policy</h1>
+        <p>Lightbulb now evaluates context/cost/approval/verification thresholds before a loop continues.</p>
+      </section>
+      <section>
+        <h2>Policy outcomes</h2>
+        <div class="flow">
+          <div class="card ok"><code>continue</code><br />gate passed</div>
+          <div class="card hold"><code>checkpoint</code><br />delegate before continuing</div>
+          <div class="card hold"><code>blocked</code><br />approval or verification pending</div>
+          <div class="card"><code>stopped</code><br />hard stop/cost ceiling</div>
+        </div>
+      </section>
+      <section>
+        <h2>Verified behavior</h2>
+        <p>Focused tests prove pure policy decisions and persisted parent-summary readback with blocked reason.</p>
+      </section>
+    </main>
+  </body>
+</html>

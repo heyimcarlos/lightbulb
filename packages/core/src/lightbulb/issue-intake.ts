@@ -1,0 +1,204 @@
+import type { Lightbulb } from "../lightbulb"
+import type { IssueRoutingInput } from "./decision-artifact"
+
+export type IssueQueueSnapshot = {
+  readonly accountID: Lightbulb.AccountID
+  readonly number: number
+  readonly title: string
+  readonly url: string
+  readonly labels: readonly string[]
+  readonly updatedAt: number
+  readonly state?: "open" | "closed"
+  readonly bodyHandle?: string
+  readonly bodySummary?: string
+  readonly dependencyRefs?: readonly string[]
+}
+
+export type IssueQueueStatus =
+  | "ready"
+  | "dependency_blocked"
+  | "human_held"
+  | "active_worker_owned"
+  | "integrated_done"
+  | "not_ready"
+
+export type IssueQueueClassification = {
+  readonly issueRef: string
+  readonly issueHandle: string
+  readonly title: string
+  readonly url: string
+  readonly labels: readonly string[]
+  readonly status: IssueQueueStatus
+  readonly bodyHandle: string | null
+  readonly bodySummary: string | null
+  readonly dependencyRefs: readonly string[]
+  readonly blockerRefs: readonly string[]
+  readonly updatedAt: number
+  readonly promptHandle: string
+  readonly instructionHandle: string
+  readonly summary: string
+}
+
+export type IssueQueueTaskPacketRequest = {
+  readonly accountID: Lightbulb.AccountID
+  readonly issueRef: string
+  readonly issueHandle: string
+  readonly title: string
+  readonly labels: readonly string[]
+  readonly promptHandle: string
+  readonly instructionHandle: string
+  readonly bodyHandle: string | null
+  readonly bodySummary: string | null
+  readonly sourceUpdatedAt: number
+}
+
+export type IssueQueueSkippedWork = {
+  readonly issueRef: string
+  readonly issueHandle: string
+  readonly title: string
+  readonly reason: Exclude<IssueQueueStatus, "ready">
+  readonly blockerRefs: readonly string[]
+  readonly summary: string
+}
+
+export type IssueQueueIntakeResult = {
+  readonly classifications: readonly IssueQueueClassification[]
+  readonly routingInputs: readonly IssueRoutingInput[]
+  readonly taskPacketRequests: readonly IssueQueueTaskPacketRequest[]
+  readonly skipped: readonly IssueQueueSkippedWork[]
+}
+
+export function ingestIssueQueueSnapshots(input: { readonly snapshots: readonly IssueQueueSnapshot[] }) {
+  const classifications = input.snapshots.map((snapshot) => classifyIssueQueueSnapshot(snapshot))
+  return {
+    classifications,
+    routingInputs: classifications.flatMap((classification, index) =>
+      classification.status === "ready" ? [toIssueRoutingInput(input.snapshots[index], classification)] : [],
+    ),
+    taskPacketRequests: classifications.flatMap((classification, index) =>
+      classification.status === "ready" ? [toTaskPacketRequest(input.snapshots[index], classification)] : [],
+    ),
+    skipped: classifications.flatMap((classification) =>
+      classification.status === "ready"
+        ? []
+        : [
+            {
+              issueRef: classification.issueRef,
+              issueHandle: classification.issueHandle,
+              title: classification.title,
+              reason: classification.status,
+              blockerRefs: classification.blockerRefs,
+              summary: classification.summary,
+            } satisfies IssueQueueSkippedWork,
+          ],
+    ),
+  } satisfies IssueQueueIntakeResult
+}
+
+export function classifyIssueQueueSnapshot(snapshot: IssueQueueSnapshot): IssueQueueClassification {
+  const issueRef = "#" + snapshot.number
+  const labels = normalizeLabels(snapshot.labels)
+  const issueHandle = "github:issue:" + snapshot.number
+  const promptHandle = "github:issue:" + snapshot.number + ":prompt"
+  const instructionHandle = snapshot.bodyHandle ?? "github:issue:" + snapshot.number + ":body"
+  const dependencyRefs = uniqueRefs(snapshot.dependencyRefs ?? [])
+  const status = issueQueueStatus(snapshot, labels, dependencyRefs)
+  const blockerRefs = blockerRefsForStatus(snapshot, status, labels, dependencyRefs)
+  return {
+    issueRef,
+    issueHandle,
+    title: snapshot.title,
+    url: snapshot.url,
+    labels,
+    status,
+    bodyHandle: snapshot.bodyHandle ?? null,
+    bodySummary: snapshot.bodySummary ?? null,
+    dependencyRefs,
+    blockerRefs,
+    updatedAt: snapshot.updatedAt,
+    promptHandle,
+    instructionHandle,
+    summary: summaryForStatus(status, blockerRefs),
+  }
+}
+
+function toIssueRoutingInput(snapshot: IssueQueueSnapshot, classification: IssueQueueClassification): IssueRoutingInput {
+  return {
+    accountID: snapshot.accountID,
+    issueRef: classification.issueRef,
+    issueHandle: classification.issueHandle,
+    title: classification.title,
+    url: classification.url,
+    labels: classification.labels,
+    bodyHandle: classification.bodyHandle ?? undefined,
+    bodySummary: classification.bodySummary ?? undefined,
+    updatedAt: classification.updatedAt,
+    dependencyRefs: classification.dependencyRefs,
+    promptHandle: classification.promptHandle,
+    instructionHandle: classification.instructionHandle,
+  }
+}
+
+function toTaskPacketRequest(snapshot: IssueQueueSnapshot, classification: IssueQueueClassification): IssueQueueTaskPacketRequest {
+  return {
+    accountID: snapshot.accountID,
+    issueRef: classification.issueRef,
+    issueHandle: classification.issueHandle,
+    title: classification.title,
+    labels: classification.labels,
+    promptHandle: classification.promptHandle,
+    instructionHandle: classification.instructionHandle,
+    bodyHandle: classification.bodyHandle,
+    bodySummary: classification.bodySummary,
+    sourceUpdatedAt: classification.updatedAt,
+  }
+}
+
+function issueQueueStatus(
+  snapshot: IssueQueueSnapshot,
+  labels: readonly string[],
+  dependencyRefs: readonly string[],
+): IssueQueueStatus {
+  if (labels.includes("agent-integrated") || labels.includes("agent-reviewed") || snapshot.state === "closed") return "integrated_done"
+  if (labels.includes("agent-running") || labels.includes("agent-done") || labels.includes("worker-owned")) return "active_worker_owned"
+  if (labels.includes("blocked-by-dependency") || dependencyRefs.length > 0) return "dependency_blocked"
+  if (labels.includes("ready-for-human") || labels.includes("needs-info") || labels.includes("needs-triage")) return "human_held"
+  if (labels.includes("ready-for-agent")) return "ready"
+  return "not_ready"
+}
+
+function blockerRefsForStatus(
+  snapshot: IssueQueueSnapshot,
+  status: IssueQueueStatus,
+  labels: readonly string[],
+  dependencyRefs: readonly string[],
+) {
+  if (status === "dependency_blocked") return dependencyRefs.length ? dependencyRefs : ["label:blocked-by-dependency"]
+  if (status === "human_held") return labelRefs(labels, ["ready-for-human", "needs-info", "needs-triage"], "label:human-held")
+  if (status === "active_worker_owned") return labelRefs(labels, ["agent-running", "agent-done", "worker-owned"], "label:worker-owned")
+  if (status === "integrated_done") return snapshot.state === "closed" ? ["state:closed"] : labelRefs(labels, ["agent-integrated", "agent-reviewed"], "label:agent-integrated")
+  if (status === "not_ready") return ["label:ready-for-agent-missing"]
+  return []
+}
+
+function summaryForStatus(status: IssueQueueStatus, blockerRefs: readonly string[]) {
+  if (status === "ready") return "Issue is ready for bounded Lightbulb worker pickup."
+  if (status === "dependency_blocked") return "Issue is dependency-blocked by " + blockerRefs.join(", ") + "."
+  if (status === "human_held") return "Issue is held for human input or review."
+  if (status === "active_worker_owned") return "Issue already has an active or completed Lightbulb worker lane."
+  if (status === "integrated_done") return "Issue has already been integrated or closed."
+  return "Issue is not labelled ready-for-agent."
+}
+
+function normalizeLabels(labels: readonly string[]) {
+  return labels.map((label) => label.trim().toLowerCase()).filter((label) => label.length > 0)
+}
+
+function labelRefs(labels: readonly string[], names: readonly string[], fallback: string) {
+  const refs = names.filter((name) => labels.includes(name)).map((name) => "label:" + name)
+  return refs.length ? refs : [fallback]
+}
+
+function uniqueRefs(refs: readonly string[]) {
+  return [...new Set(refs.map((ref) => ref.trim()).filter((ref) => ref.length > 0))]
+}

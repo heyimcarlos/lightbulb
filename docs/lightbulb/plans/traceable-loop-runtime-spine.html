@@ -1,0 +1,479 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lightbulb Plan: Traceable Loop Runtime Spine</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f7f5ef;
+        --paper: #fffdf8;
+        --ink: #17202a;
+        --muted: #5b6470;
+        --line: #d9d4c8;
+        --teal: #0b6b72;
+        --green: #2f6f4e;
+        --amber: #9a6400;
+        --red: #9b2c2c;
+        --blue: #284b8f;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.5;
+      }
+
+      main {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 32px 24px 56px;
+      }
+
+      header {
+        border-bottom: 2px solid var(--line);
+        padding-bottom: 22px;
+        margin-bottom: 24px;
+      }
+
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+        color: var(--ink);
+        letter-spacing: 0;
+      }
+
+      h1 {
+        font-size: 34px;
+        line-height: 1.12;
+      }
+
+      h2 {
+        font-size: 21px;
+        margin-top: 30px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      h3 {
+        font-size: 16px;
+        margin-top: 18px;
+      }
+
+      p,
+      li {
+        font-size: 14px;
+      }
+
+      a {
+        color: var(--blue);
+      }
+
+      code {
+        background: #ece7db;
+        border-radius: 4px;
+        padding: 1px 4px;
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 13px;
+      }
+
+      pre {
+        overflow-x: auto;
+        background: #20242a;
+        color: #f5f1e8;
+        border-radius: 8px;
+        padding: 14px 16px;
+        font-size: 13px;
+      }
+
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 14px;
+      }
+
+      .pill {
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 4px 9px;
+        font-size: 12px;
+        color: var(--muted);
+        background: var(--paper);
+      }
+
+      .summary {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        margin: 22px 0;
+      }
+
+      .box {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 14px;
+      }
+
+      .box strong {
+        display: block;
+        margin-bottom: 5px;
+      }
+
+      .decision {
+        border-left: 5px solid var(--teal);
+      }
+
+      .risk {
+        border-left: 5px solid var(--red);
+      }
+
+      .gate {
+        border-left: 5px solid var(--green);
+      }
+
+      .lane {
+        display: grid;
+        grid-template-columns: 180px minmax(0, 1fr);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--paper);
+        margin: 10px 0;
+        overflow: hidden;
+      }
+
+      .lane .label {
+        background: #ece7db;
+        padding: 12px;
+        font-weight: 700;
+        font-size: 13px;
+      }
+
+      .lane .body {
+        padding: 12px 14px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        overflow: hidden;
+        display: table;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid var(--line);
+        padding: 10px 11px;
+        text-align: left;
+        vertical-align: top;
+        font-size: 13px;
+      }
+
+      th {
+        background: #ece7db;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .diagram {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(100px, 1fr));
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .step {
+        min-height: 92px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--paper);
+        padding: 10px;
+        font-size: 13px;
+      }
+
+      .step span {
+        display: block;
+        font-weight: 700;
+        color: var(--teal);
+        margin-bottom: 5px;
+      }
+
+      .callout {
+        margin: 16px 0;
+        padding: 14px;
+        border-radius: 8px;
+        background: #e9f1ef;
+        border: 1px solid #b8d2ce;
+      }
+
+      @media (max-width: 860px) {
+        main {
+          padding: 22px 16px 40px;
+        }
+
+        .summary,
+        .diagram {
+          grid-template-columns: 1fr;
+        }
+
+        .lane {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Traceable Loop Runtime Spine</h1>
+        <p>
+          Implementation plan for turning the paused cron-style Lightbulb loops into a durable goal, loop, run,
+          worker, gate, and artifact control plane.
+        </p>
+        <div class="meta">
+          <span class="pill">Status: ready for implementation thread</span>
+          <span class="pill">Base: origin/dev plus merged PR #57</span>
+          <span class="pill">Top task 1</span>
+          <span class="pill">Prepared: 2026-06-22</span>
+        </div>
+      </header>
+
+      <section class="summary">
+        <div class="box decision">
+          <strong>Decision</strong>
+          Ship the deterministic runtime spine first: run admission, scheduler tick, launch-attempt ledger, and
+          parent-facing operations read model.
+        </div>
+        <div class="box gate">
+          <strong>Proof Gate</strong>
+          No live model workers in tests. Use fake adapters, package-local tests, typechecks, migration checks, and a
+          dashboard screenshot or HTML evidence packet.
+        </div>
+        <div class="box risk">
+          <strong>Main Risk</strong>
+          Combining every existing worker branch into one PR will create a review knot. Recover worker outputs as
+          evidence, not as the merge strategy.
+        </div>
+      </section>
+
+      <h2>Research Inputs</h2>
+      <ul>
+        <li>Merged handoff PR #57: "Google Maps for agent loops", durable state outside chat, maker/checker split.</li>
+        <li>Local dirty work: <code>run-ledger.ts</code>, <code>scheduler-tick.ts</code>, <code>worker-launch.ts</code>, dashboard/CLI read models, migration/schema updates.</li>
+        <li>Live issue chain: #9 task packets, #10 gates, #17 dispatch, #22 launch adapter, #26 runner tick, #27 budget ledger, #28 scheduler supervisor.</li>
+        <li>LangChain frames reliable agents as task-fit harnesses, not just stronger models: <a href="https://www.langchain.com/blog/the-art-of-loop-engineering">The Art of Loop Engineering</a>.</li>
+        <li>Addy Osmani frames loop engineering as designing the system that repeatedly prompts and checks the agent: <a href="https://addyosmani.com/blog/loop-engineering/">Loop Engineering</a>.</li>
+        <li>Codex app docs validate the comparable shape: desktop command center, worktrees, automations, Git review, and artifacts: <a href="https://developers.openai.com/codex/app">Codex app</a>, <a href="https://developers.openai.com/codex/app/worktrees">worktrees</a>, <a href="https://developers.openai.com/codex/app/automations">automations</a>.</li>
+      </ul>
+
+      <h2>Architecture Theories Reviewed</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Theory</th>
+            <th>What It Optimizes</th>
+            <th>Failure Mode</th>
+            <th>Decision</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Archaeology first</td>
+            <td>Recover all old worker branches and merge their outputs in dependency order.</td>
+            <td>Unavailable worktrees, stale assumptions, broad file overlap, and weak current verification.</td>
+            <td>Reject as the primary route. Use old reports only as comparison evidence.</td>
+          </tr>
+          <tr>
+            <td>UI first</td>
+            <td>Make the desktop/dashboard feel like the finished loop control plane.</td>
+            <td>Pretty status over weak durable state. The app would display state that the runtime cannot yet enforce.</td>
+            <td>Defer until after the runtime spine exposes stable read models.</td>
+          </tr>
+          <tr>
+            <td>Deterministic spine first</td>
+            <td>Land the smallest durable state machine that every later loop can reuse.</td>
+            <td>May feel less complete because it does not launch real model processes yet.</td>
+            <td>Choose this. It directly fixes traceability and gives UI/workers a stable substrate.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>Target Runtime Shape</h2>
+      <div class="diagram" aria-label="traceable loop runtime flow">
+        <div class="step"><span>Goal</span>One durable destination with owner intent and stop conditions.</div>
+        <div class="step"><span>Loop</span>Recurring profile with schedule, budget, policy, and next due time.</div>
+        <div class="step"><span>Admission</span>Transaction creates one queued run or one skipped event.</div>
+        <div class="step"><span>Task Packet</span>Bounded child instructions, issue/work item, context budget, expected artifacts.</div>
+        <div class="step"><span>Launch Attempt</span>Process/session/worktree/log/report handles and idempotent active key.</div>
+        <div class="step"><span>Gate</span>Review, debug, budget, dependency, or human approval state.</div>
+        <div class="step"><span>Artifact</span>Report, evidence, patch, test result, screenshot, or PR handle.</div>
+      </div>
+
+      <h2>Implementation Start Point</h2>
+      <div class="callout">
+        Start from the active checkout at <code>/home/ren/repos/openbulb</code>. It already supersedes
+        <code>/home/ren/repos/openbulb-traceable-loops</code>, which only contains the older run-ledger subset.
+        The local branch is behind <code>origin/dev</code> by the merged handoff commit from PR #57; do not pull over
+        dirty work. Fetch and compare against <code>origin/dev</code>, then commit or branch the local spine work
+        before merging upstream docs.
+      </div>
+
+      <h3>Files to start from</h3>
+      <ul>
+        <li><code>packages/core/src/lightbulb/run-ledger.ts</code></li>
+        <li><code>packages/core/src/lightbulb/scheduler-tick.ts</code></li>
+        <li><code>packages/core/src/lightbulb/worker-launch.ts</code></li>
+        <li><code>packages/core/src/lightbulb.ts</code></li>
+        <li><code>packages/core/src/lightbulb/sql.ts</code></li>
+        <li><code>packages/core/src/database/migration/20260622073318_lightbulb_worker_launch_attempt.ts</code></li>
+        <li><code>packages/core/test/lightbulb-loop-run.test.ts</code></li>
+        <li><code>packages/core/test/lightbulb-worker-launch.test.ts</code></li>
+        <li><code>packages/opencode/src/cli/cmd/lightbulb.ts</code></li>
+        <li><code>packages/opencode/test/cli/lightbulb.test.ts</code></li>
+      </ul>
+
+      <h2>PR Slicing</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>PR</th>
+            <th>Scope</th>
+            <th>Should Include</th>
+            <th>Should Not Include</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>PR A: traceable admission and launch ledger</td>
+            <td>Land the current local spine after cleanup.</td>
+            <td>Run admission, scheduler tick event, worker launch attempt table/service, dashboard/CLI readback, migration fix, focused tests.</td>
+            <td>Real child process spawning, issue mutation outbox, desktop UI redesign, PR #56 dashboard compaction.</td>
+          </tr>
+          <tr>
+            <td>PR B: account runner tick</td>
+            <td>Make one deterministic tick link schedule, eligible work, task packet, and launch attempt.</td>
+            <td>Fakeable intake/dispatch/launch adapters, tick journal, idempotent retry, exact no-op reasons.</td>
+            <td>Cron daemon, live model execution, GitHub write mutation.</td>
+          </tr>
+          <tr>
+            <td>PR C: reconciliation and queue closure</td>
+            <td>Close or relabel issues whose contracts are now satisfied.</td>
+            <td>Proof comments, issue readback, dependency unblock reconciliation, retained evidence packet.</td>
+            <td>New runtime behavior unless the previous PRs reveal a small missing assertion.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>Detailed Steps For PR A</h2>
+      <div class="lane">
+        <div class="label">1. Clean boundary</div>
+        <div class="body">
+          Inspect the diff and separate unrelated files. Keep the migration fix, run ledger, scheduler tick, worker
+          launch attempt, dashboard/CLI read model, and the browser test fix only if this PR owns it. Move planning
+          artifacts to docs or leave them untracked until PR B.
+        </div>
+      </div>
+      <div class="lane">
+        <div class="label">2. Normalize semantics</div>
+        <div class="body">
+          Make skipped admission and held launch behavior explicit. A skipped event must never create a duplicate run.
+          A held launch may block parent-facing worker/task state only when the input explicitly requests a blocked
+          terminal launch; otherwise it should remain a skipped launch request with the exact hold reason.
+        </div>
+      </div>
+      <div class="lane">
+        <div class="label">3. Migration audit</div>
+        <div class="body">
+          Verify the generated schema and migration order. The existing artifact-edge migration fix must stay because
+          it prevents SQLite foreign-key mismatch during desktop database startup.
+        </div>
+      </div>
+      <div class="lane">
+        <div class="label">4. Operator readback</div>
+        <div class="body">
+          Keep the text dashboard useful for triage: operations section for scheduler ticks, launch attempts under
+          workers, and JSON parity. Avoid adopting PR #56's compact dashboard in the same PR unless it is consciously
+          reconciled.
+        </div>
+      </div>
+      <div class="lane">
+        <div class="label">5. Evidence packet</div>
+        <div class="body">
+          Write a small HTML or markdown evidence packet under <code>.lightbulb/evidence/pr-&lt;number&gt;/</code>
+          after a PR exists. Include the seeded dashboard command output and a screenshot of the HTML evidence or app
+          dashboard.
+        </div>
+      </div>
+
+      <h2>Verification Commands</h2>
+      <pre><code>cd packages/core &amp;&amp; bun test test/lightbulb-worker-launch.test.ts test/lightbulb-loop-run.test.ts test/lightbulb-scheduler.test.ts test/lightbulb.test.ts test/lightbulb-policy.test.ts test/database-migration.test.ts
+cd packages/core &amp;&amp; bun typecheck
+cd packages/core &amp;&amp; bun script/migration.ts --check
+cd packages/opencode &amp;&amp; bun test test/cli/lightbulb.test.ts
+cd packages/opencode &amp;&amp; bun typecheck
+git diff --check
+OPENCODE_DB=/tmp/lightbulb-plan-a.sqlite ./packages/opencode/bin/lightbulb dashboard --seed --format json
+OPENCODE_DB=/tmp/lightbulb-plan-a.sqlite ./packages/opencode/bin/lightbulb dashboard --account &lt;lbacc_from_seed&gt;</code></pre>
+
+      <h2>Visual Evidence Requirement</h2>
+      <ul>
+        <li>Capture the dashboard output as text and JSON evidence.</li>
+        <li>Render an HTML evidence deck showing the run tree, scheduler tick, launch attempt, and skipped reasons.</li>
+        <li>Use <code>agent-browser</code> or Playwright to screenshot the evidence deck or Lightbulb dashboard once the browser tooling is available.</li>
+        <li>Attach paths in the PR body, for example <code>.lightbulb/evidence/pr-XX/traceable-loop-dashboard.png</code>.</li>
+      </ul>
+
+      <h2>Review Rounds</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Round</th>
+            <th>Reviewer Focus</th>
+            <th>Exit Criteria</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Round 1</td>
+            <td>Runtime correctness: idempotency, transaction boundaries, skip reasons, migration safety.</td>
+            <td>No duplicate active run/launch records; all skipped/no-op decisions leave durable events.</td>
+          </tr>
+          <tr>
+            <td>Round 2</td>
+            <td>Traceability: every operator-visible row links to account, goal, loop, run, worker, packet, or artifact.</td>
+            <td>Parent summary and dashboard can explain what happened without reading raw worker transcripts.</td>
+          </tr>
+          <tr>
+            <td>Round 3</td>
+            <td>PR readiness: diff boundary, tests, docs, visual evidence, no stale worker branch cargo.</td>
+            <td>PR is small enough to review and can be merged without forcing PR #56 or #55 to land first.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>Issue Triage Outcome</h2>
+      <ul>
+        <li>#22 is the first implementation target and can be partially satisfied by PR A.</li>
+        <li>#26 should wait for PR A and become PR B.</li>
+        <li>#27 and #28 should stay open until runner tick and budget rollup are first-class, not inferred from scheduler tests.</li>
+        <li>#9, #10, and #17 should not be closed from stale worker reports alone; close only after local readback verifies their acceptance criteria.</li>
+        <li>PR #56 should be reviewed separately because it changes skills and CLI dashboard shape. Do not combine it with this runtime spine PR.</li>
+      </ul>
+    </main>
+  </body>
+</html>

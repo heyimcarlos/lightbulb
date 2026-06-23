@@ -1,0 +1,125 @@
+{
+  "version": 1,
+  "skills": {
+    "commit": {
+      "source": "heyimcarlos/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/commit/SKILL.md",
+      "computedHash": "8e88133eea0bdd93778f73d88f12b9315495119236626816da368dca48f13e91"
+    },
+    "debug": {
+      "source": "heyimcarlos/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/debug/SKILL.md",
+      "computedHash": "d6dcc5520f01983c41313b5b62490c687f1011da1fec7b62c2e7bd8e6ea398fa"
+    },
+    "defragance": {
+      "source": "heyimcarlos/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/defragance/SKILL.md",
+      "computedHash": "26203141e26eb87408976e50cd7860b7bc035b711db9df8b03603948c9a7c9d8"
+    },
+    "deslop": {
+      "source": "heyimcarlos/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/deslop/SKILL.md",
+      "computedHash": "8883a7d459c07a0b2ee06972e79baa634009aa3bab969a6650acbefac394ad41"
+    },
+    "find-comparables": {
+      "source": "heyimcarlos/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/find-comparables/SKILL.md",
+      "computedHash": "ce195470c75b14918670b718de00a75672685b45a0e30401eb4ec0834d04dd0a"
+    },
+    "get-pr-comments": {
+      "source": "heyimcarlos/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/get-pr-comments/SKILL.md",
+      "computedHash": "39609c56c26d722853359ebfd7496d6e8cb33859f1b219f009355effb39a0148"
+    },
+    "qrspi-create-design-discussion": {
+      "source": "heyimcarlos/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/qrspi/qrspi-create-design-discussion/SKILL.md",
+      "computedHash": "b912c54150f1705cfef607eb9526a539c2911ea78904783c9524567d6e0e281b"
+    },
+    "qrspi-create-plan": {
+      "source": "heyimcarlos/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/qrspi/qrspi-create-plan/SKILL.md",
+      "computedHash": "f2dbec180f272a4c81d003858614e437b8e07b1842368dadbf2d6322214543ec"
+    },
+    "qrspi-create-research": {
+      "source": "heyimcarlos/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/qrspi/qrspi-create-research/SKILL.md",
+      "computedHash": "b826fbda4f34dfc745288071e18f892e034f88f697b87ff3c3f9433468209cf6"
+    },
+    "qrspi-create-research-questions": {
+      "source": "heyimcarlos/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/qrspi/qrspi-create-research-questions/SKILL.md",
+      "computedHash": "a8c410723cf126cbfb54b4da1d69ad83b11e8bca6cdb34eb4233995dbf6b19eb"
+    },
+    "qrspi-create-structure-outline": {
+      "source": "heyimcarlos/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/qrspi/qrspi-create-structure-outline/SKILL.md",
+      "computedHash": "e18153b3c51bc48914f0e2399d256ca1ee53329dfed070852bd1b8f9a2e15c78"
+    },
+    "qrspi-create-worktree": {
+      "source": "heyimcarlos/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/qrspi/qrspi-create-worktree/SKILL.md",
+      "computedHash": "8149b37465b8bb3ffa185537264c1970727016a61c6398ca29a45e82f23dc2ec"
+    },
+    "qrspi-iterate-design-discussion": {
+      "source": "heyimcarlos/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/qrspi/qrspi-iterate-design-discussion/SKILL.md",
+      "computedHash": "e20ad29309170167dfbf0089329d89005cc708955795ad87b5bf3d57ac23ce90"
+    },
+    "qrspi-iterate-plan": {
+      "source": "heyimcarlos/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/qrspi/qrspi-iterate-plan/SKILL.md",
+      "computedHash": "dca22c5e0fb929f7d43a3c250f4ffe4fcce7239e0341456d5ab1de45541b440e"
+    },
+    "qrspi-iterate-research": {
+      "source": "heyimcarlos/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/qrspi/qrspi-iterate-research/SKILL.md",
+      "computedHash": "09d9d3b1ecd9b34aca9cfaa18e80abe243bf8d62efa2524738633a4ff08c4237"
+    },
+    "qrspi-iterate-research-questions": {
+      "source": "heyimcarlos/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/qrspi/qrspi-iterate-research-questions/SKILL.md",
+      "computedHash": "1ca74aadb2ab315729399cd184c76611a645e09c7c48f2f0fa9da536be14df59"
+    },
+    "qrspi-iterate-structure-outline": {
+      "source": "heyimcarlos/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/qrspi/qrspi-iterate-structure-outline/SKILL.md",
+      "computedHash": "a73d3206a98377fe0f86f62430f66e586c40df78868314fefdecf570b4654665"
+    },
+    "qrspi-setup": {
+      "source": "heyimcarlos/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/qrspi/qrspi-setup/SKILL.md",
+      "computedHash": "66700b3b93c1a6bccd5da28400d75cb6d40e35bcf821c65daf1be4bc1311c79a"
+    },
+    "review-and-ship": {
+      "source": "heyimcarlos/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/review-and-ship/SKILL.md",
+      "computedHash": "8d6a4b696b9c89ee19a8aebdcc3a624d092911a7233273039b00ededd14de187"
+    },
+    "thermo-nuclear-code-quality-review": {
+      "source": "heyimcarlos/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/thermo-nuclear-code-quality-review/SKILL.md",
+      "computedHash": "c68ae5c72e4b5de18acb4128b8eadd0a0888c2a22f0132a2565ec136be470132"
+    }
+  }
+}

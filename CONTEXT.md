@@ -55,6 +55,16 @@ Provider-neutral sampling and output controls, partitioned from provider semanti
 **PTY Environment**:
 The host-supplied environment overlay applied by the server when creating a PTY, observed for the request Location and resolved PTY working directory.
 
+### Lightbulb Control Plane
+
+**Worker Runtime**:
+A replaceable execution engine that runs delegated Lightbulb work from pickup packets and returns compact reports, artifacts, status, and event-stream handles.
+_Avoid_: Flue, agent framework, subagent system
+
+**Worker Runtime Adapter**:
+The Lightbulb-owned boundary that translates a route stop and pickup packet into a specific **Worker Runtime** request, then normalizes its result back into Lightbulb worker, run, stream, report, and artifact handles.
+_Avoid_: Flue integration
+
 ## Relationships
 
 - A **System Context** is an opaque carrier composed from zero or more **Context Sources**.

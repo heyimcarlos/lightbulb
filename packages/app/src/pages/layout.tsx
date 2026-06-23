@@ -2346,6 +2346,13 @@ export default function Layout(props: ParentProps) {
       settingsLabel={() => language.t("sidebar.settings")}
       settingsKeybind={() => command.keybind("settings.open")}
       onOpenSettings={openSettings}
+      lightbulbLabel={() => "Lightbulb"}
+      onOpenLightbulb={() => navigateWithSidebarReset("/lightbulb/pr-review")}
+      browserLabel={() => "Computer Use"}
+      onOpenBrowser={() => {
+        const dir = currentProject()?.worktree
+        navigateWithSidebarReset(dir ? `/${base64Encode(dir)}/browser` : "/browser")
+      }}
       helpLabel={() => language.t("sidebar.help")}
       onOpenHelp={() => platform.openLink("https://opencode.ai/desktop-feedback")}
       renderPanel={() =>

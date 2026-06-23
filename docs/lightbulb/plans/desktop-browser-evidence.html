@@ -1,0 +1,498 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lightbulb Plan: Desktop Browser Evidence</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f3f6f4;
+        --paper: #ffffff;
+        --ink: #16211f;
+        --muted: #5a6663;
+        --line: #cfd8d4;
+        --teal: #0a6872;
+        --blue: #31568c;
+        --green: #327257;
+        --amber: #936500;
+        --red: #963838;
+        --panel: #eef2ef;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.5;
+      }
+
+      main {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 32px 24px 56px;
+      }
+
+      header {
+        border-bottom: 2px solid var(--line);
+        padding-bottom: 22px;
+        margin-bottom: 24px;
+      }
+
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+        color: var(--ink);
+        letter-spacing: 0;
+      }
+
+      h1 {
+        font-size: 34px;
+        line-height: 1.12;
+      }
+
+      h2 {
+        font-size: 21px;
+        margin-top: 30px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      h3 {
+        font-size: 16px;
+        margin-top: 18px;
+      }
+
+      p,
+      li {
+        font-size: 14px;
+      }
+
+      a {
+        color: var(--blue);
+      }
+
+      code {
+        background: #e6ece9;
+        border-radius: 4px;
+        padding: 1px 4px;
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 13px;
+      }
+
+      pre {
+        overflow-x: auto;
+        background: #202726;
+        color: #f1f7f4;
+        border-radius: 8px;
+        padding: 14px 16px;
+        font-size: 13px;
+      }
+
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 14px;
+      }
+
+      .pill {
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 4px 9px;
+        font-size: 12px;
+        color: var(--muted);
+        background: var(--paper);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        margin: 22px 0;
+      }
+
+      .box {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 14px;
+      }
+
+      .box strong {
+        display: block;
+        margin-bottom: 5px;
+      }
+
+      .ok {
+        border-left: 5px solid var(--green);
+      }
+
+      .warn {
+        border-left: 5px solid var(--amber);
+      }
+
+      .fail {
+        border-left: 5px solid var(--red);
+      }
+
+      .flow {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(120px, 1fr));
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .flow div {
+        min-height: 96px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--paper);
+        padding: 10px;
+        font-size: 13px;
+      }
+
+      .flow span {
+        display: block;
+        font-weight: 700;
+        color: var(--teal);
+        margin-bottom: 5px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        overflow: hidden;
+        display: table;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid var(--line);
+        padding: 10px 11px;
+        text-align: left;
+        vertical-align: top;
+        font-size: 13px;
+      }
+
+      th {
+        background: var(--panel);
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .lane {
+        display: grid;
+        grid-template-columns: 190px minmax(0, 1fr);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--paper);
+        margin: 10px 0;
+        overflow: hidden;
+      }
+
+      .lane .label {
+        background: var(--panel);
+        padding: 12px;
+        font-weight: 700;
+        font-size: 13px;
+      }
+
+      .lane .body {
+        padding: 12px 14px;
+      }
+
+      .callout {
+        margin: 16px 0;
+        padding: 14px;
+        border-radius: 8px;
+        background: #e8f1f5;
+        border: 1px solid #bed5df;
+      }
+
+      @media (max-width: 860px) {
+        main {
+          padding: 22px 16px 40px;
+        }
+
+        .grid,
+        .flow {
+          grid-template-columns: 1fr;
+        }
+
+        .lane {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Desktop Browser Evidence</h1>
+        <p>
+          Implementation plan for making Lightbulb Desktop runnable, making computer-use evidence visible, and requiring
+          screenshots or recordings on future PRs.
+        </p>
+        <div class="meta">
+          <span class="pill">Status: ready for implementation planning</span>
+          <span class="pill">Top task 2</span>
+          <span class="pill">Desktop package: Electron</span>
+          <span class="pill">Prepared: 2026-06-22</span>
+        </div>
+      </header>
+
+      <section class="grid">
+        <div class="box ok">
+          <strong>Confirmed Working</strong>
+          <code>bun run dev:desktop</code> builds the server bundle, starts Electron, opens renderer port 5173, and
+          reaches sidecar "server ready".
+        </div>
+        <div class="box warn">
+          <strong>Confirmed Missing</strong>
+          <code>agent-browser</code> is not on <code>PATH</code>, so local computer-use screenshots cannot work here
+          until the browser backend is installed or configured.
+        </div>
+        <div class="box fail">
+          <strong>Confirmed Bug Fixed Locally</strong>
+          The core browser test was stale: it passed an absolute screenshot path despite the relative artifact-path
+          contract. The test now uses a temp cwd and <code>shot.png</code>.
+        </div>
+      </section>
+
+      <h2>Research Inputs</h2>
+      <ul>
+        <li><code>packages/desktop/package.json</code>: <code>dev</code> runs <code>electron-vite dev</code>; root <code>dev:desktop</code> runs that package.</li>
+        <li><code>packages/desktop/src/main/index.ts</code>: dev Electron enables remote debugging on port 9222 and spawns a local sidecar server.</li>
+        <li><code>packages/desktop/src/main/server.ts</code>: sidecar forks <code>src/main/sidecar.ts</code> and serves the OpenCode server with basic auth.</li>
+        <li><code>packages/app/src/app.tsx</code>: <code>/browser</code> and <code>/:dir/browser</code> are registered routes.</li>
+        <li><code>packages/app/src/pages/layout.tsx</code>: sidebar opens "Computer Use" through the browser route.</li>
+        <li><code>packages/opencode/src/tool/browser.ts</code>: browser tool shells to <code>agent-browser</code> for local sessions and supports Firecrawl/Steel metadata.</li>
+        <li><code>packages/app/src/pages/browser-data.ts</code>: extracts live view, interactive live view, CDP, and artifact-path evidence from browser tool output.</li>
+        <li>Codex Desktop is a useful comparable for command center plus worktree and automation visibility: <a href="https://developers.openai.com/codex/app">Codex app docs</a>.</li>
+        <li>OpenAI computer-use guidance treats browser control as a model/tool loop with screenshots and user safety checks: <a href="https://platform.openai.com/docs/guides/tools-computer-use">computer use tool guide</a>.</li>
+      </ul>
+
+      <h2>Current Runbook</h2>
+      <pre><code># From repo root
+bun install
+bun run dev:desktop
+
+# If GPU startup crashes on Linux/Wayland, retry with:
+ELECTRON_DISABLE_GPU=1 bun run dev:desktop
+
+# Local web-only path for UI verification:
+cd packages/opencode &amp;&amp; bun run --conditions=browser ./src/index.ts serve --port 4096
+cd packages/app &amp;&amp; bun dev -- --port 4444
+open http://localhost:4444/browser</code></pre>
+
+      <div class="callout">
+        The desktop launch test in this planning session used a 45-second timeout. It reached renderer startup and
+        sidecar ready before the timeout killed the process. GPU errors appeared during forced shutdown, so they should
+        not be treated as the initial desktop blocker without a reproduction from a non-timeout run.
+      </div>
+
+      <h2>Architecture Theories Reviewed</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Theory</th>
+            <th>Pros</th>
+            <th>Cons</th>
+            <th>Decision</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Require global <code>agent-browser</code></td>
+            <td>Fast. Matches existing AGENTS browser automation guidance.</td>
+            <td>Brittle. New machines fail silently until the model tries to use the browser tool.</td>
+            <td>Use as a supported backend, not the only UX.</td>
+          </tr>
+          <tr>
+            <td>Bundle or configure browser backend</td>
+            <td>Reproducible. Lets Desktop show a clear missing-backend state and install/run guidance.</td>
+            <td>Needs platform-specific install behavior and careful security messaging.</td>
+            <td>Choose this for the product slice.</td>
+          </tr>
+          <tr>
+            <td>Use Playwright as the local backend</td>
+            <td>Already a repo dependency for app e2e tests. Good screenshots and traces.</td>
+            <td>Different command surface than <code>agent-browser</code>; risks duplicating tooling.</td>
+            <td>Keep as test/evidence harness, not the default tool backend.</td>
+          </tr>
+          <tr>
+            <td>Use only Firecrawl or Steel remote sessions</td>
+            <td>Live view and CDP URLs are strong evidence artifacts.</td>
+            <td>Requires secrets and external service availability.</td>
+            <td>Support as optional providers; do not make local proof depend on them.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>Evidence Flow</h2>
+      <div class="flow" aria-label="desktop browser evidence flow">
+        <div><span>Desktop</span>Electron starts the renderer and local sidecar server.</div>
+        <div><span>Browser Tool</span>Session tool registry exposes <code>browser</code> to agents.</div>
+        <div><span>Backend</span>Local <code>agent-browser</code>, Steel, or Firecrawl executes browser action.</div>
+        <div><span>Artifact</span>Screenshot path, live view, interactive view, CDP URL, or attachment is returned.</div>
+        <div><span>App Surface</span><code>/browser</code> summarizes sessions, activity, providers, and evidence count.</div>
+      </div>
+
+      <h2>Implementation Start Point</h2>
+      <h3>Files to start from</h3>
+      <ul>
+        <li><code>packages/core/src/tool/browser.ts</code></li>
+        <li><code>packages/core/test/tool-browser.test.ts</code></li>
+        <li><code>packages/opencode/src/tool/browser.ts</code></li>
+        <li><code>packages/opencode/src/tool/registry.ts</code></li>
+        <li><code>packages/opencode/test/tool/registry.test.ts</code></li>
+        <li><code>packages/app/src/pages/browser.tsx</code></li>
+        <li><code>packages/app/src/pages/browser-data.ts</code></li>
+        <li><code>packages/app/src/pages/browser-data.test.ts</code></li>
+        <li><code>packages/desktop/src/main/index.ts</code></li>
+        <li><code>packages/desktop/src/main/server.ts</code></li>
+        <li><code>packages/desktop/README.md</code></li>
+      </ul>
+
+      <h2>PR Slicing</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>PR</th>
+            <th>Scope</th>
+            <th>Should Include</th>
+            <th>Should Not Include</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>PR A: browser evidence reliability</td>
+            <td>Fix tests, document run commands, add backend diagnostics, make missing <code>agent-browser</code> visible.</td>
+            <td>Core/opencode browser tests, Desktop README, app Browser page missing-backend state, evidence screenshot.</td>
+            <td>Loop runtime schema, PR #56 automation skills, package rebrand.</td>
+          </tr>
+          <tr>
+            <td>PR B: desktop visual proof harness</td>
+            <td>Add repeatable screenshot or recording capture for every visual PR.</td>
+            <td>Playwright or CDP script, output under <code>.lightbulb/evidence/pr-XX/</code>, PR template/update docs.</td>
+            <td>Changing the agent/browser provider API unless PR A proves it is needed.</td>
+          </tr>
+          <tr>
+            <td>PR C: optional remote provider polish</td>
+            <td>Make Firecrawl/Steel live views first-class evidence when keys are present.</td>
+            <td>Provider health display, redacted URL handling, docs.</td>
+            <td>Hard dependency on paid/external browser providers.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>Detailed Steps For PR A</h2>
+      <div class="lane">
+        <div class="label">1. Preserve artifact safety</div>
+        <div class="body">
+          Keep screenshot paths relative to the active instance. Core tests should change cwd to a temp directory instead
+          of requesting external absolute paths. Opencode registry tests should continue proving that <code>../escape.png</code>
+          is rejected.
+        </div>
+      </div>
+      <div class="lane">
+        <div class="label">2. Add backend health</div>
+        <div class="body">
+          Add a small browser backend probe that checks whether <code>agent-browser</code> is available and reports the
+          exact command that failed. Surface that result in <code>/browser</code> next to "Tool Available" so users can
+          distinguish "tool registered" from "backend runnable".
+        </div>
+      </div>
+      <div class="lane">
+        <div class="label">3. Document install choices</div>
+        <div class="body">
+          Update <code>packages/desktop/README.md</code> and Lightbulb docs with the real desktop run command, common
+          Linux fallback <code>ELECTRON_DISABLE_GPU=1</code>, and local browser backend setup. Include Firecrawl/Steel as
+          optional remote backends.
+        </div>
+      </div>
+      <div class="lane">
+        <div class="label">4. Capture visual evidence</div>
+        <div class="body">
+          Start Desktop or the app/backend dev pair, open <code>/browser</code>, and capture a screenshot. If
+          <code>agent-browser</code> is installed, also run a screenshot action and verify it appears in Browser Activity.
+        </div>
+      </div>
+      <div class="lane">
+        <div class="label">5. Keep PR small</div>
+        <div class="body">
+          Do not combine with traceable-loop schema migrations. This PR should make computer-use evidence reliable enough
+          for future Lightbulb PRs to use as a gate.
+        </div>
+      </div>
+
+      <h2>Verification Commands</h2>
+      <pre><code>cd packages/core &amp;&amp; bun test test/tool-browser.test.ts &amp;&amp; bun typecheck
+cd packages/opencode &amp;&amp; bun test test/tool/registry.test.ts &amp;&amp; bun typecheck
+cd packages/app &amp;&amp; bun test src/pages/browser-data.test.ts &amp;&amp; bun typecheck
+cd packages/desktop &amp;&amp; bun typecheck
+timeout 45s bun run dev:desktop
+git diff --check</code></pre>
+
+      <h2>Visual Evidence Commands</h2>
+      <pre><code># Web path, easier for automated screenshots
+cd packages/opencode &amp;&amp; bun run --conditions=browser ./src/index.ts serve --port 4096
+cd packages/app &amp;&amp; bun dev -- --port 4444
+agent-browser open http://localhost:4444/browser
+agent-browser screenshot .lightbulb/evidence/pr-XX/browser-page.png
+
+# Desktop path, use Electron remote debugging in dev
+bun run dev:desktop
+# Then capture the Electron window or use CDP on ws://127.0.0.1:9222 when available.</code></pre>
+
+      <h2>Review Rounds</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Round</th>
+            <th>Reviewer Focus</th>
+            <th>Exit Criteria</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Round 1</td>
+            <td>Runtime proof: Desktop starts, sidecar becomes healthy, browser tool remains registered.</td>
+            <td>Desktop startup log reaches server ready; focused typechecks and tests pass.</td>
+          </tr>
+          <tr>
+            <td>Round 2</td>
+            <td>Evidence proof: screenshot artifact, live-view URL, or missing-backend reason is visible in app state.</td>
+            <td>PR includes screenshot or recording path and explains how it was captured.</td>
+          </tr>
+          <tr>
+            <td>Round 3</td>
+            <td>Operator ergonomics: a maintainer can follow the README from fresh checkout to visible Browser page.</td>
+            <td>No hidden global assumptions except explicitly documented browser backend install.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>Issue And PR Triage Outcome</h2>
+      <ul>
+        <li>Issue #35 is closed but should be treated as needing recovery proof in this checkout because the original worker worktree is unavailable here.</li>
+        <li>PR #56 already contains evidence files but should stay separate from browser/desktop reliability.</li>
+        <li>Future feature PRs should include either a browser/app screenshot, terminal SVG, or recording under <code>.lightbulb/evidence/pr-XX/</code>.</li>
+        <li>It is not realistic to combine desktop evidence reliability with the traceable-loop runtime spine in one PR. They share the same product mission but touch different risk surfaces.</li>
+      </ul>
+    </main>
+  </body>
+</html>

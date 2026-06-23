@@ -1,0 +1,92 @@
+{
+  "updated_at": "2026-06-21T15:13:29Z",
+  "state": "merged",
+  "prs": [
+    {
+      "pr": 30,
+      "url": "https://github.com/heyimcarlos/lightbulb/pull/30",
+      "head": "issue-24-worker",
+      "head_sha": "443102412a70164afbe248e930e32da6aacc4110",
+      "base": "dev",
+      "state": "merged",
+      "merged_at": "2026-06-21T15:11:25Z",
+      "merge_commit": "cf0a22897",
+      "checks": "absent",
+      "latest_review_request": "https://github.com/heyimcarlos/lightbulb/pull/30#issuecomment-4762388144",
+      "codex_review": "blocked by current usage limit after request",
+      "review_threads": "resolved",
+      "local_gates": {
+        "packages/core:bun test test/lightbulb-decision-artifact.test.ts test/lightbulb.test.ts": "passed",
+        "packages/core:bun typecheck": "passed",
+        "packages/core:bun run script/migration.ts --check": "passed",
+        "packages/opencode:bun test test/cli/lightbulb.test.ts": "passed",
+        "packages/opencode:bun typecheck": "passed",
+        "git diff --check origin/dev...HEAD": "passed"
+      },
+      "evidence": [
+        ".lightbulb/evidence/pr-30/deck.html",
+        ".lightbulb/evidence/pr-30/verification.svg",
+        ".lightbulb/evidence/pr-30/verification.md"
+      ],
+      "issue": 24
+    },
+    {
+      "pr": 36,
+      "url": "https://github.com/heyimcarlos/lightbulb/pull/36",
+      "head": "computer-use-screen",
+      "head_sha": "9eee222c0539b8bc981ff15063f038a7769cb5b9",
+      "base": "dev",
+      "state": "merged",
+      "merged_at": "2026-06-21T15:11:28Z",
+      "merge_commit": "64631f589",
+      "checks": "absent",
+      "latest_review_request": "https://github.com/heyimcarlos/lightbulb/pull/36#issuecomment-4762388178",
+      "codex_review": "blocked by current usage limit after request",
+      "review_threads": "resolved",
+      "local_gates": {
+        "packages/app:bun test src/pages/browser-data.test.ts": "passed",
+        "packages/app:bun typecheck": "passed",
+        "packages/core:bun test test/tool-browser.test.ts test/lightbulb.test.ts test/location-layer.test.ts": "passed",
+        "packages/core:bun typecheck": "passed",
+        "packages/opencode:bun test test/tool/registry.test.ts": "passed",
+        "packages/opencode:bun typecheck": "passed",
+        "packages/ui:bun typecheck": "passed",
+        "git diff --check origin/dev...HEAD": "passed"
+      },
+      "evidence": [
+        ".lightbulb/evidence/pr-36/deck.html",
+        ".lightbulb/evidence/pr-36/verification.md",
+        ".lightbulb/evidence/pr-36/frames/browser-tool-registry-proof.png",
+        ".lightbulb/evidence/pr-36/recordings/lightbulb-browser-tool-registry-proof.mp4"
+      ],
+      "issue": 35
+    },
+    {
+      "pr": 37,
+      "url": "https://github.com/heyimcarlos/lightbulb/pull/37",
+      "head": "issue-31-worker",
+      "head_sha": "5c0951b99190d7446c56f1f7b40ac9976c51cb5c",
+      "base": "dev",
+      "state": "merged",
+      "merged_at": "2026-06-21T15:13:00Z",
+      "merge_commit": "5ff721c8f",
+      "checks": "absent",
+      "latest_review_request": "https://github.com/heyimcarlos/lightbulb/pull/37#issuecomment-4762394068",
+      "codex_review": "blocked by current usage limit after request",
+      "review_threads": "resolved",
+      "local_gates": {
+        "packages/core:bun test test/lightbulb.loop-profile.test.ts": "passed: 9 pass, 0 fail",
+        "packages/core:bun typecheck": "passed",
+        "packages/core:bun run script/migration.ts --check": "passed",
+        "git diff --check origin/dev...HEAD": "passed"
+      },
+      "evidence": [
+        ".lightbulb/evidence/pr-37/deck.html",
+        ".lightbulb/evidence/pr-37/verification.svg",
+        ".lightbulb/evidence/pr-37/verification.md"
+      ],
+      "issue": 31,
+      "integration_note": "merged origin/dev after PR #30/#36 landed, resolved lightbulb.ts export conflict, reran core loop-profile gates, then squash-merged"
+    }
+  ]
+}

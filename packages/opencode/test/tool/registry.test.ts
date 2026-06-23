@@ -2,7 +2,7 @@ import { afterEach, describe, expect } from "bun:test"
 import path from "path"
 import fs from "fs/promises"
 import { fileURLToPath, pathToFileURL } from "url"
-import { Effect, Layer, Result, Schema } from "effect"
+import { Effect, Exit, Layer, Result, Schema } from "effect"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { ToolRegistry } from "@/tool/registry"
 import { Tool } from "@/tool/tool"
@@ -65,6 +65,25 @@ afterEach(async () => {
   await disposeAllInstances()
 })
 
+function prependPath(bin: string) {
+  const previousPath = process.env.PATH
+  process.env.PATH = `${bin}${path.delimiter}${previousPath ?? ""}`
+  return () => {
+    process.env.PATH = previousPath
+  }
+}
+
+async function writeAgentBrowser(bin: string, script: string) {
+  await fs.mkdir(bin, { recursive: true })
+  if (process.platform === "win32") {
+    await Bun.write(path.join(bin, "agent-browser.cjs"), script)
+    await Bun.write(path.join(bin, "agent-browser.cmd"), '@echo off\r\nnode "%~dp0agent-browser.cjs" %*\r\n')
+    return
+  }
+  await Bun.write(path.join(bin, "agent-browser"), `#!/usr/bin/env node\n${script}`)
+  await fs.chmod(path.join(bin, "agent-browser"), 0o755)
+}
+
 describe("tool.registry", () => {
   it.instance("does not expose task_status", () =>
     Effect.gen(function* () {
@@ -73,6 +92,211 @@ describe("tool.registry", () => {
 
       expect(ids).not.toContain("task_status")
     }),
+  )
+
+  it.instance("exposes the browser computer-use tool to the server registry", () =>
+    Effect.gen(function* () {
+      const registry = yield* ToolRegistry.Service
+      const ids = yield* registry.ids()
+
+      expect(ids).toContain("browser")
+    }),
+  )
+
+  it.instance("runs the browser tool through agent-browser and records screenshot evidence", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const bin = path.join(test.directory, "bin")
+      yield* Effect.promise(() =>
+        writeAgentBrowser(
+          bin,
+          'const fs = require("fs")\nconst args = process.argv.slice(2)\nconsole.log("agent-browser:" + args.join(" "))\nif (args[0] === "screenshot") fs.writeFileSync(args[1], "png")\n',
+        ),
+      )
+      const restorePath = prependPath(bin)
+
+      const registry = yield* ToolRegistry.Service
+      const loaded = (yield* registry.all()).find((tool) => tool.id === "browser")
+      if (!loaded) throw new Error("browser tool was not loaded")
+      const agents = yield* Agent.Service
+      const screenshot = "shot.png"
+      const asked: unknown[] = []
+      const result = yield* loaded.execute({ provider: "local", action: "screenshot", path: screenshot }, {
+        sessionID: SessionID.make("ses_browser"),
+        messageID: MessageID.make("msg_browser"),
+        agent: (yield* agents.defaultInfo()).name,
+        abort: new AbortController().signal,
+        messages: [],
+        metadata: () => Effect.void,
+        ask: (input) => Effect.sync(() => asked.push(input)),
+      } satisfies Tool.Context)
+      restorePath()
+
+      expect(result.output).toContain("agent-browser:screenshot")
+      expect(result.output).toContain(`Artifact: ${path.join(test.directory, screenshot)}`)
+      expect(yield* Effect.promise(() => Bun.file(path.join(test.directory, screenshot)).text())).toBe("png")
+      expect(asked).toEqual([
+        expect.objectContaining({ permission: "browser", patterns: ["local:screenshot:shot.png"] }),
+      ])
+    }),
+  )
+
+  it.instance("rejects browser screenshots outside the active instance directory", () =>
+    Effect.gen(function* () {
+      const registry = yield* ToolRegistry.Service
+      const loaded = (yield* registry.all()).find((tool) => tool.id === "browser")
+      if (!loaded) throw new Error("browser tool was not loaded")
+      const agents = yield* Agent.Service
+      const result = yield* loaded
+        .execute({ provider: "local", action: "screenshot", path: "../escape.png" }, {
+          sessionID: SessionID.make("ses_browser_escape"),
+          messageID: MessageID.make("msg_browser_escape"),
+          agent: (yield* agents.defaultInfo()).name,
+          abort: new AbortController().signal,
+          messages: [],
+          metadata: () => Effect.void,
+          ask: () => Effect.void,
+        } satisfies Tool.Context)
+        .pipe(Effect.exit)
+
+      expect(Exit.isFailure(result)).toBe(true)
+    }),
+  )
+
+  it.instance("runs browser CLI relative to the active instance directory", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const bin = path.join(test.directory, "bin")
+      yield* Effect.promise(() =>
+        writeAgentBrowser(
+          bin,
+          'const fs = require("fs")\nconst args = process.argv.slice(2)\nfs.writeFileSync("cwd.txt", process.cwd())\nif (args[0] === "screenshot") fs.writeFileSync(args[1], "png")\n',
+        ),
+      )
+      const restorePath = prependPath(bin)
+
+      const registry = yield* ToolRegistry.Service
+      const loaded = (yield* registry.all()).find((tool) => tool.id === "browser")
+      if (!loaded) throw new Error("browser tool was not loaded")
+      const agents = yield* Agent.Service
+      const result = yield* loaded.execute({ provider: "local", action: "screenshot", path: "relative-shot.png" }, {
+        sessionID: SessionID.make("ses_browser_cwd"),
+        messageID: MessageID.make("msg_browser_cwd"),
+        agent: (yield* agents.defaultInfo()).name,
+        abort: new AbortController().signal,
+        messages: [],
+        metadata: () => Effect.void,
+        ask: () => Effect.void,
+      } satisfies Tool.Context)
+      restorePath()
+
+      expect(yield* Effect.promise(() => Bun.file(path.join(test.directory, "cwd.txt")).text())).toBe(test.directory)
+      expect(yield* Effect.promise(() => Bun.file(path.join(test.directory, "relative-shot.png")).text())).toBe("png")
+      expect(result.output).toContain(`Artifact: ${path.join(test.directory, "relative-shot.png")}`)
+    }),
+  )
+
+  it.instance("caps browser CLI output before returning it", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const bin = path.join(test.directory, "bin")
+      yield* Effect.promise(() => writeAgentBrowser(bin, 'process.stdout.write("a".repeat(700000))\n'))
+      const restorePath = prependPath(bin)
+
+      const registry = yield* ToolRegistry.Service
+      const loaded = (yield* registry.all()).find((tool) => tool.id === "browser")
+      if (!loaded) throw new Error("browser tool was not loaded")
+      const agents = yield* Agent.Service
+      const result = yield* loaded.execute({ provider: "local", action: "snapshot" }, {
+        sessionID: SessionID.make("ses_browser_cap"),
+        messageID: MessageID.make("msg_browser_cap"),
+        agent: (yield* agents.defaultInfo()).name,
+        abort: new AbortController().signal,
+        messages: [],
+        metadata: () => Effect.void,
+        ask: () => Effect.void,
+      } satisfies Tool.Context)
+      restorePath()
+
+      expect(Buffer.byteLength(result.output, "utf8")).toBeLessThan(530000)
+      expect(result.output).toContain("bytes truncated")
+    }),
+  )
+
+  it.instance("does not spawn browser CLI processes after cancellation", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const bin = path.join(test.directory, "bin")
+      const spawned = path.join(test.directory, "spawned")
+      yield* Effect.promise(() =>
+        writeAgentBrowser(bin, `const fs = require("fs")\nfs.writeFileSync(${JSON.stringify(spawned)}, "spawned")\n`),
+      )
+      const restorePath = prependPath(bin)
+
+      const registry = yield* ToolRegistry.Service
+      const loaded = (yield* registry.all()).find((tool) => tool.id === "browser")
+      if (!loaded) throw new Error("browser tool was not loaded")
+      const agents = yield* Agent.Service
+      const abort = new AbortController()
+      abort.abort()
+      const result = yield* loaded
+        .execute({ provider: "local", action: "snapshot" }, {
+          sessionID: SessionID.make("ses_browser_cancelled"),
+          messageID: MessageID.make("msg_browser_cancelled"),
+          agent: (yield* agents.defaultInfo()).name,
+          abort: abort.signal,
+          messages: [],
+          metadata: () => Effect.void,
+          ask: () => Effect.void,
+        } satisfies Tool.Context)
+        .pipe(Effect.exit)
+      restorePath()
+
+      expect(Exit.isFailure(result)).toBe(true)
+      expect(yield* Effect.promise(() => Bun.file(spawned).exists())).toBe(false)
+    }),
+  )
+
+  it.instance("redacts nested Firecrawl session secrets", () =>
+    Effect.acquireUseRelease(
+      Effect.sync(() => globalThis.fetch),
+      (originalFetch) =>
+        Effect.gen(function* () {
+          globalThis.fetch = (() =>
+            Promise.resolve(
+              new Response(
+                JSON.stringify({
+                  sessions: [
+                    {
+                      id: "fc-session",
+                      cdpUrl: "wss://browser.firecrawl.dev/cdp/fc-session?token=secret",
+                      nested: { apiKey: "fc-secret", headers: ["Authorization: Bearer nestedsecret"] },
+                    },
+                  ],
+                }),
+                { headers: { "content-type": "application/json" } },
+              ),
+            )) as unknown as typeof fetch
+          const registry = yield* ToolRegistry.Service
+          const loaded = (yield* registry.all()).find((tool) => tool.id === "browser")
+          if (!loaded) throw new Error("browser tool was not loaded")
+          const agents = yield* Agent.Service
+          const result = yield* loaded.execute({ provider: "firecrawl", action: "sessions", apiKey: "fc-secret" }, {
+            sessionID: SessionID.make("ses_browser_firecrawl"),
+            messageID: MessageID.make("msg_browser_firecrawl"),
+            agent: (yield* agents.defaultInfo()).name,
+            abort: new AbortController().signal,
+            messages: [],
+            metadata: () => Effect.void,
+            ask: () => Effect.void,
+          } satisfies Tool.Context)
+          globalThis.fetch = originalFetch
+
+          expect(result.output).toContain("[REDACTED]")
+          expect(result.output).not.toContain("secret")
+        }),
+      (originalFetch) => Effect.sync(() => void (globalThis.fetch = originalFetch)),
+    ),
   )
 
   it.instance("hides task background parameter unless experimental background subagents are enabled", () =>

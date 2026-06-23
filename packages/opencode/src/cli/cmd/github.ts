@@ -1,37 +1,26 @@
-import { Effect } from "effect"
 import { cmd } from "./cmd"
-import { effectCmd } from "../effect-cmd"
+import { effectCmd, fail } from "../effect-cmd"
 
 export { extractResponseText, formatPromptTooLargeError, parseGitHubRemote } from "./github.shared"
 
 export const GithubInstallCommand = effectCmd({
   command: "install",
-  describe: "install the GitHub agent",
+  describe: "unsupported in Lightbulb",
+  instance: false,
   handler: () =>
-    Effect.gen(function* () {
-      const { githubInstall } = yield* Effect.promise(() => import("./github.handler"))
-      return yield* githubInstall()
-    }),
+    fail(
+      "The inherited OpenCode GitHub agent installer is disabled in Lightbulb until a Lightbulb-native GitHub Action, app, and trigger vocabulary exist.",
+    ),
 })
 
 export const GithubRunCommand = effectCmd({
   command: "run",
-  describe: "run the GitHub agent",
-  builder: (yargs) =>
-    yargs
-      .option("event", {
-        type: "string",
-        describe: "GitHub mock event to run the agent for",
-      })
-      .option("token", {
-        type: "string",
-        describe: "GitHub personal access token (github_pat_********)",
-      }),
-  handler: (args) =>
-    Effect.gen(function* () {
-      const { githubRun } = yield* Effect.promise(() => import("./github.handler"))
-      return yield* githubRun(args)
-    }),
+  describe: "unsupported in Lightbulb",
+  instance: false,
+  handler: () =>
+    fail(
+      "The inherited OpenCode GitHub runner is disabled in Lightbulb until a Lightbulb-native GitHub Action, app, and trigger vocabulary exist.",
+    ),
 })
 
 export const GithubCommand = cmd({

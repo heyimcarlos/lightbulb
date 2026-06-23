@@ -1,0 +1,10 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Recurring loop schedules and budgets</title><style>body{font-family:Inter,system-ui,sans-serif;background:#10131a;color:#f4f7fb;margin:0;padding:32px}section{max-width:980px;margin:0 auto 28px;padding:28px;border:1px solid #2c3442;border-radius:18px;background:#161b24}h1,h2{margin-top:0}.flow{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}.box{padding:14px;border-radius:12px;background:#202838;border:1px solid #3b4658}.ok{color:#86efac}.warn{color:#fde68a}code{color:#93c5fd}</style></head>
+<body>
+<section><h1>Slice 6: recurring loop schedules and budgets</h1><p>Lightbulb now reads persisted loop-profile schedule and budget metadata as a deterministic scheduler read model. No provider/model call is required.</p></section>
+<section><h2>State flow</h2><div class="flow"><div class="box">Loop profile metadata<br><code>schedule + budget</code></div><div class="box">Scheduler classifier<br><code>due / not_due</code></div><div class="box">Budget gate<br><code>held / open</code></div><div class="box">Dashboard projection<br><code>next due + reason</code></div><div class="box">Operator action<br><code>dispatch or hold</code></div></div></section>
+<section><h2>Observable behavior</h2><ul><li><span class="ok">due</span>: next due time has passed and budget is open.</li><li><span class="warn">not_due</span>: next due time is in the future or missing.</li><li><span class="warn">disabled</span>: loop or schedule is disabled.</li><li><span class="warn">budget_held</span>: explicit budget hold or daily run count exhausted.</li></ul></section>
+<section><h2>Verification</h2><p>Focused package-local tests, typecheck, migration check, and whitespace checks passed from <code>packages/core</code>. See <code>verification.md</code>.</p></section>
+</body>
+</html>

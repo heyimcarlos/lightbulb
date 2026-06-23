@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520">
+  <rect width="1200" height="520" fill="#0b1020"/>
+  <rect x="36" y="32" width="1128" height="456" rx="18" fill="#111827" stroke="#334155"/>
+  <text x="64" y="78" fill="#93c5fd" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="24">Lightbulb schedule-budgets verification</text>
+  <text x="64" y="128" fill="#e5e7eb" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="20">$ cd packages/core &amp;&amp; bun test test/lightbulb-scheduler.test.ts test/lightbulb.test.ts</text>
+  <text x="86" y="168" fill="#86efac" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="20">24 pass, 0 fail</text>
+  <text x="64" y="218" fill="#e5e7eb" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="20">$ cd packages/core &amp;&amp; bun typecheck</text>
+  <text x="86" y="258" fill="#86efac" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="20">tsgo --noEmit: exit 0</text>
+  <text x="64" y="308" fill="#e5e7eb" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="20">$ cd packages/core &amp;&amp; bun script/migration.ts --check</text>
+  <text x="86" y="348" fill="#86efac" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="20">No schema changes; full migration check generated successfully</text>
+  <text x="64" y="398" fill="#e5e7eb" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="20">$ git diff --check</text>
+  <text x="86" y="438" fill="#86efac" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="20">exit 0</text>
+</svg>

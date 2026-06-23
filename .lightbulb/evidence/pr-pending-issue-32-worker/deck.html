@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Issue 32 evidence — context bundle assembly</title>
+  <style>
+    body { margin: 0; font-family: Inter, ui-sans-serif, system-ui, sans-serif; background: #08111f; color: #e5e7eb; }
+    main { display: grid; gap: 24px; padding: 32px; }
+    section { min-height: 330px; border: 1px solid #334155; border-radius: 20px; padding: 30px; background: linear-gradient(135deg, #0f172a, #1e1b4b); }
+    h1 { font-size: 42px; margin: 0 0 18px; }
+    h2 { font-size: 30px; margin: 0 0 14px; color: #93c5fd; }
+    p, li { font-size: 20px; line-height: 1.45; }
+    code { color: #fbbf24; }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .card { border: 1px solid #475569; border-radius: 14px; padding: 16px; background: rgba(15, 23, 42, .76); }
+    .ok { color: #86efac; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <main>
+    <section>
+      <h1>Issue #32: bounded worker context bundles</h1>
+      <p>Adds the pre-dispatch assembly seam that turns a ready work item plus goal, loop, artifact, decision, and verification handles into a compact <code>context_manifest</code>.</p>
+      <p class="ok">Parent verification passed after materializing dependencies and fixing one type narrowing issue.</p>
+    </section>
+    <section>
+      <h2>Loop state transition</h2>
+      <div class="grid">
+        <div class="card"><h2>Input</h2><p>Ready issue + task packet request + parent goal/loop/gate references.</p></div>
+        <div class="card"><h2>Gate</h2><p>Policy holds stop dispatch for unresolved decisions, budget/cost/approval blocks, and raw transcript/log content.</p></div>
+        <div class="card"><h2>Output</h2><p>Idempotent harness-authored <code>context_manifest</code> artifact and spawn-ready packet.</p></div>
+      </div>
+    </section>
+    <section>
+      <h2>Verification</h2>
+      <ul>
+        <li><code>bun test test/lightbulb-context-bundle.test.ts</code> → 9 pass / 0 fail.</li>
+        <li><code>bun typecheck</code> from <code>packages/core</code> → pass.</li>
+        <li><code>git diff --check</code> → pass.</li>
+        <li>Thermo review: new module is 712 lines; <code>lightbulb.ts</code> remains below 1k lines at 977.</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

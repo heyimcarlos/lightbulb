@@ -171,30 +171,25 @@ opencode github [command]
 
 #### install
 
-GitHub エージェントをリポジトリにインストールします。
+The inherited GitHub installer is disabled in Lightbulb.
 
 ```bash
-opencode github install
+opencode github install # disabled in Lightbulb
 ```
 
-これにより、必要な GitHub Actions ワークフローが設定され、構成プロセスがガイドされます。 [詳細はこちら](/docs/github)。
+Lightbulb needs a native action, app, and trigger vocabulary before this command can provide setup steps. [Learn more](/docs/github).
 
 ---
 
 #### run
 
-GitHub エージェントを実行します。これは通常、GitHub Actions で使用されます。
+The inherited GitHub runner is disabled in Lightbulb.
 
 ```bash
-opencode github run
+opencode github run # disabled in Lightbulb
 ```
 
-##### フラグ
-
-| フラグ                                | 説明                                                |
-| ------------------------------------- | --------------------------------------------------- |
-| <nobr><code>{"--event"}</code></nobr> | エージェントを実行するための GitHub モック イベント |
-| <nobr><code>{"--token"}</code></nobr> | GitHub 個人アクセストークン                         |
+Lightbulb needs a native action, app, and trigger vocabulary before this command can run repository automation. [Learn more](/docs/github).
 
 ---
 

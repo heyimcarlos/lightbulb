@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <rect width="1280" height="720" fill="#08111f"/>
+  <rect x="52" y="48" width="1176" height="624" rx="18" fill="#111827" stroke="#334155" stroke-width="2"/>
+  <circle cx="84" cy="82" r="8" fill="#ef4444"/><circle cx="112" cy="82" r="8" fill="#f59e0b"/><circle cx="140" cy="82" r="8" fill="#22c55e"/>
+  <text x="72" y="135" fill="#93c5fd" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="24">$ bun test test/lightbulb-context-bundle.test.ts</text>
+  <text x="92" y="178" fill="#86efac" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="26">9 pass / 0 fail / 40 expect() calls</text>
+  <text x="72" y="245" fill="#93c5fd" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="24">$ bun typecheck</text>
+  <text x="92" y="288" fill="#86efac" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="26">$ tsgo --noEmit</text>
+  <text x="92" y="330" fill="#86efac" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="26">exit 0</text>
+  <text x="72" y="397" fill="#93c5fd" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="24">$ git diff --check</text>
+  <text x="92" y="440" fill="#86efac" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="26">pass</text>
+  <text x="72" y="507" fill="#93c5fd" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="24">$ thermo review</text>
+  <text x="92" y="550" fill="#86efac" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="26">new context-bundle seam; lightbulb.ts 977 lines, below 1k guardrail</text>
+  <text x="72" y="622" fill="#fbbf24" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="22">Issue #32 evidence: context manifests are assembled before worker dispatch with policy holds.</text>
+</svg>

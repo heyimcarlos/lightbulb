@@ -1,0 +1,10 @@
+{
+  "updated_at": "2026-06-21T02:42:27Z",
+  "objective_complete": true,
+  "current_loop": "idle",
+  "current_goal": "Issue #2 Lightbulb loop/goal harness tracer bullet verified locally",
+  "active_issue": "#2",
+  "last_verification": "cd packages/core && bun run script/migration.ts --check (passed); bun typecheck (passed); bun test test/lightbulb.test.ts test/database-migration.test.ts (18 pass, 0 fail); git diff --check (passed)",
+  "blocker": null,
+  "next_action": "Await human review of the local diff; do not push/open PR/merge/publish without approval"
+}

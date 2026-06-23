@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="520" viewBox="0 0 1120 520" role="img" aria-label="Terminal verification evidence for issue 12">
+  <rect width="1120" height="520" fill="#0b1020"/>
+  <rect x="24" y="24" width="1072" height="472" rx="8" fill="#111827" stroke="#374151"/>
+  <circle cx="54" cy="54" r="7" fill="#ef4444"/>
+  <circle cx="78" cy="54" r="7" fill="#f59e0b"/>
+  <circle cx="102" cy="54" r="7" fill="#22c55e"/>
+  <text x="36" y="95" fill="#e5e7eb" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="18">Issue 12 - GitHub issue queue intake</text>
+  <text x="36" y="136" fill="#93c5fd" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15">$ cd packages/core &amp;&amp; bun test issue-intake + runner-tick + decision-artifact</text>
+  <text x="56" y="174" fill="#bbf7d0" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15">17 pass</text>
+  <text x="56" y="202" fill="#bbf7d0" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15">0 fail</text>
+  <text x="56" y="230" fill="#d1d5db" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15">Ready issues route to bounded handles; dependency, human, active, and done issues skip.</text>
+  <text x="36" y="284" fill="#93c5fd" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15">$ cd packages/core &amp;&amp; bun typecheck</text>
+  <text x="56" y="322" fill="#bbf7d0" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15">tsgo --noEmit - pass</text>
+  <text x="36" y="376" fill="#93c5fd" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15">$ git diff --check</text>
+  <text x="56" y="414" fill="#bbf7d0" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15">pass</text>
+  <text x="36" y="458" fill="#9ca3af" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14">No live GitHub, worker, browser, or model process required for this core read-model slice.</text>
+</svg>

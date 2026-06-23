@@ -28,9 +28,9 @@ jobs:
       matrix:
         settings:
           - name: linux
-            host: blacksmith-4vcpu-ubuntu-2404
+            host: ubuntu-24.04
           - name: windows
-            host: blacksmith-4vcpu-windows-2025
+            host: windows-2025
     runs-on: ${{ matrix.settings.host }}
     defaults:
       run:
@@ -63,8 +63,14 @@ jobs:
             turbo-${{ runner.os }}-${{ hashFiles('turbo.json', '**/package.json') }}-
             turbo-${{ runner.os }}-
 
+      - name: Install ripgrep
+        if: runner.os == 'Windows'
+        run: |
+          choco install ripgrep -y --no-progress
+          rg --version
+
       - name: Run unit tests
-        timeout-minutes: 20
+        timeout-minutes: 45
         run: bun turbo test --output-logs=errors-only --log-order=grouped --log-prefix=task
         env:
           OPENCODE_EXPERIMENTAL_DISABLE_FILEWATCHER: ${{ runner.os == 'Windows' && 'true' || 'false' }}
@@ -81,12 +87,14 @@ jobs:
       matrix:
         settings:
           - name: linux
-            host: blacksmith-4vcpu-ubuntu-2404
+            host: ubuntu-24.04
           - name: windows
-            host: blacksmith-4vcpu-windows-2025
+            host: windows-2025
     runs-on: ${{ matrix.settings.host }}
     env:
       PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.playwright-browsers
+      PLAYWRIGHT_CHROMIUM_CHANNEL: chrome
+      PLAYWRIGHT_DISABLE_VIDEO: "1"
     defaults:
       run:
         shell: bash
@@ -120,15 +128,23 @@ jobs:
       - name: Install Playwright system dependencies
         if: runner.os == 'Linux'
         working-directory: packages/app
-        run: bunx playwright install-deps chromium
+        run: |
+          playwright_cli=$(node -p "require.resolve('@playwright/test/cli')")
+          node "$playwright_cli" install-deps chromium
 
       - name: Install Playwright browsers
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        if: env.PLAYWRIGHT_CHROMIUM_CHANNEL == '' && steps.playwright-cache.outputs.cache-hit != 'true'
         working-directory: packages/app
-        run: bunx playwright install chromium
+        timeout-minutes: 30
+        run: |
+          playwright_cli=$(node -p "require.resolve('@playwright/test/cli')")
+          node "$playwright_cli" install chromium
 
       - name: Run app e2e tests
-        run: bun --cwd packages/app test:e2e:local
+        working-directory: packages/app
+        run: |
+          playwright_cli=$(node -p "require.resolve('@playwright/test/cli')")
+          node "$playwright_cli" test
         env:
           CI: true
         timeout-minutes: 30

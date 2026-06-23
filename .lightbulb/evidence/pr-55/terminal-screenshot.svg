@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="680" viewBox="0 0 1200 680">
+  <rect width="1200" height="680" fill="#07111f"/>
+  <rect x="42" y="40" width="1116" height="600" rx="20" fill="#0b1220" stroke="#2d436b"/>
+  <circle cx="78" cy="74" r="8" fill="#ff5f57"/><circle cx="104" cy="74" r="8" fill="#ffbd2e"/><circle cx="130" cy="74" r="8" fill="#28c840"/>
+  <text x="64" y="125" fill="#93c5fd" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="23">$ git diff --check</text>
+  <text x="64" y="162" fill="#7dffb2" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="23">PASS</text>
+  <text x="64" y="214" fill="#93c5fd" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="23">$ grep README/package docs for upstream public identity</text>
+  <text x="64" y="251" fill="#7dffb2" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="23">only intentional substrate and inventory references remain</text>
+  <text x="64" y="303" fill="#93c5fd" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="23">$ ./bin/lightbulb --help</text>
+  <text x="64" y="340" fill="#7dffb2" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="23">prints Lightbulb-rooted command list including dashboard</text>
+  <text x="64" y="392" fill="#93c5fd" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="23">$ ./bin/lightbulb dashboard --seed --format json</text>
+  <text x="64" y="429" fill="#7dffb2" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="23">PASS with clean OPENCODE_DB</text>
+  <text x="64" y="586" fill="#facc15" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="23">Issue #46 evidence captured 2026-06-22T16:44:56Z</text>
+</svg>

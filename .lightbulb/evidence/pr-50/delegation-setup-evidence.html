@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>PR #50 Evidence — Lightbulb Delegation Setup</title>
+  <style>
+    body { margin: 0; font-family: Inter, ui-sans-serif, system-ui, sans-serif; background: #0b1020; color: #edf2ff; }
+    main { display: grid; gap: 24px; padding: 32px; max-width: 1100px; margin: 0 auto; }
+    section { border: 1px solid #26345f; border-radius: 18px; padding: 28px; background: linear-gradient(135deg, #111936, #0e1428); box-shadow: 0 20px 70px rgba(0,0,0,.35); }
+    h1, h2 { margin: 0 0 16px; }
+    h1 { font-size: 40px; }
+    h2 { color: #8bd3ff; }
+    ul { line-height: 1.7; }
+    code { background: #18264b; color: #b5f4ff; padding: 2px 6px; border-radius: 6px; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+    .card { border: 1px solid #31406f; border-radius: 14px; padding: 18px; background: #0d1730; }
+    .pass { color: #8ef0a3; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <main>
+    <section>
+      <h1>Lightbulb Delegation Setup</h1>
+      <p>PR #50 adds a project skill, a <code>/delegate</code> command, and five focused <code>lightbulb-*</code> agents so Lightbulb work can be routed through isolated-worktree delegation instead of generic copied agent wording.</p>
+    </section>
+    <section>
+      <h2>Surfaces added</h2>
+      <div class="grid">
+        <div class="card"><strong>Skill</strong><br><code>.agents/skills/lightbulb-delegate/SKILL.md</code></div>
+        <div class="card"><strong>Command</strong><br><code>.opencode/command/delegate.md</code></div>
+        <div class="card"><strong>Primary agent</strong><br><code>lightbulb-orchestrator</code></div>
+        <div class="card"><strong>Subagents</strong><br><code>locator</code>, <code>researcher</code>, <code>implementer</code>, <code>reviewer</code></div>
+      </div>
+    </section>
+    <section>
+      <h2>Verified behavior</h2>
+      <ul>
+        <li class="pass">PASS: <code>agent list | grep '^lightbulb-'</code> discovers all five Lightbulb agents.</li>
+        <li class="pass">PASS: <code>npx skills@latest list --json</code> discovers <code>lightbulb-delegate</code> as a project skill.</li>
+        <li class="pass">PASS: <code>bun typecheck</code> from <code>packages/opencode</code>.</li>
+        <li class="pass">PASS: <code>bun test test/config/config.test.ts --timeout 30000</code> from <code>packages/opencode</code> — 94 pass.</li>
+        <li class="pass">PASS: <code>git diff --check</code>.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Review result</h2>
+      <p>Local Hermes review found no blocking correctness or thermo-nuclear maintainability issues: no large-file threshold risk, no code-path spaghetti, and the added configuration/docs remain narrowly scoped to delegation setup.</p>
+    </section>
+  </main>
+</body>
+</html>

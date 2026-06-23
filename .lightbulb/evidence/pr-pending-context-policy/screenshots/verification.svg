@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720">
+  <rect width="1200" height="720" fill="#0b1020"/>
+  <text x="60" y="80" fill="#eef2ff" font-family="monospace" font-size="34" font-weight="700">Lightbulb gate policy verification</text>
+  <rect x="60" y="130" width="1080" height="470" rx="18" fill="#020617" stroke="#334155"/>
+  <text x="90" y="185" fill="#86efac" font-family="monospace" font-size="24">$ bun test test/lightbulb-policy.test.ts test/lightbulb.test.ts --timeout 30000</text>
+  <text x="90" y="240" fill="#e2e8f0" font-family="monospace" font-size="22">pass  Lightbulb gate policy &gt; continues when thresholds are clear</text>
+  <text x="90" y="280" fill="#e2e8f0" font-family="monospace" font-size="22">pass  checkpoints and requires delegation when context crosses threshold</text>
+  <text x="90" y="320" fill="#e2e8f0" font-family="monospace" font-size="22">pass  blocks while required approval is pending</text>
+  <text x="90" y="360" fill="#e2e8f0" font-family="monospace" font-size="22">pass  persists a blocked policy gate in the parent summary</text>
+  <text x="90" y="430" fill="#86efac" font-family="monospace" font-size="26">27 pass, 0 fail</text>
+  <text x="90" y="485" fill="#86efac" font-family="monospace" font-size="24">$ bun typecheck  → passed</text>
+  <text x="90" y="535" fill="#86efac" font-family="monospace" font-size="24">$ git diff --check  → passed</text>
+  <text x="60" y="660" fill="#94a3b8" font-family="monospace" font-size="20">Evidence packet for PR pending branch context-policy</text>
+</svg>

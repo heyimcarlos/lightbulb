@@ -1795,6 +1795,130 @@ ToolRegistry.register({
 })
 
 ToolRegistry.register({
+  name: "browser",
+  render(props) {
+    const i18n = useI18n()
+    const [copied, setCopied] = createSignal("")
+    const provider = createMemo(() => stringField(props.input, "provider") ?? "local")
+    const action = createMemo(() => stringField(props.input, "action"))
+    const url = createMemo(() => stringField(props.metadata, "url") ?? stringField(props.input, "url"))
+    const session = createMemo(
+      () =>
+        stringField(props.metadata, "sessionID") ??
+        stringField(props.input, "sessionID") ??
+        stringField(props.input, "sessionName"),
+    )
+    const liveViewUrl = createMemo(
+      () => stringField(props.metadata, "interactiveLiveViewUrl") ?? stringField(props.metadata, "liveViewUrl"),
+    )
+    const cdpUrl = createMemo(() => stringField(props.metadata, "cdpUrl"))
+    const artifactPath = createMemo(() => stringField(props.metadata, "artifactPath"))
+    const details = createMemo(() =>
+      [
+        liveViewUrl() ? { key: "live", label: "Live", value: liveViewUrl()!, href: liveViewUrl() } : undefined,
+        cdpUrl() ? { key: "cdp", label: "CDP", value: cdpUrl()! } : undefined,
+        artifactPath() ? { key: "artifact", label: "Artifact", value: artifactPath()! } : undefined,
+        session() ? { key: "session", label: "Session", value: session()! } : undefined,
+      ].filter((item): item is { key: string; label: string; value: string; href?: string } => !!item),
+    )
+    const body = createMemo(() => !!(liveViewUrl() || props.output || details().length))
+    const handleCopy = async (key: string, value: string) => {
+      if (!(await writeClipboard(value))) return
+      setCopied(key)
+      setTimeout(() => setCopied(""), 2000)
+    }
+
+    return (
+      <BasicTool
+        {...props}
+        icon="window-cursor"
+        trigger={{
+          title: i18n.t("ui.tool.browser"),
+          subtitle: url() ?? liveViewUrl(),
+          args: [provider(), action()].filter((value): value is string => !!value),
+          action: liveViewUrl() ? (
+            <a
+              data-component="tool-action"
+              href={liveViewUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(event) => event.stopPropagation()}
+              aria-label={i18n.t("ui.tool.browser")}
+            >
+              <Icon name="square-arrow-top-right" size="small" />
+            </a>
+          ) : undefined,
+        }}
+        hideDetails={props.hideDetails || !body()}
+        defaultOpen={props.defaultOpen ?? !!liveViewUrl()}
+        open={props.open}
+        onOpenChange={props.onOpenChange}
+        defer={props.deferContent}
+      >
+        <Show when={liveViewUrl()}>
+          {(src) => (
+            <div data-component="browser-tool-viewport" data-scrollable>
+              <iframe
+                src={src()}
+                title={i18n.t("ui.tool.browser")}
+                referrerPolicy="no-referrer"
+                sandbox="allow-downloads allow-forms allow-popups allow-same-origin allow-scripts"
+                onLoad={() => props.onContentRendered?.()}
+              />
+            </div>
+          )}
+        </Show>
+        <Show when={!liveViewUrl() && props.output}>
+          <div data-component="tool-output" data-scrollable>
+            <Markdown text={props.output!} />
+          </div>
+        </Show>
+        <Show when={details().length > 0}>
+          <div data-component="browser-tool-details">
+            <For each={details()}>
+              {(detail) => (
+                <div data-slot="browser-tool-detail">
+                  <span data-slot="browser-tool-detail-label">{detail.label}</span>
+                  <Show
+                    when={detail.href}
+                    fallback={<span data-slot="browser-tool-detail-value">{detail.value}</span>}
+                  >
+                    {(href) => (
+                      <a
+                        data-slot="browser-tool-detail-value"
+                        href={href()}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {detail.value}
+                      </a>
+                    )}
+                  </Show>
+                  <Tooltip
+                    value={copied() === detail.key ? i18n.t("ui.message.copied") : i18n.t("ui.message.copy")}
+                    placement="top"
+                    gutter={4}
+                  >
+                    <IconButton
+                      icon={copied() === detail.key ? "check" : "copy"}
+                      size="small"
+                      variant="ghost"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => handleCopy(detail.key, detail.value)}
+                      aria-label={copied() === detail.key ? i18n.t("ui.message.copied") : i18n.t("ui.message.copy")}
+                    />
+                  </Tooltip>
+                </div>
+              )}
+            </For>
+          </div>
+        </Show>
+      </BasicTool>
+    )
+  },
+})
+
+ToolRegistry.register({
   name: "task",
   render(props) {
     const data = useData()
@@ -1878,6 +2002,14 @@ ToolRegistry.register({
     )
   },
 })
+
+function stringField(source: Record<string, unknown> | undefined, key: string) {
+  const value = source?.[key]
+  if (typeof value !== "string") return
+  const trimmed = value.trim()
+  if (!trimmed) return
+  return trimmed
+}
 
 ToolRegistry.register({
   name: "bash",
