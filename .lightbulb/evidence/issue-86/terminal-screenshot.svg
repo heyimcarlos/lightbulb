@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="600" viewBox="0 0 1180 600" role="img" aria-labelledby="title desc">
+  <title id="title">Issue 86 adversarial review verification</title>
+  <desc id="desc">A terminal-style visual evidence card showing deterministic Lightbulb adversarial review and whitespace checks passing.</desc>
+  <rect width="1180" height="600" fill="#101418"/>
+  <rect x="24" y="24" width="1132" height="552" rx="8" fill="#171d23" stroke="#34404c"/>
+  <rect x="24" y="24" width="1132" height="42" rx="8" fill="#222a32"/>
+  <circle cx="52" cy="45" r="7" fill="#ff6b6b"/>
+  <circle cx="76" cy="45" r="7" fill="#ffd166"/>
+  <circle cx="100" cy="45" r="7" fill="#4ecdc4"/>
+  <text x="132" y="51" fill="#c9d1d9" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15">/home/ren/wt/lightbulb/review-gate</text>
+  <text x="48" y="112" fill="#7ee787" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17">$ bun run script/adversarial-review.ts --base origin/dev --head HEAD</text>
+  <text x="48" y="154" fill="#d0d7de" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17">Lightbulb Adversarial Review: passed</text>
+  <text x="48" y="194" fill="#d0d7de" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17">Diff: 5 files changed, 577 insertions(+)</text>
+  <text x="48" y="248" fill="#7ee787" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17">Blockers: none</text>
+  <text x="48" y="288" fill="#ffd166" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17">Warning: workflow changed; token/event review required</text>
+  <text x="48" y="342" fill="#7ee787" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17">No paid AI reviewer, Copilot, Codex, or model API was used</text>
+  <text x="48" y="396" fill="#7ee787" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17">$ bun typecheck</text>
+  <text x="48" y="436" fill="#7ee787" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17">23 successful typecheck tasks</text>
+  <text x="48" y="502" fill="#d0d7de" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17">CI shape: pull_request_target runs trusted base script, fetches PR head as diff-only ref</text>
+  <text x="48" y="542" fill="#d0d7de" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17">Artifacts: JSON + Markdown uploaded; PR comment is updated by marker</text>
+</svg>
