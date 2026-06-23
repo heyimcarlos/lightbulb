@@ -192,6 +192,18 @@ handles. The runner tick can then create a durable task packet from handles such
 `github:issue:12:body`, leaving full issue/comment content outside the authoritative Lightbulb route/run/gate/artifact
 state.
 
+## Dependency Unblock Reconciliation
+
+Dependency reconciliation is the fakeable read-model seam between issue intake and worker pickup. It accepts compact
+issue snapshots plus explicit evidence handles for closed dependencies, integrated issues, accepted review gates, or
+base-branch proof. It never rereads full issue histories, calls GitHub, or launches workers in core tests.
+
+When all dependency refs are satisfied, reconciliation proposes a bounded mutation that removes only the dependency hold,
+sets the blocked reason to `None - dependency satisfied by <evidence>.`, emits one idempotent reconciliation event, and
+returns an operator summary with compact issue, gate, or git handles. Mixed holds keep their human, budget, context, or
+ADR labels and remain out of worker dispatch until those separate holds clear. Missing or pending evidence leaves the
+issue dependency-held with an exact skipped reason.
+
 ## Pickup Packets
 
 Pickup packets are the structured worker handoff contract layered on top of task packets. A packet records the work
