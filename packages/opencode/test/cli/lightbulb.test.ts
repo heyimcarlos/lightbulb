@@ -209,6 +209,7 @@ describe("lightbulb dashboard display", () => {
                         role: "bounded implementation worker",
                         status: "complete",
                         summary: "Returned the dashboard worker report.",
+                        launchAttempts: [],
                       },
                     ],
                     gates: [
