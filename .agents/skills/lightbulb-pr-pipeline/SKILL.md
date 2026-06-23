@@ -30,7 +30,7 @@ Use this under `lightbulb-maintainer-orchestrator` after queue triage chooses a 
 3. Spin up a maker thread with `lightbulb-delegate`: fresh worktree from `origin/dev`, exact objective, allowed files, forbidden actions, verification commands, visual evidence requirement, and PR title convention.
 4. Maker implements, verifies, commits, pushes, and opens a draft or ready PR against `dev` when parent/root has authorized that mutation.
 5. Parent records the PR URL, reads the diff, and runs or delegates `thermo-nuclear-code-quality-review` against the PR branch.
-6. Spin up a separate read-only reviewer thread; it reviews the filed PR diff against `origin/dev` for correctness, regression risk, missing tests, missing visual evidence, and duplicate agent/skill/command artifacts. Use `review` or `thermo-nuclear-code-quality-review` as inputs when the scope calls for them, but keep the reviewer thread separate from the maker.
+6. Spin up a separate read-only reviewer thread; it reviews the filed PR diff against `origin/dev` for correctness, regression risk, missing tests, missing visual evidence, and redundant agent/skill/command artifacts. Use `review` or `thermo-nuclear-code-quality-review` as inputs when the scope calls for them, but keep the reviewer thread separate from the maker.
 7. Parent records the current PR head SHA, polls for automatic Copilot review activity, uses one `gh pr edit <number> --add-reviewer @copilot` fallback only if no Copilot review or pending request appears, requests Codex review only when account limits allow it, then polls PR reviews, comments, checks, and merge state until a decision, timeout, or infrastructure blocker is clear. Stale reviews or comments from older head SHAs are context only.
 8. Feed actionable comments and failing checks back to the maker thread. Maker fixes in the same branch, reruns focused verification, pushes, and returns evidence plus the new head SHA.
 9. After every maker push, parent records the new head SHA, re-checks automatic Copilot and available Codex review status for that head, and asks the reviewer thread to re-check the changed diff when needed.
@@ -61,7 +61,7 @@ Include:
 
 - PR URL, base/head refs, and local checkout path
 - instruction to review only and make no edits
-- scope: correctness, regressions, tests, visual proof, duplicate artifacts, maintainability
+- scope: correctness, regressions, tests, visual proof, redundant artifacts, maintainability
 - required output: verdict, blocking issues, non-blocking issues, verification reviewed, residual risk
 
 ## Parent Closeout
