@@ -68,6 +68,10 @@ export const AcpCommand = effectCmd({
           process.stdin.on("end", () => resolve())
           process.stdin.on("error", reject)
         }),
+    ).pipe(
+      // Windows keeps the listener handle alive after stdin EOF unless the
+      // ACP command explicitly releases its internal server.
+      Effect.ensuring(Effect.promise(() => server.stop(true)).pipe(Effect.ignore)),
     )
   }),
 })
