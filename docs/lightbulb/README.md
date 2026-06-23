@@ -154,6 +154,20 @@ and exits. It uses `OPENCODE_DESKTOP_QA=1`, an in-memory database, a temporary u
 `OPENCODE_DESKTOP_REMOTE_DEBUGGING_PORT=off` so it can run next to a normal desktop dev session without stealing the
 default single-instance lock or DevTools port.
 
+Stable-v0 desktop surfaces can point the same harness at a seeded Lightbulb database:
+
+```bash
+OPENCODE_DB=/tmp/lightbulb-stable.db ./packages/opencode/bin/lightbulb dashboard --seed --format json
+cd packages/desktop
+OPENCODE_DB=/tmp/lightbulb-stable.db \
+  OPENCODE_DESKTOP_QA_ROUTE=/lightbulb/dashboard \
+  OPENCODE_DESKTOP_QA_SELECTOR="[data-page='lightbulb-dashboard']" \
+  bun run qa:browser -- --out ../../.lightbulb/evidence/desktop-stable-dashboard-qa
+```
+
+When `OPENCODE_DB` is omitted the QA harness still uses an isolated in-memory database. When it is provided, the desktop
+sidecar preserves it so the captured route can render real seeded goal, route, run, worker, artifact, and gate state.
+
 ## Scheduler Supervisor Passes
 
 The recurring scheduler supervisor is the account-level controller above loop admission. A supervisor pass reads loop
