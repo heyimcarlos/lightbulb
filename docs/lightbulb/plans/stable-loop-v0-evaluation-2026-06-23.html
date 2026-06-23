@@ -1,0 +1,524 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lightbulb Stable Loop v0 Evaluation - 2026-06-23</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f7f8fa;
+        --panel: #ffffff;
+        --ink: #17202a;
+        --muted: #5d6875;
+        --line: #dbe1e8;
+        --green: #137a43;
+        --amber: #9a6200;
+        --red: #b42318;
+        --blue: #245db5;
+        --violet: #6842b8;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      main {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 32px 24px 56px;
+      }
+
+      header {
+        border-bottom: 1px solid var(--line);
+        padding-bottom: 20px;
+        margin-bottom: 24px;
+      }
+
+      h1,
+      h2,
+      h3 {
+        line-height: 1.18;
+        margin: 0;
+      }
+
+      h1 {
+        font-size: 34px;
+        letter-spacing: 0;
+      }
+
+      h2 {
+        font-size: 21px;
+        margin-top: 32px;
+        margin-bottom: 12px;
+      }
+
+      h3 {
+        font-size: 16px;
+        margin-top: 18px;
+      }
+
+      p {
+        margin: 8px 0 0;
+      }
+
+      a {
+        color: var(--blue);
+        text-decoration: none;
+      }
+
+      a:hover {
+        text-decoration: underline;
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      .lede {
+        max-width: 920px;
+        font-size: 17px;
+      }
+
+      .grid {
+        display: grid;
+        gap: 12px;
+      }
+
+      .stats {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        margin: 20px 0 12px;
+      }
+
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 14px;
+      }
+
+      .stat-value {
+        display: block;
+        font-size: 28px;
+        font-weight: 700;
+        line-height: 1;
+      }
+
+      .stat-label {
+        display: block;
+        margin-top: 6px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .verdict {
+        border-left: 4px solid var(--amber);
+      }
+
+      .good {
+        color: var(--green);
+        font-weight: 650;
+      }
+
+      .warn {
+        color: var(--amber);
+        font-weight: 650;
+      }
+
+      .bad {
+        color: var(--red);
+        font-weight: 650;
+      }
+
+      .tag {
+        display: inline-block;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 2px 8px;
+        margin: 2px 4px 2px 0;
+        background: #f9fafb;
+        color: var(--muted);
+        font-size: 12px;
+        white-space: nowrap;
+      }
+
+      .tag.good {
+        border-color: #b6dfc5;
+        background: #eefaf2;
+        color: var(--green);
+      }
+
+      .tag.warn {
+        border-color: #ead28d;
+        background: #fff7dc;
+        color: var(--amber);
+      }
+
+      .tag.bad {
+        border-color: #f0b4ad;
+        background: #fff2f0;
+        color: var(--red);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid var(--line);
+        padding: 9px 10px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: #eef2f6;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+        color: #425063;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      code {
+        background: #eef2f6;
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        padding: 1px 5px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.92em;
+      }
+
+      pre {
+        overflow-x: auto;
+        background: #111827;
+        color: #f9fafb;
+        border-radius: 8px;
+        padding: 12px 14px;
+      }
+
+      ul,
+      ol {
+        margin: 8px 0 0 22px;
+        padding: 0;
+      }
+
+      li {
+        margin: 5px 0;
+      }
+
+      .two {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      }
+
+      @media (max-width: 880px) {
+        main {
+          padding: 24px 16px 44px;
+        }
+
+        .stats,
+        .two {
+          grid-template-columns: 1fr;
+        }
+
+        h1 {
+          font-size: 27px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Lightbulb Stable Loop v0 Evaluation</h1>
+        <p class="muted">Generated 2026-06-23 15:29 EDT from local repo state, GitHub issue/PR state, local evidence files, and focused package-local tests.</p>
+        <p class="lede">
+          Lightbulb has moved past "can model itself" into a tested control-plane spine: issue intake, pickup packets, loop runner ticks,
+          worker launch lifecycle, review gates, worker-runtime adapter shape, and worker report ingestion now exist. It still cannot be
+          called a stable self-building loop until live execution, recovery, operator visibility, safe-write gates, and human inbox flows
+          are connected end to end.
+        </p>
+      </header>
+
+      <section class="grid stats">
+        <div class="card">
+          <span class="stat-value">32</span>
+          <span class="stat-label">stable-v0 milestone issues</span>
+        </div>
+        <div class="card">
+          <span class="stat-value">13</span>
+          <span class="stat-label">closed stable-v0 issues</span>
+        </div>
+        <div class="card">
+          <span class="stat-value">19</span>
+          <span class="stat-label">open stable-v0 issues</span>
+        </div>
+        <div class="card">
+          <span class="stat-value">16</span>
+          <span class="stat-label">PRs merged on 2026-06-23</span>
+        </div>
+        <div class="card">
+          <span class="stat-value">1</span>
+          <span class="stat-label">open PR in flight</span>
+        </div>
+      </section>
+
+      <section class="card verdict">
+        <h2>Verdict</h2>
+        <p>
+          <strong>Current state:</strong> Lightbulb can now model and <em>simulate/test</em> the first self-build route through durable DB
+          state. It can classify issue work, create bounded pickup packets, admit a runner tick, create durable run/worker/task/launch
+          records, and ingest compact worker reports with artifact handles.
+        </p>
+        <p>
+          <strong>Not yet true:</strong> Lightbulb is not yet a stable autonomous self-builder. The current implementation still needs a
+          live worker execution pass, dashboard seed/migration stability, dependency reconciliation merged, operator read-model surfaces,
+          safe-write gates, human inbox, collision guards, crash recovery, and PR babysitting.
+        </p>
+        <p>
+          <strong>Distance:</strong> supervised dogfood is now close: finish PR #106, fix the dashboard seed migration failure, then run one
+          live route tick against a real ready issue and ingest a real worker report. Stable loop v0 is still several product slices away.
+        </p>
+      </section>
+
+      <h2>Live Queue Snapshot</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Area</th>
+            <th>Current evidence</th>
+            <th>Implication</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Repository</td>
+            <td>
+              <a href="https://github.com/heyimcarlos/lightbulb">heyimcarlos/lightbulb</a>, branch <code>lightbulb</code>. GitHub now reports
+              <code>lightbulb</code> as the default branch.
+            </td>
+            <td>The older local AGENTS note that says default branch <code>dev</code> is stale for this repo state.</td>
+          </tr>
+          <tr>
+            <td>Open PR</td>
+            <td>
+              <a href="https://github.com/heyimcarlos/lightbulb/pull/106">#106 feat(core): reconcile dependency holds</a> is
+              <span class="warn">UNSTABLE</span>; all checks except <code>unit (windows)</code> are green, and <code>unit (windows)</code> is still in progress.
+            </td>
+            <td>Do not count dependency reconciliation as complete yet.</td>
+          </tr>
+          <tr>
+            <td>Milestone</td>
+            <td>
+              <a href="https://github.com/heyimcarlos/lightbulb/milestone/1">Lightbulb stable loop v0</a> has 19 open issues and 13 closed issues.
+              Open labels: 15 <code>ready-for-agent</code>, 4 <code>ready-for-human</code>, 0 <code>needs-triage</code>.
+            </td>
+            <td>The queue is mostly agent-ready, but the hard control-plane and safety surfaces remain.</td>
+          </tr>
+          <tr>
+            <td>Local verification</td>
+            <td>
+              <code>cd packages/core &amp;&amp; bun test test/lightbulb-pickup-packet.test.ts test/lightbulb-worker-report.test.ts test/lightbulb-worker-launch.test.ts test/lightbulb-loop-runner-tick.test.ts</code>
+              passed: 19 tests, 0 fail.
+            </td>
+            <td>The core route-runner spine is test-backed.</td>
+          </tr>
+          <tr>
+            <td>Local smoke</td>
+            <td>
+              <code>lightbulb dashboard --seed --format json</code> failed with <code>table lightbulb_worker_launch_attempt already exists</code>.
+            </td>
+            <td>Dashboard seed/local migration idempotency is now a dogfood blocker.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>What Landed Since The Earlier Estimate</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Capability</th>
+            <th>Status</th>
+            <th>Evidence</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Loop profile registry and readiness metadata</td>
+            <td><span class="tag good">Done</span></td>
+            <td><a href="https://github.com/heyimcarlos/lightbulb/issues/73">#73</a>, <a href="https://github.com/heyimcarlos/lightbulb/pull/85">PR #85</a></td>
+          </tr>
+          <tr>
+            <td>Structured pickup packets</td>
+            <td><span class="tag good">Done</span></td>
+            <td><a href="https://github.com/heyimcarlos/lightbulb/issues/74">#74</a>, <a href="https://github.com/heyimcarlos/lightbulb/pull/101">PR #101</a>; focused pickup tests passed.</td>
+          </tr>
+          <tr>
+            <td>Issue queue intake</td>
+            <td><span class="tag good">Done</span></td>
+            <td><a href="https://github.com/heyimcarlos/lightbulb/issues/12">#12</a>, <a href="https://github.com/heyimcarlos/lightbulb/pull/100">PR #100</a></td>
+          </tr>
+          <tr>
+            <td>Account loop runner tick</td>
+            <td><span class="tag good">Done in core tests</span></td>
+            <td><a href="https://github.com/heyimcarlos/lightbulb/issues/26">#26</a>, <a href="https://github.com/heyimcarlos/lightbulb/pull/95">PR #95</a>; records run/task/worker/launch state without launching a live model in tests.</td>
+          </tr>
+          <tr>
+            <td>Worker launch adapter and lifecycle</td>
+            <td><span class="tag good">Done in core tests</span></td>
+            <td><a href="https://github.com/heyimcarlos/lightbulb/issues/22">#22</a>, <a href="https://github.com/heyimcarlos/lightbulb/pull/91">PR #91</a>, <a href="https://github.com/heyimcarlos/lightbulb/pull/102">PR #102</a></td>
+          </tr>
+          <tr>
+            <td>Worker-runtime adapter contract</td>
+            <td><span class="tag good">Done</span></td>
+            <td><a href="https://github.com/heyimcarlos/lightbulb/issues/90">#90</a>, <a href="https://github.com/heyimcarlos/lightbulb/pull/94">PR #94</a>; OpenCode native is default, Flue remains comparable/optional.</td>
+          </tr>
+          <tr>
+            <td>Review and adversarial PR gates</td>
+            <td><span class="tag good">Done in core and CI</span></td>
+            <td><a href="https://github.com/heyimcarlos/lightbulb/issues/10">#10</a>, <a href="https://github.com/heyimcarlos/lightbulb/issues/86">#86</a>, <a href="https://github.com/heyimcarlos/lightbulb/pull/103">PR #103</a>, <a href="https://github.com/heyimcarlos/lightbulb/pull/88">PR #88</a></td>
+          </tr>
+          <tr>
+            <td>Worker final report ingestion</td>
+            <td><span class="tag good">Done in core tests</span></td>
+            <td><a href="https://github.com/heyimcarlos/lightbulb/issues/18">#18</a>, <a href="https://github.com/heyimcarlos/lightbulb/pull/105">PR #105</a>; rejects raw transcript content and opens review gate for needs-review reports.</td>
+          </tr>
+          <tr>
+            <td>Read-only desktop PR review status</td>
+            <td><span class="tag good">Done</span></td>
+            <td><a href="https://github.com/heyimcarlos/lightbulb/issues/68">#68</a>, <a href="https://github.com/heyimcarlos/lightbulb/pull/84">PR #84</a></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>Still Missing For Stable v0</h2>
+      <div class="grid two">
+        <section class="card">
+          <h3>Required before a credible supervised dogfood</h3>
+          <ol>
+            <li>
+              Finish <a href="https://github.com/heyimcarlos/lightbulb/pull/106">PR #106</a> / <a href="https://github.com/heyimcarlos/lightbulb/issues/29">#29</a>
+              so dependency-blocked work can unblock deterministically.
+            </li>
+            <li>
+              Fix the local dashboard seed/migration failure:
+              <code>table lightbulb_worker_launch_attempt already exists</code>.
+            </li>
+            <li>
+              Run one real end-to-end dogfood route:
+              <code>discover issue -> pickup packet -> worker launch -> report artifact -> review gate -> dashboard status</code>.
+            </li>
+            <li>
+              Make the resulting state visible through the operator snapshot feed and TUI/desktop surfaces.
+            </li>
+          </ol>
+        </section>
+
+        <section class="card">
+          <h3>Required before stable autonomous use</h3>
+          <ol>
+            <li>Crash-safe run recovery: <a href="https://github.com/heyimcarlos/lightbulb/issues/14">#14</a>.</li>
+            <li>Operations snapshot and exports: <a href="https://github.com/heyimcarlos/lightbulb/issues/33">#33</a>, <a href="https://github.com/heyimcarlos/lightbulb/issues/75">#75</a>.</li>
+            <li>Read-only TUI status: <a href="https://github.com/heyimcarlos/lightbulb/issues/67">#67</a>.</li>
+            <li>Loop readiness audit: <a href="https://github.com/heyimcarlos/lightbulb/issues/76">#76</a>.</li>
+            <li>Discovery/PR babysitting: <a href="https://github.com/heyimcarlos/lightbulb/issues/77">#77</a>, <a href="https://github.com/heyimcarlos/lightbulb/issues/78">#78</a>.</li>
+            <li>Collision guards: <a href="https://github.com/heyimcarlos/lightbulb/issues/79">#79</a>.</li>
+            <li>Safe-write and human gates: <a href="https://github.com/heyimcarlos/lightbulb/issues/80">#80</a>, <a href="https://github.com/heyimcarlos/lightbulb/issues/81">#81</a>, <a href="https://github.com/heyimcarlos/lightbulb/issues/38">#38</a>, <a href="https://github.com/heyimcarlos/lightbulb/issues/52">#52</a>.</li>
+            <li>Budget and supervisor loops: <a href="https://github.com/heyimcarlos/lightbulb/issues/27">#27</a>, <a href="https://github.com/heyimcarlos/lightbulb/issues/6">#6</a>.</li>
+            <li>Starters and hill-climbing: <a href="https://github.com/heyimcarlos/lightbulb/issues/82">#82</a>, <a href="https://github.com/heyimcarlos/lightbulb/issues/83">#83</a>.</li>
+          </ol>
+        </section>
+      </div>
+
+      <h2>Open Stable-v0 Issues</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Issue</th>
+            <th>Title</th>
+            <th>State</th>
+            <th>Why it matters</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><a href="https://github.com/heyimcarlos/lightbulb/issues/29">#29</a></td><td>Dependency unblock reconciliation</td><td><span class="tag warn">PR #106 in flight</span></td><td>Lets the loop stop skipping work after prerequisite issues close.</td></tr>
+          <tr><td><a href="https://github.com/heyimcarlos/lightbulb/issues/33">#33</a></td><td>Loop operations snapshot feed</td><td><span class="tag good">ready-for-agent</span></td><td>Operator surfaces need one compact feed for run, worker, gate, and wake state.</td></tr>
+          <tr><td><a href="https://github.com/heyimcarlos/lightbulb/issues/67">#67</a></td><td>TUI read-only PR review goal status</td><td><span class="tag good">ready-for-agent</span></td><td>Terminal dogfooding needs the same route visibility as desktop.</td></tr>
+          <tr><td><a href="https://github.com/heyimcarlos/lightbulb/issues/75">#75</a></td><td>Export loop state budget and run logs</td><td><span class="tag good">ready-for-agent</span></td><td>Needed for auditable long-running loop memory and debugging.</td></tr>
+          <tr><td><a href="https://github.com/heyimcarlos/lightbulb/issues/76">#76</a></td><td>Native loop readiness audit</td><td><span class="tag good">ready-for-agent</span></td><td>Prevents loops from launching before profiles, budgets, gates, and connectors are ready.</td></tr>
+          <tr><td><a href="https://github.com/heyimcarlos/lightbulb/issues/77">#77</a></td><td>System discovery candidate inbox</td><td><span class="tag good">ready-for-agent</span></td><td>Turns read-only GitHub observation into human-admitted goal candidates.</td></tr>
+          <tr><td><a href="https://github.com/heyimcarlos/lightbulb/issues/78">#78</a></td><td>PR babysitter route state digest</td><td><span class="tag good">ready-for-agent</span></td><td>Lets the PR conveyor sleep/wake on CI, review, and comment changes.</td></tr>
+          <tr><td><a href="https://github.com/heyimcarlos/lightbulb/issues/79">#79</a></td><td>Multi-loop ownership and collision guards</td><td><span class="tag good">ready-for-agent</span></td><td>Prevents multiple workers from writing to the same branch, PR, or path group.</td></tr>
+          <tr><td><a href="https://github.com/heyimcarlos/lightbulb/issues/80">#80</a></td><td>Safe-write connector policy gates</td><td><span class="tag good">ready-for-agent</span></td><td>Required before automatic GitHub writes, pushes, labels, comments, or merge actions.</td></tr>
+          <tr><td><a href="https://github.com/heyimcarlos/lightbulb/issues/81">#81</a></td><td>Human inbox and escalation digest</td><td><span class="tag good">ready-for-agent</span></td><td>Needed for route holds, approvals, risky writes, and unresolved review gates.</td></tr>
+          <tr><td><a href="https://github.com/heyimcarlos/lightbulb/issues/82">#82</a></td><td>Loop profile starters and bootstrap</td><td><span class="tag good">ready-for-agent</span></td><td>Makes useful loops repeatable instead of hand-assembled.</td></tr>
+          <tr><td><a href="https://github.com/heyimcarlos/lightbulb/issues/83">#83</a></td><td>Trace-eval failure mode loop</td><td><span class="tag good">ready-for-agent</span></td><td>Starts hill-climbing from failed gates, flaky CI, and bad worker reports.</td></tr>
+          <tr><td><a href="https://github.com/heyimcarlos/lightbulb/issues/38">#38</a></td><td>GitHub issue mutation outbox</td><td><span class="tag good">ready-for-agent</span></td><td>Separates proposed GitHub writes from applied GitHub writes.</td></tr>
+          <tr><td><a href="https://github.com/heyimcarlos/lightbulb/issues/52">#52</a></td><td>Operator-approved issue mutation apply pass</td><td><span class="tag good">ready-for-agent</span></td><td>Turns safe-write proposals into explicitly approved mutations.</td></tr>
+          <tr><td><a href="https://github.com/heyimcarlos/lightbulb/issues/14">#14</a></td><td>Crash-safe run recovery</td><td><span class="tag good">ready-for-agent</span></td><td>Required before long-running or unattended execution is credible.</td></tr>
+          <tr><td><a href="https://github.com/heyimcarlos/lightbulb/issues/1">#1</a>, <a href="https://github.com/heyimcarlos/lightbulb/issues/6">#6</a>, <a href="https://github.com/heyimcarlos/lightbulb/issues/27">#27</a>, <a href="https://github.com/heyimcarlos/lightbulb/issues/72">#72</a></td><td>Human strategy/rollup issues</td><td><span class="tag warn">ready-for-human</span></td><td>These should remain steering/acceptance anchors rather than direct worker tasks.</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Recommended Route From Here</h2>
+      <ol>
+        <li>
+          <strong>Close the current in-flight lane:</strong> wait for <code>unit (windows)</code> on
+          <a href="https://github.com/heyimcarlos/lightbulb/pull/106">PR #106</a>, patch if needed, then merge.
+        </li>
+        <li>
+          <strong>Fix local dogfood smoke:</strong> make <code>lightbulb dashboard --seed --format json</code> tolerate the current migrated
+          database or use a fresh isolated data path by default for seed smoke.
+        </li>
+        <li>
+          <strong>Run one real self-build route:</strong> choose one ready issue, execute a runner tick, launch an OpenCode-native worker,
+          ingest its report artifact, open or approve the review gate, and show the state in the dashboard.
+        </li>
+        <li>
+          <strong>Build operator visibility next:</strong> implement <a href="https://github.com/heyimcarlos/lightbulb/issues/33">#33</a> and
+          <a href="https://github.com/heyimcarlos/lightbulb/issues/67">#67</a> before adding more automation.
+        </li>
+        <li>
+          <strong>Add safety gates before write autonomy:</strong> prioritize <a href="https://github.com/heyimcarlos/lightbulb/issues/76">#76</a>,
+          <a href="https://github.com/heyimcarlos/lightbulb/issues/80">#80</a>, and <a href="https://github.com/heyimcarlos/lightbulb/issues/81">#81</a>.
+        </li>
+      </ol>
+
+      <h2>Updated Short Answer</h2>
+      <pre>Before:
+  Lightbulb could model itself but not drive itself.
+
+Now:
+  Lightbulb has a tested route-runner/worker/report spine and can almost run a supervised self-build pass.
+  It still cannot be trusted as a stable autonomous loop until live execution, recovery, operator surfaces,
+  safe-write gates, and human inbox flows are connected and proven.</pre>
+
+      <h2>Commands And Sources Used</h2>
+      <ul>
+        <li><code>git status --short --branch</code> and <code>gh repo view --json nameWithOwner,url,defaultBranchRef</code></li>
+        <li><code>gh issue list --state open/closed --limit 200 --json ...</code></li>
+        <li><code>gh pr list --state open/closed --limit 100 --json ...</code></li>
+        <li><code>gh pr view 106 --json ...</code></li>
+        <li><code>cd packages/core &amp;&amp; bun test test/lightbulb-pickup-packet.test.ts test/lightbulb-worker-report.test.ts test/lightbulb-worker-launch.test.ts test/lightbulb-loop-runner-tick.test.ts</code></li>
+        <li><code>OPENCODE_CLI_NAME=lightbulb bun --conditions=browser packages/opencode/src/index.ts dashboard --seed --format json</code></li>
+        <li>Local evidence files under <code>.lightbulb/evidence/issue-*</code> and <code>.lightbulb/runs/</code></li>
+      </ul>
+    </main>
+  </body>
+</html>
