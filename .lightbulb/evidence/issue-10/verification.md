@@ -3,9 +3,9 @@
 ## Local Commands
 
 - `cd packages/core && bun test test/lightbulb-review-gate.test.ts` - pass, 3 tests.
-- `cd packages/core && bun test test/lightbulb-review-gate.test.ts test/lightbulb-policy.test.ts test/lightbulb-decision-artifact.test.ts test/lightbulb-loop-runner-tick.test.ts` - pass, 23 tests.
+- `cd packages/core && bun test test/lightbulb-review-gate.test.ts test/lightbulb-policy.test.ts test/lightbulb-decision-artifact.test.ts test/lightbulb-loop-runner-tick.test.ts test/lightbulb.test.ts` - pass, 45 tests.
 - `cd packages/core && bun typecheck` - pass.
-- `git diff --check` - pass.
+- `git diff --check origin/lightbulb...HEAD` - pass.
 - `bun run script/adversarial-review.ts --base origin/lightbulb --head HEAD --markdown .lightbulb/evidence/issue-10/adversarial-review.md` - pass, no blockers.
 
 ## Visual / Read-Model Evidence
