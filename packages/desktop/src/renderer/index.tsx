@@ -17,8 +17,8 @@ import {
 import type { UpdaterState } from "@opencode-ai/app/updater"
 import * as Sentry from "@sentry/solid"
 import type { AsyncStorage } from "@solid-primitives/storage"
-import { MemoryRouter } from "@solidjs/router"
-import { createEffect, createMemo, createResource, createSignal, onCleanup, onMount, Show } from "solid-js"
+import { createMemoryHistory, MemoryRouter, type BaseRouterProps } from "@solidjs/router"
+import { createEffect, createMemo, createResource, createSignal, onCleanup, onMount, Show, type Component } from "solid-js"
 import { render } from "solid-js/web"
 import pkg from "../../package.json"
 import { initI18n, t } from "./i18n"
@@ -30,6 +30,7 @@ import { Splash } from "@opencode-ai/ui/logo"
 import { useTheme } from "@opencode-ai/ui/theme/context"
 
 const root = document.getElementById("root")
+const router = desktopQaRoute(import.meta.env.OPENCODE_DESKTOP_QA_ROUTE) ?? MemoryRouter
 if (import.meta.env.DEV && !(root instanceof HTMLElement)) {
   throw new Error(t("error.dev.rootNotFound"))
 }
@@ -367,7 +368,7 @@ render(() => {
       <Show when={ready()} fallback={splash}>
         <Show when={effectiveDefaultServer()} keyed>
           {(key) => (
-            <AppInterface defaultServer={key} servers={servers()} router={MemoryRouter}>
+            <AppInterface defaultServer={key} servers={servers()} router={router}>
               <Inner />
             </AppInterface>
           )}
@@ -391,3 +392,10 @@ render(() => {
     </PlatformProvider>
   )
 }, root!)
+
+function desktopQaRoute(value?: string): Component<BaseRouterProps> | undefined {
+  if (!value?.startsWith("/")) return
+  const history = createMemoryHistory()
+  history.set({ value, replace: true })
+  return (props) => <MemoryRouter {...props} history={history} />
+}

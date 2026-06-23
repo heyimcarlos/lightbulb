@@ -80,6 +80,9 @@ export default defineConfig({
     },
   },
   renderer: {
+    define: {
+      "import.meta.env.OPENCODE_DESKTOP_QA_ROUTE": JSON.stringify(process.env.OPENCODE_DESKTOP_QA_ROUTE ?? ""),
+    },
     plugins: [appPlugin, sentry],
     publicDir: "../../../app/public",
     root: "src/renderer",
