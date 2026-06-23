@@ -16,17 +16,8 @@ import { it } from "./lib/effect"
 const now = Date.UTC(2026, 5, 23, 18)
 
 const defaultPolicy = {
-  schedule: {
-    enabled: true,
-    cadenceMs: 60_000,
-  },
-  budget: {
-    status: "open",
-    maxRunsPerDay: 3,
-    maxTokens: 120_000,
-    maxCostUsd: 12,
-    maxContextTokens: 480_000,
-  },
+  schedule: { enabled: true, cadenceMs: 60_000 },
+  budget: { status: "open", maxRunsPerDay: 3, maxTokens: 120_000, maxCostUsd: 12, maxContextTokens: 480_000 },
 } satisfies Lightbulb.LoopProfileDefaultPolicy
 
 function layer(directory: string) {
