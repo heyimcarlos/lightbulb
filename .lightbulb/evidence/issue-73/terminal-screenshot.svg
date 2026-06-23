@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="560" viewBox="0 0 1180 560" role="img" aria-labelledby="title desc">
+  <title id="title">Issue 73 terminal verification summary</title>
+  <desc id="desc">A terminal-style visual evidence card showing loop profile registry tests, scheduler adjacency tests, typecheck, and diff check passing.</desc>
+  <rect width="1180" height="560" fill="#101418"/>
+  <rect x="24" y="24" width="1132" height="512" rx="8" fill="#171d23" stroke="#34404c"/>
+  <rect x="24" y="24" width="1132" height="42" rx="8" fill="#222a32"/>
+  <circle cx="52" cy="45" r="7" fill="#ff6b6b"/>
+  <circle cx="76" cy="45" r="7" fill="#ffd166"/>
+  <circle cx="100" cy="45" r="7" fill="#4ecdc4"/>
+  <text x="132" y="51" fill="#c9d1d9" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15">/home/ren/wt/lightbulb/loop-profiles</text>
+  <text x="48" y="112" fill="#7ee787" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17">$ cd packages/core &amp;&amp; bun test test/lightbulb.loop-profile.test.ts test/lightbulb.test.ts</text>
+  <text x="48" y="152" fill="#d0d7de" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17">Loop profile registry metadata plus core dashboard regression suite</text>
+  <text x="48" y="184" fill="#7ee787" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17">33 pass, 0 fail, 197 expect() calls</text>
+  <text x="48" y="238" fill="#7ee787" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17">$ cd packages/core &amp;&amp; bun test scheduler/run-ledger/supervisor adjacency</text>
+  <text x="48" y="278" fill="#d0d7de" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17">Scheduler, due-run admission, and supervisor behavior stayed stable</text>
+  <text x="48" y="310" fill="#7ee787" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17">19 pass, 0 fail, 74 expect() calls</text>
+  <text x="48" y="364" fill="#7ee787" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17">$ cd packages/core &amp;&amp; bun typecheck</text>
+  <text x="48" y="404" fill="#d0d7de" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17">$ tsgo --noEmit</text>
+  <text x="48" y="436" fill="#7ee787" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17">core typecheck passed</text>
+  <text x="48" y="490" fill="#7ee787" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17">$ git diff --check origin/dev...HEAD</text>
+  <text x="48" y="522" fill="#7ee787" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17">whitespace check passed</text>
+</svg>

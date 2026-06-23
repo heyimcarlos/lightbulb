@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm"
+import { and, asc, eq } from "drizzle-orm"
 import { Effect } from "effect"
 import type { Database } from "../database/database"
 import type { Lightbulb } from "../lightbulb"
@@ -14,6 +14,50 @@ export type LoopProfileBudgetEnvelope = {
   readonly maxContextTokens: number
   readonly holdReason?: string
 }
+
+export type LoopProfileRisk = "low" | "medium" | "high"
+
+export type LoopProfileReadinessMode = "automatic" | "human_gate" | "manual"
+
+export type LoopProfileTokenCostTier = "low" | "medium" | "high"
+
+export type LoopProfileRegistryPhase = {
+  readonly id: string
+  readonly goal: string
+}
+
+export type LoopProfileRegistryMetadata = {
+  readonly name: string
+  readonly goal: string
+  readonly cadence: string
+  readonly risk: LoopProfileRisk
+  readonly skills: readonly string[]
+  readonly state: string
+  readonly readModel: string
+  readonly phases: readonly LoopProfileRegistryPhase[]
+  readonly humanGates: readonly string[]
+  readonly readinessMode: LoopProfileReadinessMode
+  readonly tokenCostTier: LoopProfileTokenCostTier
+  readonly dailyCap: number
+  readonly earlyExitRequirement: string
+  readonly starterRef?: string
+}
+
+export type LoopProfileInvalidFieldReason =
+  | "missing_profile_metadata"
+  | "invalid_profile_name"
+  | "invalid_profile_goal"
+  | "invalid_profile_cadence"
+  | "invalid_profile_risk"
+  | "invalid_profile_skills"
+  | "invalid_profile_state"
+  | "invalid_profile_read_model"
+  | "invalid_profile_phases"
+  | "invalid_profile_human_gates"
+  | "invalid_readiness_mode"
+  | "invalid_token_cost_tier"
+  | "invalid_daily_cap"
+  | "invalid_early_exit_requirement"
 
 export type LoopProfileScheduleEnvelope = {
   readonly enabled: boolean
@@ -51,8 +95,32 @@ export type LoopProfileDefinition = {
   readonly profileID: LoopProfileID
   readonly kind: Lightbulb.LoopKind
   readonly summary: string
+  readonly registry?: LoopProfileRegistryMetadata
   readonly schedule?: LoopProfileScheduleOverride
   readonly budget?: LoopProfileBudgetOverride
+}
+
+export type LoopProfileCompactSummary = {
+  readonly profileID: LoopProfileID
+  readonly loopID: Lightbulb.LoopID | null
+  readonly kind: Lightbulb.LoopKind | null
+  readonly name: string
+  readonly goal: string
+  readonly cadence: string
+  readonly cadenceMs: number | null
+  readonly risk: LoopProfileRisk
+  readonly skills: readonly string[]
+  readonly state: string
+  readonly readModel: string
+  readonly phases: readonly LoopProfileRegistryPhase[]
+  readonly humanGates: readonly string[]
+  readonly readinessMode: LoopProfileReadinessMode
+  readonly tokenCostTier: LoopProfileTokenCostTier
+  readonly dailyCap: number
+  readonly earlyExitRequirement: string
+  readonly starterRef?: string
+  readonly ready: boolean
+  readonly invalidProfileReasons: readonly LoopProfileInvalidFieldReason[]
 }
 
 export type LoopProfileGoalRef = {
@@ -127,6 +195,7 @@ export type LoopProfileReason =
   | "profile_disabled"
   | "budget_held"
   | "custom_policy"
+  | "invalid_registry_metadata"
   | "invalid_profile_id"
   | "duplicate_profile_id"
   | "invalid_loop_kind"
@@ -143,6 +212,7 @@ export type LoopProfileHandle = {
   readonly schedule: LoopProfileScheduleEnvelope | null
   readonly budget: LoopProfileBudgetEnvelope | null
   readonly summary: string
+  readonly profile: LoopProfileCompactSummary
 }
 
 export type LoopProfileBootstrapSummary = LoopProfileGoalRef & {
@@ -158,6 +228,8 @@ type ValidatedProfile =
   | {
       readonly valid: true
       readonly definition: LoopProfileDefinition
+      readonly registry: LoopProfileRegistryMetadata
+      readonly invalidProfileReasons: readonly LoopProfileInvalidFieldReason[]
       readonly schedule: LoopProfileScheduleEnvelope
       readonly budget: LoopProfileBudgetEnvelope
       readonly status: Lightbulb.LoopStatus
@@ -173,6 +245,8 @@ export type LoopProfileMetadata = {
   readonly managed: boolean
   readonly schedule: LoopProfileScheduleEnvelope & { readonly custom: boolean }
   readonly budget: LoopProfileBudgetEnvelope & { readonly custom: boolean }
+  readonly registry: LoopProfileRegistryMetadata | null
+  readonly invalidProfileReasons: readonly LoopProfileInvalidFieldReason[]
 }
 
 export const standardAccountLoopProfiles: readonly LoopProfileDefinition[] = [
@@ -180,26 +254,121 @@ export const standardAccountLoopProfiles: readonly LoopProfileDefinition[] = [
     profileID: "discovery",
     kind: "discovery",
     summary: "Discover ready account work and produce bounded task candidates.",
+    registry: {
+      name: "Daily triage",
+      goal: "Find ready work, blockers, and candidate slices before worker dispatch.",
+      cadence: "Every 6h",
+      risk: "low",
+      skills: ["triage", "codebase-research", "issue-slicing"],
+      state: "scanning",
+      readModel: "account graph, route stops, scheduler outcomes, and issue queue",
+      phases: [
+        { id: "scan", goal: "Read current goals, routes, blockers, and recent scheduler outcomes." },
+        { id: "slice", goal: "Emit bounded candidate work items or stop when nothing is ready." },
+      ],
+      humanGates: ["needs-info", "ready-for-human"],
+      readinessMode: "automatic",
+      tokenCostTier: "medium",
+      dailyCap: 4,
+      earlyExitRequirement: "Exit when no blocker-free account work can be sliced.",
+      starterRef: "patterns/registry.yaml#daily-triage",
+    },
   },
   {
     profileID: "implementation",
     kind: "implementation",
     summary: "Dispatch bounded implementation workers for ready account work.",
+    registry: {
+      name: "Implementation dispatch",
+      goal: "Send one bounded ready slice to a fresh worker with enough context to return artifacts.",
+      cadence: "Every 6h",
+      risk: "high",
+      skills: ["implementation", "test-selection", "artifact-reporting"],
+      state: "ready-for-agent",
+      readModel: "ready route stop, context bundle manifest, and active run ledger",
+      phases: [
+        { id: "packet", goal: "Select one ready task packet and assemble the worker packet." },
+        { id: "dispatch", goal: "Launch or record the bounded implementation assignment." },
+      ],
+      humanGates: ["budget", "context", "review-required"],
+      readinessMode: "human_gate",
+      tokenCostTier: "high",
+      dailyCap: 4,
+      earlyExitRequirement: "Exit before dispatch when no ready packet or unresolved gate exists.",
+      starterRef: "patterns/registry.yaml#implementation",
+    },
   },
   {
     profileID: "debug",
     kind: "debug",
     summary: "Reproduce and isolate failures returned by workers or gates.",
+    registry: {
+      name: "Failure diagnosis",
+      goal: "Turn failing worker evidence into a minimal repro, diagnosis, or recovery packet.",
+      cadence: "Every 6h",
+      risk: "medium",
+      skills: ["diagnosis", "log-reading", "regression-test-selection"],
+      state: "recovery-required",
+      readModel: "failed runs, stale workers, gates, and returned artifacts",
+      phases: [
+        { id: "reproduce", goal: "Reproduce the returned failure from durable evidence." },
+        { id: "isolate", goal: "Reduce the failure into a bounded fix or escalation packet." },
+      ],
+      humanGates: ["needs-info", "failed-gate"],
+      readinessMode: "automatic",
+      tokenCostTier: "medium",
+      dailyCap: 4,
+      earlyExitRequirement: "Exit when no failed run, stale worker, or recovery hold is visible.",
+      starterRef: "patterns/registry.yaml#debug",
+    },
   },
   {
     profileID: "review-integration",
     kind: "integration",
     summary: "Review worker artifacts and integrate accepted changes through gates.",
+    registry: {
+      name: "PR review and integration",
+      goal: "Review returned worker artifacts, verify evidence, and move accepted changes through integration gates.",
+      cadence: "Every 6h",
+      risk: "high",
+      skills: ["code-review", "verification", "release-gating"],
+      state: "review-required",
+      readModel: "worker reports, artifact handles, gates, and PR review routes",
+      phases: [
+        { id: "review", goal: "Audit returned diffs and evidence before integration." },
+        { id: "integrate", goal: "Record accepted artifacts and surface unresolved gates." },
+      ],
+      humanGates: ["approval", "ci", "merge"],
+      readinessMode: "human_gate",
+      tokenCostTier: "high",
+      dailyCap: 4,
+      earlyExitRequirement: "Exit when no returned artifact is ready for review or a gate blocks integration.",
+      starterRef: "patterns/registry.yaml#pr-review",
+    },
   },
   {
     profileID: "status",
     kind: "status",
     summary: "Publish compact account-loop status for the operator and scheduler.",
+    registry: {
+      name: "Status digest",
+      goal: "Publish the smallest useful operator view of loop health, blockers, budgets, and next wakeups.",
+      cadence: "Every 6h",
+      risk: "low",
+      skills: ["summarization", "audit", "scheduler-read-models"],
+      state: "reporting",
+      readModel: "dashboard, scheduler ticks, loop summaries, and artifact handles",
+      phases: [
+        { id: "summarize", goal: "Collect compact loop and scheduler read models." },
+        { id: "publish", goal: "Emit an operator-safe status summary without raw worker text." },
+      ],
+      humanGates: [],
+      readinessMode: "automatic",
+      tokenCostTier: "low",
+      dailyCap: 4,
+      earlyExitRequirement: "Exit after publishing the bounded status digest.",
+      starterRef: "patterns/registry.yaml#status",
+    },
   },
 ]
 
@@ -239,6 +408,8 @@ export function bootstrapLoopProfiles(input: LoopProfileBootstrapInput) {
                 reason: "missing_goal",
                 schedule: profile.schedule,
                 budget: profile.budget,
+                registry: profile.registry,
+                invalidProfileReasons: profile.invalidProfileReasons,
               })
             : profile.handle,
         ),
@@ -256,6 +427,8 @@ export function bootstrapLoopProfiles(input: LoopProfileBootstrapInput) {
                 reason: "goal_not_active",
                 schedule: profile.schedule,
                 budget: profile.budget,
+                registry: profile.registry,
+                invalidProfileReasons: profile.invalidProfileReasons,
               })
             : profile.handle,
         ),
@@ -299,7 +472,10 @@ export function databaseLoopProfileStorage(
         .from(LightbulbLoopTable)
         .where(and(eq(LightbulbLoopTable.account_id, input.accountID), eq(LightbulbLoopTable.goal_id, input.goalID)))
         .all()
-        .pipe(Effect.orDie, Effect.map((loops) => loops.map(toStoredLoop))),
+        .pipe(
+          Effect.orDie,
+          Effect.map((loops) => loops.map(toStoredLoop)),
+        ),
     createLoop: (input) =>
       db
         .transaction((tx) =>
@@ -396,6 +572,23 @@ export function databaseLoopProfileStorage(
   }
 }
 
+export function readLoopProfileSummariesInDb(db: Database.Interface["db"], input: LoopProfileGoalRef) {
+  return db
+    .select()
+    .from(LightbulbLoopTable)
+    .where(and(eq(LightbulbLoopTable.account_id, input.accountID), eq(LightbulbLoopTable.goal_id, input.goalID)))
+    .orderBy(asc(LightbulbLoopTable.time_created))
+    .all()
+    .pipe(
+      Effect.orDie,
+      Effect.map((loops) =>
+        loops
+          .map((loop) => toLoopProfileCompactSummary(toStoredLoop(loop)))
+          .filter((profile): profile is LoopProfileCompactSummary => profile !== null),
+      ),
+    )
+}
+
 function bootstrapProfile(
   input: LoopProfileBootstrapInput,
   loops: readonly LoopProfileStoredLoop[],
@@ -426,6 +619,8 @@ function bootstrapProfile(
         reason: profile.reason,
         schedule: profile.schedule,
         budget: profile.budget,
+        registry: profile.registry,
+        invalidProfileReasons: profile.invalidProfileReasons,
       })
     }
 
@@ -437,6 +632,8 @@ function bootstrapProfile(
         reason: "custom_policy",
         schedule: current?.schedule ?? profile.schedule,
         budget: current?.budget ?? profile.budget,
+        registry: current?.registry ?? profile.registry,
+        invalidProfileReasons: current?.invalidProfileReasons ?? profile.invalidProfileReasons,
       })
     }
 
@@ -450,6 +647,8 @@ function bootstrapProfile(
         reason: profile.reason,
         schedule: refreshed.schedule,
         budget: refreshed.budget,
+        registry: refreshed.registry,
+        invalidProfileReasons: refreshed.invalidProfileReasons,
       })
     }
 
@@ -469,6 +668,8 @@ function bootstrapProfile(
       reason: profile.reason,
       schedule: refreshed.schedule,
       budget: refreshed.budget,
+      registry: refreshed.registry,
+      invalidProfileReasons: refreshed.invalidProfileReasons,
     })
   })
 }
@@ -495,6 +696,7 @@ function validateProfiles(input: LoopProfileBootstrapInput): readonly ValidatedP
       maxContextTokens: definition.budget?.maxContextTokens ?? input.defaultPolicy.budget.maxContextTokens,
       holdReason: definition.budget?.holdReason ?? input.defaultPolicy.budget.holdReason,
     }
+    const registry = normalizeProfileRegistry(definition, schedule, budget)
 
     if (!isValidProfileID(definition.profileID)) return invalidProfile(definition, "invalid_profile_id")
     if ((profileCounts.get(definition.profileID) ?? 0) > 1) return invalidProfile(definition, "duplicate_profile_id")
@@ -516,12 +718,17 @@ function validateProfiles(input: LoopProfileBootstrapInput): readonly ValidatedP
     ) {
       return invalidProfile(definition, "invalid_budget")
     }
+    if (registry.invalidProfileReasons.length > 0) {
+      return invalidProfile(definition, "invalid_registry_metadata", registry.registry, registry.invalidProfileReasons)
+    }
 
     const status = !enabled ? "disabled" : budget.status === "held" ? "held" : "active"
 
     return {
       valid: true,
       definition,
+      registry: registry.registry,
+      invalidProfileReasons: registry.invalidProfileReasons,
       schedule: {
         ...schedule,
         nextDueAt: enabled && budget.status === "open" ? schedule.nextDueAt : null,
@@ -533,7 +740,12 @@ function validateProfiles(input: LoopProfileBootstrapInput): readonly ValidatedP
   })
 }
 
-function invalidProfile(definition: LoopProfileDefinition, reason: LoopProfileReason): ValidatedProfile {
+function invalidProfile(
+  definition: LoopProfileDefinition,
+  reason: LoopProfileReason,
+  registry?: LoopProfileRegistryMetadata,
+  invalidProfileReasons: readonly LoopProfileInvalidFieldReason[] = [],
+): ValidatedProfile {
   return {
     valid: false,
     handle: toHandle(definition, {
@@ -542,6 +754,8 @@ function invalidProfile(definition: LoopProfileDefinition, reason: LoopProfileRe
       reason,
       schedule: null,
       budget: null,
+      registry,
+      invalidProfileReasons,
     }),
   }
 }
@@ -567,8 +781,12 @@ function toHandle(
     readonly reason?: LoopProfileReason
     readonly schedule: LoopProfileScheduleEnvelope | null
     readonly budget: LoopProfileBudgetEnvelope | null
+    readonly registry?: LoopProfileRegistryMetadata | null
+    readonly invalidProfileReasons?: readonly LoopProfileInvalidFieldReason[]
   },
 ): LoopProfileHandle {
+  const registry = input.registry ?? defaultRegistryForDefinition(definition, input.schedule, input.budget)
+  const invalidProfileReasons = input.invalidProfileReasons ?? []
   return {
     profileID: definition.profileID,
     loopID: input.loopID,
@@ -578,6 +796,15 @@ function toHandle(
     schedule: input.schedule,
     budget: input.budget,
     summary: definition.summary,
+    profile: toCompactProfileSummary({
+      profileID: definition.profileID,
+      loopID: input.loopID,
+      kind: LOOP_KINDS.includes(definition.kind) ? definition.kind : null,
+      registry,
+      schedule: input.schedule,
+      budget: input.budget,
+      invalidProfileReasons,
+    }),
   }
 }
 
@@ -607,6 +834,22 @@ function toLoopProfileMetadata(
         max_context_tokens: profile.budget.maxContextTokens,
         hold_reason: profile.budget.holdReason,
         custom: false,
+      },
+      registry: {
+        name: profile.registry.name,
+        goal: profile.registry.goal,
+        cadence: profile.registry.cadence,
+        risk: profile.registry.risk,
+        skills: profile.registry.skills,
+        state: profile.registry.state,
+        read_model: profile.registry.readModel,
+        phases: profile.registry.phases,
+        human_gates: profile.registry.humanGates,
+        readiness_mode: profile.registry.readinessMode,
+        token_cost_tier: profile.registry.tokenCostTier,
+        daily_cap: profile.registry.dailyCap,
+        early_exit_requirement: profile.registry.earlyExitRequirement,
+        starter_ref: profile.registry.starterRef,
       },
       bootstrapped_at: now,
       refreshed_at: now,
@@ -655,7 +898,9 @@ function loopMatches(
     current.budget.maxTokens === profile.budget.maxTokens &&
     current.budget.maxCostUsd === profile.budget.maxCostUsd &&
     current.budget.maxContextTokens === profile.budget.maxContextTokens &&
-    current.budget.holdReason === profile.budget.holdReason
+    current.budget.holdReason === profile.budget.holdReason &&
+    current.invalidProfileReasons.length === 0 &&
+    loopRegistryMatches(current.registry, profile.registry)
   )
 }
 
@@ -681,6 +926,26 @@ function profileWithPreservedSchedule(
   return profile
 }
 
+function loopRegistryMatches(current: LoopProfileRegistryMetadata | null, next: LoopProfileRegistryMetadata) {
+  if (!current) return false
+  return (
+    current.name === next.name &&
+    current.goal === next.goal &&
+    current.cadence === next.cadence &&
+    current.risk === next.risk &&
+    stringListMatches(current.skills, next.skills) &&
+    current.state === next.state &&
+    current.readModel === next.readModel &&
+    registryPhasesMatch(current.phases, next.phases) &&
+    stringListMatches(current.humanGates, next.humanGates) &&
+    current.readinessMode === next.readinessMode &&
+    current.tokenCostTier === next.tokenCostTier &&
+    current.dailyCap === next.dailyCap &&
+    current.earlyExitRequirement === next.earlyExitRequirement &&
+    current.starterRef === next.starterRef
+  )
+}
+
 function loopBudgetMatches(current: LoopProfileMetadata["budget"], next: LoopProfileBudgetEnvelope) {
   return (
     current.status === next.status &&
@@ -692,9 +957,7 @@ function loopBudgetMatches(current: LoopProfileMetadata["budget"], next: LoopPro
   )
 }
 
-export function readLoopProfileMetadata(
-  metadata: Record<string, unknown> | null,
-): LoopProfileMetadata | undefined {
+export function readLoopProfileMetadata(metadata: Record<string, unknown> | null): LoopProfileMetadata | undefined {
   const loopProfile = isRecord(metadata) ? metadata.loop_profile : undefined
   if (!isRecord(loopProfile)) return
   const schedule = isRecord(loopProfile.schedule) ? loopProfile.schedule : undefined
@@ -716,6 +979,7 @@ export function readLoopProfileMetadata(
   ) {
     return
   }
+  const registry = readStoredRegistry(loopProfile.registry)
 
   return {
     profileID: loopProfile.profile_id,
@@ -735,7 +999,253 @@ export function readLoopProfileMetadata(
       holdReason: typeof budget.hold_reason === "string" ? budget.hold_reason : undefined,
       custom: budget.custom === true,
     },
+    registry: registry.registry,
+    invalidProfileReasons: registry.invalidProfileReasons,
   }
+}
+
+export function toLoopProfileCompactSummary(loop: LoopProfileStoredLoop): LoopProfileCompactSummary | null {
+  const metadata = readLoopProfileMetadata(loop.metadata)
+  if (!metadata) return null
+  return toCompactProfileSummary({
+    profileID: metadata.profileID,
+    loopID: loop.id,
+    kind: loop.kind,
+    registry: metadata.registry ?? defaultRegistryForLoop(loop, metadata),
+    schedule: metadata.schedule,
+    budget: metadata.budget,
+    invalidProfileReasons: metadata.invalidProfileReasons,
+  })
+}
+
+function normalizeProfileRegistry(
+  definition: LoopProfileDefinition,
+  schedule: LoopProfileScheduleEnvelope,
+  budget: LoopProfileBudgetEnvelope,
+) {
+  const fallback = defaultRegistryForDefinition(definition, schedule, budget)
+  if (!definition.registry) return { registry: fallback, invalidProfileReasons: [] }
+  if (!isRecord(definition.registry)) {
+    return { registry: fallback, invalidProfileReasons: ["missing_profile_metadata"] as const }
+  }
+  return {
+    registry: registryFromRecord(definition.registry, fallback),
+    invalidProfileReasons: registryInvalidReasons(definition.registry),
+  }
+}
+
+function readStoredRegistry(value: unknown) {
+  if (!isRecord(value)) {
+    return {
+      registry: null,
+      invalidProfileReasons: ["missing_profile_metadata"] as readonly LoopProfileInvalidFieldReason[],
+    }
+  }
+  const invalidProfileReasons = registryInvalidReasons(value)
+  return {
+    registry: invalidProfileReasons.length === 0 ? registryFromRecord(value, null) : null,
+    invalidProfileReasons,
+  }
+}
+
+function registryInvalidReasons(registry: Record<string, unknown>): readonly LoopProfileInvalidFieldReason[] {
+  return [
+    ...(!nonEmptyString(registry.name) ? ["invalid_profile_name" as const] : []),
+    ...(!nonEmptyString(registry.goal) ? ["invalid_profile_goal" as const] : []),
+    ...(!nonEmptyString(registry.cadence) ? ["invalid_profile_cadence" as const] : []),
+    ...(!isRisk(registry.risk) ? ["invalid_profile_risk" as const] : []),
+    ...(!stringList(registry.skills, false) ? ["invalid_profile_skills" as const] : []),
+    ...(!nonEmptyString(registry.state) ? ["invalid_profile_state" as const] : []),
+    ...(!nonEmptyString(registry.readModel) && !nonEmptyString(registry.read_model)
+      ? ["invalid_profile_read_model" as const]
+      : []),
+    ...(!registryPhases(registry.phases) ? ["invalid_profile_phases" as const] : []),
+    ...(!stringList(registry.humanGates ?? registry.human_gates, true) ? ["invalid_profile_human_gates" as const] : []),
+    ...(!isReadinessMode(registry.readinessMode ?? registry.readiness_mode) ? ["invalid_readiness_mode" as const] : []),
+    ...(!isTokenCostTier(registry.tokenCostTier ?? registry.token_cost_tier)
+      ? ["invalid_token_cost_tier" as const]
+      : []),
+    ...(!positiveInteger(registry.dailyCap ?? registry.daily_cap) ? ["invalid_daily_cap" as const] : []),
+    ...(!nonEmptyString(registry.earlyExitRequirement ?? registry.early_exit_requirement)
+      ? ["invalid_early_exit_requirement" as const]
+      : []),
+  ]
+}
+
+function registryFromRecord(
+  registry: Record<string, unknown>,
+  fallback: LoopProfileRegistryMetadata | null,
+): LoopProfileRegistryMetadata {
+  const readModel = registry.readModel ?? registry.read_model
+  const humanGates = registry.humanGates ?? registry.human_gates
+  const readinessMode = registry.readinessMode ?? registry.readiness_mode
+  const tokenCostTier = registry.tokenCostTier ?? registry.token_cost_tier
+  const dailyCap = registry.dailyCap ?? registry.daily_cap
+  const earlyExitRequirement = registry.earlyExitRequirement ?? registry.early_exit_requirement
+  const starterRef = registry.starterRef ?? registry.starter_ref
+  return {
+    name: nonEmptyString(registry.name) ? registry.name.trim() : (fallback?.name ?? "Loop profile"),
+    goal: nonEmptyString(registry.goal) ? registry.goal.trim() : (fallback?.goal ?? "Run the loop profile."),
+    cadence: nonEmptyString(registry.cadence) ? registry.cadence.trim() : (fallback?.cadence ?? "Unscheduled"),
+    risk: isRisk(registry.risk) ? registry.risk : (fallback?.risk ?? "medium"),
+    skills: stringList(registry.skills, false) ?? fallback?.skills ?? ["loop-profile"],
+    state: nonEmptyString(registry.state) ? registry.state.trim() : (fallback?.state ?? "unknown"),
+    readModel: nonEmptyString(readModel) ? readModel.trim() : (fallback?.readModel ?? "lightbulb.loop_profile"),
+    phases: registryPhases(registry.phases) ?? fallback?.phases ?? [{ id: "run", goal: "Run the loop profile." }],
+    humanGates: stringList(humanGates, true) ?? fallback?.humanGates ?? [],
+    readinessMode: isReadinessMode(readinessMode) ? readinessMode : (fallback?.readinessMode ?? "automatic"),
+    tokenCostTier: isTokenCostTier(tokenCostTier) ? tokenCostTier : (fallback?.tokenCostTier ?? "medium"),
+    dailyCap: positiveInteger(dailyCap) ? dailyCap : (fallback?.dailyCap ?? 1),
+    earlyExitRequirement: nonEmptyString(earlyExitRequirement)
+      ? earlyExitRequirement.trim()
+      : (fallback?.earlyExitRequirement ?? "Exit when the loop has no due work."),
+    starterRef: nonEmptyString(starterRef) ? starterRef.trim() : fallback?.starterRef,
+  }
+}
+
+function defaultRegistryForDefinition(
+  definition: LoopProfileDefinition,
+  schedule: LoopProfileScheduleEnvelope | null,
+  budget: LoopProfileBudgetEnvelope | null,
+): LoopProfileRegistryMetadata {
+  const goal = definition.summary.trim() || "Run the loop profile."
+  return {
+    name: titleFromProfileID(definition.profileID),
+    goal,
+    cadence: formatCadence(schedule?.cadenceMs ?? null),
+    risk: "medium",
+    skills: [definition.kind],
+    state: "loop_profile",
+    readModel: "lightbulb.loop_profile",
+    phases: [{ id: "run", goal }],
+    humanGates: [],
+    readinessMode: "automatic",
+    tokenCostTier: "medium",
+    dailyCap: budget?.maxRunsPerDay ?? 1,
+    earlyExitRequirement: "Exit when the loop has no due work or a gate blocks progress.",
+  }
+}
+
+function defaultRegistryForLoop(
+  loop: LoopProfileStoredLoop,
+  metadata: LoopProfileMetadata,
+): LoopProfileRegistryMetadata {
+  return {
+    name: titleFromProfileID(metadata.profileID),
+    goal: loop.summary,
+    cadence: formatCadence(metadata.schedule.cadenceMs),
+    risk: "medium",
+    skills: [loop.kind],
+    state: loop.status,
+    readModel: "lightbulb.loop_profile",
+    phases: [{ id: "run", goal: loop.summary }],
+    humanGates: [],
+    readinessMode: "automatic",
+    tokenCostTier: "medium",
+    dailyCap: metadata.budget.maxRunsPerDay,
+    earlyExitRequirement: "Exit when the loop has no due work or a gate blocks progress.",
+  }
+}
+
+function toCompactProfileSummary(input: {
+  readonly profileID: LoopProfileID
+  readonly loopID: Lightbulb.LoopID | null
+  readonly kind: Lightbulb.LoopKind | null
+  readonly registry: LoopProfileRegistryMetadata
+  readonly schedule: LoopProfileScheduleEnvelope | null
+  readonly budget: LoopProfileBudgetEnvelope | null
+  readonly invalidProfileReasons: readonly LoopProfileInvalidFieldReason[]
+}): LoopProfileCompactSummary {
+  return {
+    profileID: input.profileID,
+    loopID: input.loopID,
+    kind: input.kind,
+    name: input.registry.name,
+    goal: input.registry.goal,
+    cadence: input.registry.cadence,
+    cadenceMs: input.schedule?.cadenceMs ?? null,
+    risk: input.registry.risk,
+    skills: input.registry.skills,
+    state: input.registry.state,
+    readModel: input.registry.readModel,
+    phases: input.registry.phases,
+    humanGates: input.registry.humanGates,
+    readinessMode: input.registry.readinessMode,
+    tokenCostTier: input.registry.tokenCostTier,
+    dailyCap: input.registry.dailyCap,
+    earlyExitRequirement: input.registry.earlyExitRequirement,
+    starterRef: input.registry.starterRef,
+    ready:
+      input.invalidProfileReasons.length === 0 && input.schedule?.enabled === true && input.budget?.status === "open",
+    invalidProfileReasons: input.invalidProfileReasons,
+  }
+}
+
+function titleFromProfileID(profileID: string) {
+  return profileID
+    .split("-")
+    .filter((part) => part.length > 0)
+    .map((part) => `${part[0]?.toUpperCase() ?? ""}${part.slice(1)}`)
+    .join(" ")
+}
+
+function formatCadence(cadenceMs: number | null) {
+  if (!cadenceMs || !Number.isFinite(cadenceMs) || cadenceMs <= 0) return "Unscheduled"
+  const hours = cadenceMs / (60 * 60 * 1000)
+  if (Number.isInteger(hours)) return `Every ${hours}h`
+  const minutes = cadenceMs / (60 * 1000)
+  if (Number.isInteger(minutes)) return `Every ${minutes}m`
+  return `Every ${cadenceMs}ms`
+}
+
+function nonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0
+}
+
+function positiveInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value > 0
+}
+
+function stringList(value: unknown, allowEmpty: boolean): readonly string[] | undefined {
+  if (!Array.isArray(value)) return
+  if (!allowEmpty && value.length === 0) return
+  if (!value.every(nonEmptyString)) return
+  return value.map((item) => item.trim())
+}
+
+function stringListMatches(current: readonly string[], next: readonly string[]) {
+  return current.length === next.length && current.every((value, index) => value === next[index])
+}
+
+function registryPhases(value: unknown): readonly LoopProfileRegistryPhase[] | undefined {
+  if (!Array.isArray(value) || value.length === 0) return
+  if (!value.every((phase) => isRecord(phase) && nonEmptyString(phase.id) && nonEmptyString(phase.goal))) return
+  return value.map((phase) => ({
+    id: isRecord(phase) && nonEmptyString(phase.id) ? phase.id.trim() : "",
+    goal: isRecord(phase) && nonEmptyString(phase.goal) ? phase.goal.trim() : "",
+  }))
+}
+
+function registryPhasesMatch(
+  current: readonly LoopProfileRegistryPhase[],
+  next: readonly LoopProfileRegistryPhase[],
+) {
+  return (
+    current.length === next.length &&
+    current.every((phase, index) => phase.id === next[index]?.id && phase.goal === next[index]?.goal)
+  )
+}
+
+function isRisk(value: unknown): value is LoopProfileRisk {
+  return value === "low" || value === "medium" || value === "high"
+}
+
+function isReadinessMode(value: unknown): value is LoopProfileReadinessMode {
+  return value === "automatic" || value === "human_gate" || value === "manual"
+}
+
+function isTokenCostTier(value: unknown): value is LoopProfileTokenCostTier {
+  return value === "low" || value === "medium" || value === "high"
 }
 
 function toStoredLoop(row: typeof LightbulbLoopTable.$inferSelect): LoopProfileStoredLoop {

@@ -16,6 +16,7 @@ import type { GoalLifecycle, GoalRunTree, GoalSummary } from "./goal"
 import { toPRReviewCandidateSummary } from "./pr-review-candidate"
 import { toPRReviewRouteSummary } from "./pr-review-route"
 import { classifyLoopSchedule } from "./scheduler"
+import { toLoopProfileCompactSummary } from "./loop-profile"
 import type {
   LightbulbArtifactTable,
   LightbulbEventTable,
@@ -146,6 +147,15 @@ function toDashboardLoop(
     budget: schedule.budget,
     scheduleClassification: schedule.classification,
     scheduleReason: schedule.reason,
+    profile: toLoopProfileCompactSummary({
+      id: loop.id,
+      accountID: loop.account_id,
+      goalID: loop.goal_id,
+      kind: loop.kind,
+      status: loop.status,
+      summary: loop.summary,
+      metadata: loop.metadata ?? null,
+    }),
     runs: runs.filter((run) => run.loop_id === loop.id).map((run) => toDashboardRun(graph, run, retentionGraph)),
   }
 }

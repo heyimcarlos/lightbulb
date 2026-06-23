@@ -28,9 +28,17 @@ and status loop profiles. The bootstrap seam takes an account/goal reference, pr
 schedule and budget policy, current time, and storage adapters. It creates or adopts one stable loop row per profile.
 
 Until schedule and budget tables are promoted into dedicated primitives, each loop row stores its profile state in
-metadata: profile ID, enabled or disabled state, cadence, next due time, and budget envelope. Scheduler wakeups
-consume the compact loop handles returned by bootstrap; they should display bounded reasons such as `missing_goal`,
-`profile_disabled`, `budget_held`, `custom_policy`, or invalid profile reasons rather than worker transcripts.
+metadata: profile ID, enabled or disabled state, cadence, next due time, budget envelope, and compact registry
+metadata. The registry metadata mirrors the Cobus `patterns/registry.yaml` shape: profile name, goal, cadence,
+risk tier, required skills, state/read-model source, phases, human gates, starter/profile reference, readiness mode,
+token-cost tier, daily cap, and early-exit requirement.
+
+Profile bootstrap returns compact handles for created, adopted, skipped, held, and invalid profiles. The Lightbulb
+service and dashboard also expose compact profile summaries for route-runner, audit, and operator decisions. Missing
+or malformed registry fields are reported through bounded `invalidProfileReasons` such as
+`invalid_profile_goal`, `invalid_profile_phases`, or `invalid_token_cost_tier`; callers should display those reasons
+instead of raw parser failures or worker transcripts. Scheduler wakeups should continue to display bounded loop
+reasons such as `missing_goal`, `profile_disabled`, `budget_held`, `custom_policy`, or invalid profile reasons.
 
 Worker dispatch remains downstream of the scheduler. Discovery and status loops usually produce harness-authored
 summaries or task candidates. Implementation, debug, and review/integration loops may dispatch fresh child workers only
