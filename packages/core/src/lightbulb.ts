@@ -29,6 +29,7 @@ export type {
   ContextBundleWorkItemSummary,
 } from "./lightbulb/context-bundle"
 export * from "./lightbulb/loop-profile"
+export * from "./lightbulb/loop-runner-tick"
 export * from "./lightbulb/pr-review-candidate"
 export * from "./lightbulb/pr-review-route"
 export * from "./lightbulb/run-ledger"
@@ -113,6 +114,11 @@ import {
   type LoopProfileBootstrapSummary,
   type LoopProfileCompactSummary,
 } from "./lightbulb/loop-profile"
+import {
+  runAccountLoopTickInDb,
+  type AccountLoopRunnerTickResult,
+  type AccountLoopRunnerTickServiceInput,
+} from "./lightbulb/loop-runner-tick"
 import { admitLoopRunInDb, type LoopRunAdmissionResult, type LoopRunAdmissionServiceInput } from "./lightbulb/run-ledger"
 import { readLoopSchedulesInDb, type LoopScheduleReadModel } from "./lightbulb/scheduler"
 import {
@@ -589,6 +595,7 @@ export interface Interface {
   readonly admitLoopRun: (input: LoopRunAdmissionServiceInput) => Effect.Effect<LoopRunAdmissionResult>
   readonly superviseScheduledLoops: (input: SchedulerSupervisorServiceInput) => Effect.Effect<SchedulerSupervisorResult>
   readonly admitScheduledLoopRuns: (input: LoopSchedulerTickServiceInput) => Effect.Effect<LoopSchedulerTickResult>
+  readonly runAccountLoopTick: (input: AccountLoopRunnerTickServiceInput) => Effect.Effect<AccountLoopRunnerTickResult>
   readonly launchWorker: (input: WorkerLaunchServiceInput) => Effect.Effect<WorkerLaunchResult>
   readonly readGoalRunTree: (goalID: GoalID) => Effect.Effect<GoalRunTree | undefined>
   readonly seedTracerBullet: (input?: {
@@ -690,6 +697,15 @@ export const layer = Layer.effect(
       }),
       admitScheduledLoopRuns: Effect.fn("Lightbulb.admitScheduledLoopRuns")(function* (input) {
         return yield* admitScheduledLoopRunsInDb(db, { ...input, now: input.now ?? Date.now() }, { run: RunID.create, event: EventID.create })
+      }),
+      runAccountLoopTick: Effect.fn("Lightbulb.runAccountLoopTick")(function* (input) {
+        return yield* runAccountLoopTickInDb(db, { ...input, now: input.now ?? Date.now() }, {
+          run: RunID.create,
+          worker: WorkerID.create,
+          taskPacket: TaskPacketID.create,
+          launchAttempt: WorkerLaunchAttemptID.create,
+          event: EventID.create,
+        })
       }),
       launchWorker: Effect.fn("Lightbulb.launchWorker")(function* (input) {
         return yield* launchWorkerInDb(

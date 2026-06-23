@@ -150,3 +150,28 @@ worker heartbeat is stale, the loop is held as `stale_worker` so a recovery/debu
 before any duplicate work is admitted. Explicit dependency or recovery holds live in loop supervisor metadata until the
 responsible gate clears them; once cleared, the next supervisor pass can select the loop again when its schedule and
 budget are open.
+
+## Account Loop Runner Ticks
+
+The account loop runner tick is the first deterministic coordinator above issue/work intake, scheduler supervision, and
+worker launch. It accepts an account, current time, stable tick ID, compact issue routing inputs, and a fakeable storage
+seam. It does not run a model or child process itself. It selects one ready work item, asks the scheduler supervisor to
+admit at most one due loop run, creates or reuses one worker plus task packet for that run, records a durable worker
+launch request, and writes a compact `lightbulb.account_loop_runner_tick.completed` journal event.
+
+Runner ticks check cheap work holds before any run admission: dependency-blocked issues return `dependency_held`,
+human-held issues return `human_review_held`, and context-policy-held issues return `context_policy_held`. If no ready
+work remains, the tick records `no_ready_work` and creates no run. If ready work exists but the scheduler cannot admit a
+loop, the tick preserves bounded supervisor reasons such as `budget_held`, `disabled`, `no_due_loops`,
+`already_active_run`, `stale_worker`, or `recovery_required`.
+
+When a loop is selected, the runner stores the scheduler tick ID in the run admission source, the worker metadata, and
+the task packet metadata. Retrying the same tick ID reuses the existing supervisor pass, run, worker, task packet, and
+active launch attempt; it reports `already_active` instead of duplicating worker ownership. Launch failures and pre-launch
+blocks are terminal bounded tick outcomes (`launch_failed` or `blocked`) that leave recovery/report-ingestion loops with
+explicit handles to inspect later.
+
+This coordinator sits before final-report ingestion and after issue intake. Report ingestion remains responsible for
+turning completed worker reports into run status, artifact lineage, review gates, and budget usage evidence. Crash
+recovery should resume from the runner tick journal, scheduler pass, worker launch attempt, heartbeat/log handles, and
+expected report URI rather than raw worker transcripts.
