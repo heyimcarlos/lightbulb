@@ -21,7 +21,7 @@ export type WorkerLaunchServiceInput = {
   readonly taskPacketID: Lightbulb.TaskPacketID
   readonly trigger?: Lightbulb.WorkerLaunchTrigger
   readonly now?: number
-  readonly status?: Extract<Lightbulb.WorkerLaunchStatus, "requested" | "launching" | "running" | "launch_failed" | "blocked">
+  readonly status?: Lightbulb.WorkerLaunchStatus
   readonly holdReason?: Lightbulb.WorkerLaunchHoldReason
   readonly issueRef?: string
   readonly workItemRef?: string
@@ -486,7 +486,7 @@ function isActiveWorkerLaunchStatus(status: Lightbulb.WorkerLaunchStatus) {
 }
 
 function canRefreshWorkerLaunch(current: Lightbulb.WorkerLaunchStatus, next: Lightbulb.WorkerLaunchStatus) {
-  if (current === "running") return false
+  if (!isActiveWorkerLaunchStatus(current)) return false
   return launchStatusRank(next) > launchStatusRank(current)
 }
 
@@ -500,6 +500,8 @@ function launchStatusRank(status: Lightbulb.WorkerLaunchStatus) {
 function defaultSummary(status: Lightbulb.WorkerLaunchStatus) {
   if (status === "launch_failed") return "Worker launch failed before a runnable process was established."
   if (status === "blocked") return "Worker launch request is blocked before child process execution."
+  if (status === "cancelled") return "Worker launch was cancelled before completion."
+  if (status === "complete") return "Worker launch completed and returned control to Lightbulb."
   if (status === "requested") return "Worker launch request was recorded before process start."
   if (status === "launching") return "Worker launch adapter is preparing an isolated process handle."
   return "Worker launch adapter returned an active process handle."
@@ -516,6 +518,8 @@ function defaultHoldSummary(reason: Lightbulb.WorkerLaunchHoldReason | undefined
 function launchEventType(status: Lightbulb.WorkerLaunchStatus) {
   if (status === "launch_failed") return "lightbulb.worker_launch.failed"
   if (status === "blocked") return "lightbulb.worker_launch.blocked"
+  if (status === "cancelled") return "lightbulb.worker_launch.cancelled"
+  if (status === "complete") return "lightbulb.worker_launch.completed"
   if (status === "requested") return "lightbulb.worker_launch.requested"
   if (status === "launching") return "lightbulb.worker_launch.launching"
   return "lightbulb.worker_launch.running"
@@ -525,37 +529,42 @@ function launchEventSummary(type: string, attempt: typeof LightbulbWorkerLaunchA
   if (type === "lightbulb.worker_launch.already_active") return "Worker launch request reused active attempt " + attempt.id + "."
   if (type === "lightbulb.worker_launch.failed") return "Worker launch attempt failed for task packet " + attempt.task_packet_id + "."
   if (type === "lightbulb.worker_launch.blocked") return "Worker launch request is blocked for task packet " + attempt.task_packet_id + "."
+  if (type === "lightbulb.worker_launch.cancelled") return "Worker launch attempt was cancelled for task packet " + attempt.task_packet_id + "."
+  if (type === "lightbulb.worker_launch.completed") return "Worker launch attempt completed for task packet " + attempt.task_packet_id + "."
   if (type === "lightbulb.worker_launch.requested") return "Worker launch request was recorded for task packet " + attempt.task_packet_id + "."
   if (type === "lightbulb.worker_launch.launching") return "Worker launch attempt is preparing task packet " + attempt.task_packet_id + "."
   return "Worker launch attempt is running for task packet " + attempt.task_packet_id + "."
 }
 
 function workerStatusForLaunch(status: Lightbulb.WorkerLaunchStatus): Lightbulb.WorkerStatus {
+  if (status === "complete") return "complete"
   if (status === "launch_failed") return "failed"
-  if (status === "blocked") return "blocked"
+  if (status === "blocked" || status === "cancelled") return "blocked"
   return "running"
 }
 
 function runStatusForLaunch(current: Lightbulb.RunStatus, status: Lightbulb.WorkerLaunchStatus): Lightbulb.RunStatus {
+  if (status === "complete") return "complete"
   if (status === "launch_failed") return "failed"
-  if (status === "blocked") return "blocked"
+  if (status === "blocked" || status === "cancelled") return "blocked"
   if (current === "queued") return "running"
   return current
 }
 
 function gateStatusForLaunch(current: Lightbulb.GateStatus, status: Lightbulb.WorkerLaunchStatus): Lightbulb.GateStatus {
   if (status === "launch_failed") return "failed"
-  if (status === "blocked") return "blocked"
+  if (status === "blocked" || status === "cancelled") return "blocked"
   return current
 }
 
 function runSummaryForLaunch(current: string, status: Lightbulb.WorkerLaunchStatus, summary: string) {
-  if (status === "launch_failed" || status === "blocked") return summary
+  if (status === "launch_failed" || status === "blocked" || status === "cancelled" || status === "complete") return summary
   return current
 }
 
 function taskPacketStatusForLaunch(status: Lightbulb.WorkerLaunchStatus): Lightbulb.TaskPacketStatus {
-  if (status === "launch_failed" || status === "blocked") return "blocked"
+  if (status === "complete") return "complete"
+  if (status === "launch_failed" || status === "blocked" || status === "cancelled") return "blocked"
   return "claimed"
 }
 

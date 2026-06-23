@@ -140,6 +140,110 @@ describe("Lightbulb worker launch attempts", () => {
     ),
   )
 
+  it.live("marks a running launch attempt complete and clears active ownership", () =>
+    Effect.acquireRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ).pipe(
+      Effect.flatMap((tmp) =>
+        Effect.gen(function* () {
+          const lightbulb = yield* Lightbulb.Service
+          const database = yield* Database.Service
+          const prepared = yield* prepareLaunchPacket(lightbulb, database)
+
+          const running = yield* lightbulb.launchWorker({
+            accountID: prepared.accountID,
+            workerID: prepared.workerID,
+            taskPacketID: prepared.taskPacketID,
+            trigger: "scheduler",
+            now: now + 3_000,
+            status: "running",
+            cwd: "/tmp/lightbulb-worker-complete",
+            command: "lightbulb run --agent lightbulb-worker --format json",
+            processID: 22222,
+            reportURI: ".lightbulb/runs/issue-9-worker.md",
+          })
+          const completed = yield* lightbulb.launchWorker({
+            accountID: prepared.accountID,
+            workerID: prepared.workerID,
+            taskPacketID: prepared.taskPacketID,
+            trigger: "scheduler",
+            now: now + 3_100,
+            status: "complete",
+            cwd: "/tmp/lightbulb-worker-complete",
+            command: "lightbulb run --agent lightbulb-worker --format json",
+            summary: "Worker completed and produced a final-report handle.",
+          })
+          const retried = yield* lightbulb.launchWorker({
+            accountID: prepared.accountID,
+            workerID: prepared.workerID,
+            taskPacketID: prepared.taskPacketID,
+            trigger: "scheduler",
+            now: now + 3_200,
+            cwd: "/tmp/lightbulb-worker-complete",
+            command: "lightbulb run --agent lightbulb-worker --format json",
+          })
+          const attempts = yield* database.db
+            .select()
+            .from(LightbulbWorkerLaunchAttemptTable)
+            .where(eq(LightbulbWorkerLaunchAttemptTable.worker_id, prepared.workerID))
+            .all()
+            .pipe(Effect.orDie)
+          const events = yield* database.db
+            .select()
+            .from(LightbulbEventTable)
+            .where(eq(LightbulbEventTable.aggregate_type, "worker_launch_attempt"))
+            .orderBy(asc(LightbulbEventTable.time_created))
+            .all()
+            .pipe(Effect.orDie)
+          const graph = yield* lightbulb.readAccountGraph(prepared.accountID)
+          const summary = yield* lightbulb.parentSummary(prepared.runID)
+
+          if (running.outcome !== "launched" || completed.outcome !== "launched") throw new Error("expected launched attempts")
+          expect(completed.attempt).toMatchObject({
+            id: running.attempt.id,
+            status: "complete",
+            processID: 22222,
+            reportURI: ".lightbulb/runs/issue-9-worker.md",
+          })
+          expect(retried).toMatchObject({
+            outcome: "skipped",
+            reason: "run_not_runnable",
+          })
+          expect(attempts).toEqual([
+            expect.objectContaining({
+              id: running.attempt.id,
+              active_key: null,
+              status: "complete",
+              summary: "Worker completed and produced a final-report handle.",
+            }),
+          ])
+          expect(events.map((event) => event.type)).toEqual([
+            "lightbulb.worker_launch.running",
+            "lightbulb.worker_launch.completed",
+          ])
+          expect(graph?.runs.map((run) => [run.id, run.status, run.gate_status, run.summary])).toContainEqual([
+            prepared.runID,
+            "complete",
+            "pending",
+            "Worker completed and produced a final-report handle.",
+          ])
+          expect(graph?.workers.map((worker) => [worker.id, worker.status])).toContainEqual([prepared.workerID, "complete"])
+          expect(graph?.taskPackets.map((packet) => [packet.id, packet.status])).toContainEqual([
+            prepared.taskPacketID,
+            "complete",
+          ])
+          expect(summary?.workers).toContainEqual(
+            expect.objectContaining({
+              id: prepared.workerID,
+              status: "complete",
+            }),
+          )
+        }).pipe(Effect.provide(layer(tmp.path))),
+      ),
+    ),
+  )
+
   it.live("refreshes a requested launch attempt with the running process handle", () =>
     Effect.acquireRelease(
       Effect.promise(() => tmpdir()),
