@@ -3,7 +3,7 @@
 
 **Result:** passed
 
-Diff: 5 files changed, 944 insertions(+)
+Diff: 6 files changed, 966 insertions(+)
 
 ### Blockers
 
@@ -13,7 +13,7 @@ _No high-confidence blockers._
 _No warnings._
 ### Passed Checks
 
-- 5 changed files inspected.
+- 6 changed files inspected.
 - No paid AI reviewer, model API, or external service was required.
 - No high-confidence Lightbulb review blockers found.
 - Code changes include package-local verification in the PR body.
