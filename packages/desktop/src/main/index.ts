@@ -1,12 +1,13 @@
 import { randomUUID } from "node:crypto"
 import { mkdirSync, rmSync } from "node:fs"
+import { mkdir, writeFile } from "node:fs/promises"
 import * as http from "node:http"
 import { createServer } from "node:net"
 import { homedir, tmpdir } from "node:os"
-import { join } from "node:path"
+import { dirname, join } from "node:path"
 import { getCACertificates, setDefaultCACertificates } from "node:tls"
 import type { Event } from "electron"
-import { app, BrowserWindow } from "electron"
+import { app, BrowserWindow, nativeImage } from "electron"
 
 import { Deferred, Effect, Fiber } from "effect"
 import contextMenu from "electron-context-menu"
@@ -50,6 +51,7 @@ const APP_IDS: Record<string, string> = {
   prod: "ai.opencode.desktop",
 }
 const TEST_ONBOARDING = process.env.OPENCODE_TEST_ONBOARDING === "1"
+const DESKTOP_QA = process.env.OPENCODE_DESKTOP_QA === "1"
 const jsCallStackFeature = "DocumentPolicyIncludeJSCallStacksInCrashReports"
 
 let logger: ReturnType<typeof initLogging>
@@ -112,10 +114,12 @@ const main = Effect.gen(function* () {
 
   const appId = app.isPackaged ? APP_IDS[CHANNEL] : "ai.opencode.desktop.dev"
   const onboardingTestRoot = ((): string | undefined => {
-    if (!TEST_ONBOARDING) return
+    if (!TEST_ONBOARDING && !DESKTOP_QA) return
 
-    const root = join(tmpdir(), `opencode-onboarding-${randomUUID()}`)
-    rmSync(root, { recursive: true, force: true })
+    const providedQaRoot = DESKTOP_QA ? process.env.OPENCODE_DESKTOP_QA_ROOT : undefined
+    const root =
+      providedQaRoot ?? join(tmpdir(), `${DESKTOP_QA ? "opencode-desktop-qa" : "opencode-onboarding"}-${randomUUID()}`)
+    if (!providedQaRoot) rmSync(root, { recursive: true, force: true })
     ;["data", "config", "cache", "state", "desktop", "session"].forEach((dir) =>
       mkdirSync(join(root, dir), { recursive: true }),
     )
@@ -172,6 +176,7 @@ const main = Effect.gen(function* () {
     version: app.getVersion(),
     packaged: app.isPackaged,
     onboardingTest: Boolean(onboardingTestRoot),
+    desktopQa: DESKTOP_QA,
   })
 
   ensureLoopbackNoProxy()
@@ -179,7 +184,11 @@ const main = Effect.gen(function* () {
   app.commandLine.appendSwitch("proxy-bypass-list", "<-loopback>")
   const features = app.commandLine.getSwitchValue("enable-features")
   app.commandLine.appendSwitch("enable-features", features ? `${jsCallStackFeature},${features}` : jsCallStackFeature)
-  if (!app.isPackaged) app.commandLine.appendSwitch("remote-debugging-port", "9222")
+  const remoteDebuggingPort = process.env.OPENCODE_DESKTOP_REMOTE_DEBUGGING_PORT
+  if (!app.isPackaged && remoteDebuggingPort !== "off") {
+    app.commandLine.appendSwitch("remote-debugging-port", remoteDebuggingPort || "9222")
+  }
+  if (DESKTOP_QA) app.commandLine.appendSwitch("disable-gpu")
 
   if (!app.requestSingleInstanceLock()) {
     app.quit()
@@ -236,8 +245,8 @@ const main = Effect.gen(function* () {
 
   yield* Effect.promise(() => app.whenReady())
 
-  if (!TEST_ONBOARDING) migrate()
-  app.setAsDefaultProtocolClient("opencode")
+  if (!TEST_ONBOARDING && !DESKTOP_QA) migrate()
+  if (!DESKTOP_QA) app.setAsDefaultProtocolClient("opencode")
   registerRendererProtocol()
   setDockIcon()
   const updater = setupAutoUpdater(stopSidecars)
@@ -268,10 +277,12 @@ const main = Effect.gen(function* () {
     recordFatalRendererError: (error) => writeLog("renderer", "fatal renderer error", { ...error }, "error"),
   })
   registerWslIpcHandlers(wslServers)
-  void updater.start()
-  const updateTimer = setInterval(() => void updater.check(), 10 * 60 * 1000)
-  updateTimer.unref()
-  app.once("will-quit", () => clearInterval(updateTimer))
+  if (!DESKTOP_QA) {
+    void updater.start()
+    const updateTimer = setInterval(() => void updater.check(), 10 * 60 * 1000)
+    updateTimer.unref()
+    app.once("will-quit", () => clearInterval(updateTimer))
+  }
   yield* Effect.promise(() => startNetLog()).pipe(
     Effect.catch((error) =>
       Effect.sync(() => {
@@ -361,7 +372,110 @@ const main = Effect.gen(function* () {
         relaunch()
       },
     })
+    void captureDesktopQa(mainWindow).catch((error) => {
+      logger.error("desktop QA capture failed", error)
+      app.exit(1)
+    })
   }
 })
 
 Effect.runFork(main)
+
+async function captureDesktopQa(win: BrowserWindow) {
+  const screenshot = process.env.OPENCODE_DESKTOP_QA_SCREENSHOT
+  if (!DESKTOP_QA || !screenshot) return
+
+  const started = Date.now()
+  const selector = process.env.OPENCODE_DESKTOP_QA_SELECTOR ?? "[data-page='browser-surface']"
+  logger.log("desktop QA capture started", { selector, screenshot })
+  await waitForReadyToShow(win)
+  await waitForRendererSelector(win, selector)
+  const image = nativeImage.createFromBuffer(await captureRendererPng(win))
+  await mkdir(dirname(screenshot), { recursive: true })
+  await writeFile(screenshot, image.toPNG())
+  await writeFile(
+    process.env.OPENCODE_DESKTOP_QA_METADATA ?? `${screenshot}.json`,
+    JSON.stringify(
+      {
+        capturedAt: new Date().toISOString(),
+        durationMs: Date.now() - started,
+        route: process.env.OPENCODE_DESKTOP_QA_ROUTE ?? null,
+        screenshot,
+        selector,
+        size: image.getSize(),
+        url: win.webContents.getURL(),
+      },
+      null,
+      2,
+    ),
+  )
+  logger.log("desktop QA capture finished", { screenshot, durationMs: Date.now() - started })
+  app.quit()
+}
+
+async function captureRendererPng(win: BrowserWindow) {
+  win.show()
+  win.focus()
+  await delay(500)
+  const electronDebugger = win.webContents.debugger
+  const attached = electronDebugger.isAttached()
+  if (!attached) electronDebugger.attach("1.3")
+  try {
+    const result = await electronDebugger.sendCommand("Page.captureScreenshot", {
+      captureBeyondViewport: false,
+      format: "png",
+      fromSurface: true,
+    })
+    if (!isCaptureScreenshotResult(result)) throw new Error("Page.captureScreenshot returned no image data")
+    return Buffer.from(result.data, "base64")
+  } finally {
+    if (!attached && electronDebugger.isAttached()) electronDebugger.detach()
+  }
+}
+
+function isCaptureScreenshotResult(value: unknown): value is { data: string } {
+  return Boolean(value && typeof value === "object" && "data" in value && typeof value.data === "string")
+}
+
+function waitForReadyToShow(win: BrowserWindow) {
+  if (win.isVisible()) return Promise.resolve()
+  return new Promise<void>((resolve) => {
+    let settled = false
+    const finish = () => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      win.off("ready-to-show", finish)
+      win.webContents.off("did-finish-load", finish)
+      resolve()
+    }
+    const timer = setTimeout(finish, 3_000)
+    win.once("ready-to-show", finish)
+    win.webContents.once("did-finish-load", finish)
+  })
+}
+
+function waitForRendererSelector(win: BrowserWindow, selector: string) {
+  return win.webContents.executeJavaScript(`
+    new Promise((resolve, reject) => {
+      const selector = ${JSON.stringify(selector)}
+      const deadline = Date.now() + 15000
+      const tick = () => {
+        if (document.querySelector(selector)) {
+          resolve(true)
+          return
+        }
+        if (Date.now() > deadline) {
+          reject(new Error("Timed out waiting for " + selector))
+          return
+        }
+        setTimeout(tick, 100)
+      }
+      tick()
+    })
+  `)
+}
+
+function delay(ms: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, ms))
+}

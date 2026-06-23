@@ -77,6 +77,21 @@ script from `.github/workflows/adversarial-review.yml` and uploads both JSON and
 review. For UI, desktop, browser, or CLI-affecting PRs, the PR body should include screenshot, recording, terminal
 evidence, or an explicit not-applicable rationale.
 
+## Desktop Browser QA
+
+Desktop/browser PRs can produce local visual evidence with:
+
+```bash
+cd packages/desktop
+bun run qa:browser -- --out ../../.lightbulb/evidence/desktop-browser-qa
+```
+
+The command makes Electron's binary install deterministic, builds the desktop assets with the app memory router starting
+on `/browser`, launches an isolated read-only QA profile, captures `browser-surface.png`, writes `browser-surface.json`,
+and exits. It uses `OPENCODE_DESKTOP_QA=1`, an in-memory database, a temporary user-data root, and
+`OPENCODE_DESKTOP_REMOTE_DEBUGGING_PORT=off` so it can run next to a normal desktop dev session without stealing the
+default single-instance lock or DevTools port.
+
 ## Scheduler Supervisor Passes
 
 The recurring scheduler supervisor is the account-level controller above loop admission. A supervisor pass reads loop
