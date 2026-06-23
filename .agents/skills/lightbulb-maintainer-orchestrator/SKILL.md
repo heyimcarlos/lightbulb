@@ -70,8 +70,8 @@ Before calling work done:
 - verify against the changed user/runtime path, not just types
 - run package-local tests; never run tests from repo root
 - run `git diff --check`
-- inspect final diff
-- confirm worktree state
+- inspect final diff and confirm worktree state
+- after editing Lightbulb skills, run `bun .agents/skills/lightbulb-maintainer-orchestrator/scripts/evaluate-lightbulb-skills.ts`
 - for public issue/PR updates, include concrete evidence and caveats
 
 For Lightbulb loop work, preserve traceability: a scheduler or worker action should have a durable goal, loop, run, event, gate, or artifact handle when the current system supports it.
