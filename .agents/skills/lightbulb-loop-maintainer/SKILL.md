@@ -1,6 +1,6 @@
 ---
 name: lightbulb-loop-maintainer
-description: Maintain Lightbulb automation loops through Hermes async delegation, not a recurring cron job.
+description: Maintain Lightbulb loop health by diagnosing Hermes state, stale runs, worker dispatch, and broken automation without adding cron. Use when a Lightbulb loop, worker lane, PR review lane, or automation setup is broken or stale.
 ---
 
 # Lightbulb Loop Maintainer
@@ -17,17 +17,11 @@ This is a request-driven maintainer. Do not create a recurring cron job. Use Her
 - Lightbulb worktrees under `/home/cyberjanitor/worktrees/lightbulb-*`.
 - Loop state files under `.lightbulb/loops/*.json` and `~/.hermes/state/lightbulb-*`.
 - Installed skill names and qualified names.
-- Missing workdirs, stale active runs, failed script paths, bad branch state, duplicate prompts/agents/skills.
+- Missing workdirs, stale active runs, failed script paths, bad branch state, repeated prompts/agents/skills.
 
 ## Delegation lanes
 
-Before dispatching background lanes, verify the Lightbulb/OpenCode process has enabled background subagents:
-
-```bash
-test "${OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS:-${OPENCODE_EXPERIMENTAL:-}}" = "true"
-```
-
-If the check fails, enable `OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true` for the process before using `background: true`, or run the lane in the foreground without `background: true`.
+Use `lightbulb-delegate` for background worker dispatch mechanics and its single background gate. Do not restate or bypass that gate here.
 
 Dispatch non-overlapping lanes through async delegation:
 
