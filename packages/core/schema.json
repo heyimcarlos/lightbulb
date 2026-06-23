@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "98d0fc2e-49d1-4060-8dc6-1c754326c775",
+  "id": "cdaadf16-94f4-46a3-b593-1da28ebcf482",
   "prevIds": [
-    "94c8131e-0e86-4366-89e7-9f81f668f52d"
+    "98d0fc2e-49d1-4060-8dc6-1c754326c775"
   ],
   "ddl": [
     {
@@ -100,6 +100,10 @@
     },
     {
       "name": "lightbulb_task_packet",
+      "entityType": "tables"
+    },
+    {
+      "name": "lightbulb_worker_launch_attempt",
       "entityType": "tables"
     },
     {
@@ -2488,6 +2492,226 @@
       "generated": null,
       "name": "id",
       "entityType": "columns",
+      "table": "lightbulb_worker_launch_attempt"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "account_id",
+      "entityType": "columns",
+      "table": "lightbulb_worker_launch_attempt"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "run_id",
+      "entityType": "columns",
+      "table": "lightbulb_worker_launch_attempt"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "worker_id",
+      "entityType": "columns",
+      "table": "lightbulb_worker_launch_attempt"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "task_packet_id",
+      "entityType": "columns",
+      "table": "lightbulb_worker_launch_attempt"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "active_key",
+      "entityType": "columns",
+      "table": "lightbulb_worker_launch_attempt"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "lightbulb_worker_launch_attempt"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "trigger",
+      "entityType": "columns",
+      "table": "lightbulb_worker_launch_attempt"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "summary",
+      "entityType": "columns",
+      "table": "lightbulb_worker_launch_attempt"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "cwd",
+      "entityType": "columns",
+      "table": "lightbulb_worker_launch_attempt"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "worktree_id",
+      "entityType": "columns",
+      "table": "lightbulb_worker_launch_attempt"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "command",
+      "entityType": "columns",
+      "table": "lightbulb_worker_launch_attempt"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "profile_id",
+      "entityType": "columns",
+      "table": "lightbulb_worker_launch_attempt"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "session_id",
+      "entityType": "columns",
+      "table": "lightbulb_worker_launch_attempt"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "process_id",
+      "entityType": "columns",
+      "table": "lightbulb_worker_launch_attempt"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "heartbeat_uri",
+      "entityType": "columns",
+      "table": "lightbulb_worker_launch_attempt"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "log_uri",
+      "entityType": "columns",
+      "table": "lightbulb_worker_launch_attempt"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "report_uri",
+      "entityType": "columns",
+      "table": "lightbulb_worker_launch_attempt"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "failure_reason",
+      "entityType": "columns",
+      "table": "lightbulb_worker_launch_attempt"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "metadata",
+      "entityType": "columns",
+      "table": "lightbulb_worker_launch_attempt"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "lightbulb_worker_launch_attempt"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_updated",
+      "entityType": "columns",
+      "table": "lightbulb_worker_launch_attempt"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
       "table": "lightbulb_worker"
     },
     {
@@ -4461,6 +4685,151 @@
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
+      "name": "fk_lightbulb_worker_launch_attempt_account_id_lightbulb_account_id_fk",
+      "entityType": "fks",
+      "table": "lightbulb_worker_launch_attempt"
+    },
+    {
+      "columns": [
+        "run_id"
+      ],
+      "tableTo": "lightbulb_run",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_lightbulb_worker_launch_attempt_run_id_lightbulb_run_id_fk",
+      "entityType": "fks",
+      "table": "lightbulb_worker_launch_attempt"
+    },
+    {
+      "columns": [
+        "worker_id"
+      ],
+      "tableTo": "lightbulb_worker",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_lightbulb_worker_launch_attempt_worker_id_lightbulb_worker_id_fk",
+      "entityType": "fks",
+      "table": "lightbulb_worker_launch_attempt"
+    },
+    {
+      "columns": [
+        "task_packet_id"
+      ],
+      "tableTo": "lightbulb_task_packet",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_lightbulb_worker_launch_attempt_task_packet_id_lightbulb_task_packet_id_fk",
+      "entityType": "fks",
+      "table": "lightbulb_worker_launch_attempt"
+    },
+    {
+      "columns": [
+        "account_id",
+        "run_id"
+      ],
+      "tableTo": "lightbulb_run",
+      "columnsTo": [
+        "account_id",
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": true,
+      "name": "lightbulb_worker_launch_account_run_fk",
+      "entityType": "fks",
+      "table": "lightbulb_worker_launch_attempt"
+    },
+    {
+      "columns": [
+        "account_id",
+        "worker_id"
+      ],
+      "tableTo": "lightbulb_worker",
+      "columnsTo": [
+        "account_id",
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": true,
+      "name": "lightbulb_worker_launch_account_worker_fk",
+      "entityType": "fks",
+      "table": "lightbulb_worker_launch_attempt"
+    },
+    {
+      "columns": [
+        "account_id",
+        "task_packet_id"
+      ],
+      "tableTo": "lightbulb_task_packet",
+      "columnsTo": [
+        "account_id",
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": true,
+      "name": "lightbulb_worker_launch_account_task_packet_fk",
+      "entityType": "fks",
+      "table": "lightbulb_worker_launch_attempt"
+    },
+    {
+      "columns": [
+        "worker_id",
+        "run_id"
+      ],
+      "tableTo": "lightbulb_worker",
+      "columnsTo": [
+        "id",
+        "run_id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": true,
+      "name": "lightbulb_worker_launch_worker_run_fk",
+      "entityType": "fks",
+      "table": "lightbulb_worker_launch_attempt"
+    },
+    {
+      "columns": [
+        "task_packet_id",
+        "worker_id"
+      ],
+      "tableTo": "lightbulb_task_packet",
+      "columnsTo": [
+        "id",
+        "worker_id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": true,
+      "name": "lightbulb_worker_launch_task_packet_worker_fk",
+      "entityType": "fks",
+      "table": "lightbulb_worker_launch_attempt"
+    },
+    {
+      "columns": [
+        "account_id"
+      ],
+      "tableTo": "lightbulb_account",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
       "name": "fk_lightbulb_worker_account_id_lightbulb_account_id_fk",
       "entityType": "fks",
       "table": "lightbulb_worker"
@@ -4886,6 +5255,15 @@
       "nameExplicit": false,
       "name": "lightbulb_task_packet_pk",
       "table": "lightbulb_task_packet",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "lightbulb_worker_launch_attempt_pk",
+      "table": "lightbulb_worker_launch_attempt",
       "entityType": "pks"
     },
     {
@@ -5787,6 +6165,94 @@
       "name": "lightbulb_task_packet_id_worker_idx",
       "entityType": "indexes",
       "table": "lightbulb_task_packet"
+    },
+    {
+      "columns": [
+        {
+          "value": "account_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "lightbulb_worker_launch_account_idx",
+      "entityType": "indexes",
+      "table": "lightbulb_worker_launch_attempt"
+    },
+    {
+      "columns": [
+        {
+          "value": "run_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "lightbulb_worker_launch_run_idx",
+      "entityType": "indexes",
+      "table": "lightbulb_worker_launch_attempt"
+    },
+    {
+      "columns": [
+        {
+          "value": "worker_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "lightbulb_worker_launch_worker_idx",
+      "entityType": "indexes",
+      "table": "lightbulb_worker_launch_attempt"
+    },
+    {
+      "columns": [
+        {
+          "value": "task_packet_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "lightbulb_worker_launch_task_packet_idx",
+      "entityType": "indexes",
+      "table": "lightbulb_worker_launch_attempt"
+    },
+    {
+      "columns": [
+        {
+          "value": "account_id",
+          "isExpression": false
+        },
+        {
+          "value": "id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "lightbulb_worker_launch_account_id_idx",
+      "entityType": "indexes",
+      "table": "lightbulb_worker_launch_attempt"
+    },
+    {
+      "columns": [
+        {
+          "value": "active_key",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "lightbulb_worker_launch_active_key_idx",
+      "entityType": "indexes",
+      "table": "lightbulb_worker_launch_attempt"
     },
     {
       "columns": [

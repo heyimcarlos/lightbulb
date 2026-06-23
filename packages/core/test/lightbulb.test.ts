@@ -433,6 +433,7 @@ describe("Lightbulb", () => {
                           role: "bounded implementation worker",
                           status: "complete",
                           summary: "Implemented the schema tracer bullet and returned artifact handles.",
+                          launchAttempts: [],
                         },
                       ],
                       gates: [
@@ -637,6 +638,7 @@ describe("Lightbulb", () => {
               role: "bounded implementation worker",
               status: "complete",
               summary: "Implemented the schema tracer bullet and returned artifact handles.",
+              launchAttempts: [],
             },
           ])
           expect(tree?.taskPackets).toEqual([

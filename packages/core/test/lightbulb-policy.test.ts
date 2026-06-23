@@ -131,6 +131,7 @@ describe("Lightbulb gate policy", () => {
             role: "bounded implementation worker",
             status: "blocked",
             summary: transition!.decision.reason,
+            launchAttempts: [],
           })
           expect(summary?.gates).toContainEqual({
             id: transition!.gateID,

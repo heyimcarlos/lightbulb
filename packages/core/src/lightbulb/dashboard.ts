@@ -17,6 +17,7 @@ import { toPRReviewCandidateSummary } from "./pr-review-candidate"
 import { toPRReviewRouteSummary } from "./pr-review-route"
 import { classifyLoopSchedule } from "./scheduler"
 import { toLoopProfileCompactSummary } from "./loop-profile"
+import { toWorkerLaunchAttemptHandle } from "./worker-launch"
 import type {
   LightbulbArtifactTable,
   LightbulbEventTable,
@@ -179,6 +180,9 @@ function toDashboardRun(
         role: worker.role,
         status: worker.status,
         summary: worker.summary,
+        launchAttempts: graph.workerLaunchAttempts
+          .filter((attempt) => attempt.worker_id === worker.id)
+          .map(toWorkerLaunchAttemptHandle),
       })),
     gates: graph.gates.filter((gate) => gate.run_id === run.id).map(toDashboardGate),
     artifacts: graph.artifacts

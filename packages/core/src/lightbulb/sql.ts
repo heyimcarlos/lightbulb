@@ -391,6 +391,78 @@ export const LightbulbTaskPacketTable = sqliteTable(
   ],
 )
 
+export const LightbulbWorkerLaunchAttemptTable = sqliteTable(
+  "lightbulb_worker_launch_attempt",
+  {
+    id: text().$type<Lightbulb.WorkerLaunchAttemptID>().primaryKey(),
+    account_id: text()
+      .$type<Lightbulb.AccountID>()
+      .notNull()
+      .references(() => LightbulbAccountTable.id, { onDelete: "cascade" }),
+    run_id: text()
+      .$type<Lightbulb.RunID>()
+      .notNull()
+      .references(() => LightbulbRunTable.id, { onDelete: "cascade" }),
+    worker_id: text()
+      .$type<Lightbulb.WorkerID>()
+      .notNull()
+      .references(() => LightbulbWorkerTable.id, { onDelete: "cascade" }),
+    task_packet_id: text()
+      .$type<Lightbulb.TaskPacketID>()
+      .notNull()
+      .references(() => LightbulbTaskPacketTable.id, { onDelete: "cascade" }),
+    active_key: text(),
+    status: text().$type<Lightbulb.WorkerLaunchStatus>().notNull(),
+    trigger: text().$type<Lightbulb.WorkerLaunchTrigger>().notNull(),
+    summary: text().notNull(),
+    cwd: text().notNull(),
+    worktree_id: text(),
+    command: text().notNull(),
+    profile_id: text(),
+    session_id: text(),
+    process_id: integer(),
+    heartbeat_uri: text(),
+    log_uri: text(),
+    report_uri: text(),
+    failure_reason: text(),
+    metadata: text({ mode: "json" }).$type<Record<string, unknown>>(),
+    ...Timestamps,
+  },
+  (table) => [
+    index("lightbulb_worker_launch_account_idx").on(table.account_id),
+    index("lightbulb_worker_launch_run_idx").on(table.run_id),
+    index("lightbulb_worker_launch_worker_idx").on(table.worker_id),
+    index("lightbulb_worker_launch_task_packet_idx").on(table.task_packet_id),
+    uniqueIndex("lightbulb_worker_launch_account_id_idx").on(table.account_id, table.id),
+    uniqueIndex("lightbulb_worker_launch_active_key_idx").on(table.active_key),
+    foreignKey({
+      columns: [table.account_id, table.run_id],
+      foreignColumns: [LightbulbRunTable.account_id, LightbulbRunTable.id],
+      name: "lightbulb_worker_launch_account_run_fk",
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [table.account_id, table.worker_id],
+      foreignColumns: [LightbulbWorkerTable.account_id, LightbulbWorkerTable.id],
+      name: "lightbulb_worker_launch_account_worker_fk",
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [table.account_id, table.task_packet_id],
+      foreignColumns: [LightbulbTaskPacketTable.account_id, LightbulbTaskPacketTable.id],
+      name: "lightbulb_worker_launch_account_task_packet_fk",
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [table.worker_id, table.run_id],
+      foreignColumns: [LightbulbWorkerTable.id, LightbulbWorkerTable.run_id],
+      name: "lightbulb_worker_launch_worker_run_fk",
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [table.task_packet_id, table.worker_id],
+      foreignColumns: [LightbulbTaskPacketTable.id, LightbulbTaskPacketTable.worker_id],
+      name: "lightbulb_worker_launch_task_packet_worker_fk",
+    }).onDelete("cascade"),
+  ],
+)
+
 export const LightbulbArtifactTable = sqliteTable(
   "lightbulb_artifact",
   {

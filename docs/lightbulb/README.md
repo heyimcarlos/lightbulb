@@ -8,7 +8,7 @@ OpenCode is the execution/session substrate. Lightbulb owns the account-level wo
 
 - **Goals**: durable objectives that may span repositories, schedules, and workers.
 - **Loops**: recurring discovery/execution/verification policies.
-- **Workers**: isolated agent sessions or processes, usually fresh-context Codex/Hermes runs.
+- **Workers**: isolated OpenCode-native agent sessions or local processes, usually fresh-context delegated runs.
 - **Task packets**: bounded work items passed to workers.
 - **Gates**: approval, verification, budget, and context thresholds.
 - **Artifacts**: files, repos, code, diffs, plans, reports, screenshots, logs, and generated assets that flow to and from the harness.
@@ -58,6 +58,21 @@ the account loops. The tick event stores admitted/skipped counts and compact per
 where no loop exists yet. This gives paused cron, external scheduler, and recovery loops a durable trace before any
 worker process exists. The dashboard read model exposes the recent tick events under `operations.schedulerTicks`, and
 the text dashboard prints an `Operations` section when tick state exists.
+
+## Durable Worker Launch Attempts
+
+Worker dispatch records a `lightbulb_worker_launch_attempt` row before treating a child process or session as active.
+Launch attempts are tied to the account, run, worker, and task packet, and carry compact process handles: cwd,
+worktree ID, command summary, environment summary, profile ID, session ID, process ID, heartbeat URI, log URI,
+expected final-report URI, and failure reason.
+
+An active-key guard allows only one active launch attempt per task packet. Retrying the same request returns the active
+attempt and records `lightbulb.worker_launch.already_active` instead of starting duplicate worker ownership. Failed or
+blocked launches are terminal evidence with no active key, so later recovery can decide whether to issue a new packet.
+
+Dependency, human-review, budget, and context-policy holds are recorded as skipped launch events with exact bounded
+reasons before any child process starts. Parent summaries and dashboard worker rows expose launch attempts as handles
+that point to heartbeat, log, and final-report artifacts; raw child transcripts stay outside parent read models.
 
 ## Adversarial PR Review Gate
 

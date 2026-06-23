@@ -35,6 +35,7 @@ export * from "./lightbulb/run-ledger"
 export * from "./lightbulb/scheduler"
 export * from "./lightbulb/scheduler-supervisor"
 export * from "./lightbulb/scheduler-tick"
+export * from "./lightbulb/worker-launch"
 
 import { and, asc, desc, eq, or } from "drizzle-orm"
 import { Context, Effect, Layer, Schema } from "effect"
@@ -100,6 +101,7 @@ import {
   LightbulbRouteTable,
   LightbulbRunTable,
   LightbulbTaskPacketTable,
+  LightbulbWorkerLaunchAttemptTable,
   LightbulbWorkerTable,
 } from "./lightbulb/sql"
 import {
@@ -123,6 +125,13 @@ import {
   type LoopSchedulerTickResult,
   type LoopSchedulerTickServiceInput,
 } from "./lightbulb/scheduler-tick"
+import {
+  launchWorkerInDb,
+  toWorkerLaunchAttemptHandle,
+  type WorkerLaunchAttemptHandle,
+  type WorkerLaunchResult,
+  type WorkerLaunchServiceInput,
+} from "./lightbulb/worker-launch"
 
 const prefixedID = <const Prefix extends string>(prefix: Prefix, brand: string) =>
   Schema.String.check(Schema.isStartsWith(`${prefix}_`)).pipe(
@@ -142,6 +151,8 @@ export const WorkerID = prefixedID("lbworker", "Lightbulb.WorkerID")
 export type WorkerID = typeof WorkerID.Type
 export const TaskPacketID = prefixedID("lbpacket", "Lightbulb.TaskPacketID")
 export type TaskPacketID = typeof TaskPacketID.Type
+export const WorkerLaunchAttemptID = prefixedID("lblaunch", "Lightbulb.WorkerLaunchAttemptID")
+export type WorkerLaunchAttemptID = typeof WorkerLaunchAttemptID.Type
 export const ArtifactID = prefixedID("lbartifact", "Lightbulb.ArtifactID")
 export type ArtifactID = typeof ArtifactID.Type
 export const GateID = prefixedID("lbgate", "Lightbulb.GateID")
@@ -166,6 +177,9 @@ export type DebugStatus = "not_started" | "reproducing" | "isolating" | "fixed" 
 export type GateStatus = "pending" | "running" | "passed" | "failed" | "blocked"
 export type WorkerStatus = "queued" | "running" | "blocked" | "complete" | "failed"
 export type TaskPacketStatus = "ready" | "claimed" | "complete" | "blocked"
+export type WorkerLaunchStatus = "requested" | "launching" | "running" | "launch_failed" | "blocked" | "complete" | "cancelled"
+export type WorkerLaunchTrigger = "scheduler" | "manual" | "recovery"
+export type WorkerLaunchHoldReason = "dependency_held" | "human_review_held" | "budget_held" | "context_policy_held"
 export type ArtifactType =
   | "report"
   | "plan"
@@ -376,6 +390,7 @@ export type AccountGraph = {
   readonly runs: (typeof LightbulbRunTable.$inferSelect)[]
   readonly workers: (typeof LightbulbWorkerTable.$inferSelect)[]
   readonly taskPackets: (typeof LightbulbTaskPacketTable.$inferSelect)[]
+  readonly workerLaunchAttempts: (typeof LightbulbWorkerLaunchAttemptTable.$inferSelect)[]
   readonly routes: (typeof LightbulbRouteTable.$inferSelect)[]
   readonly routeStops: (typeof LightbulbRouteStopTable.$inferSelect)[]
   readonly routeSteers: (typeof LightbulbRouteSteerTable.$inferSelect)[]
@@ -411,6 +426,7 @@ export type ParentSummary = {
     readonly role: string
     readonly status: WorkerStatus
     readonly summary: string
+    readonly launchAttempts: WorkerLaunchAttemptHandle[]
   }[]
   readonly gates: {
     readonly id: GateID
@@ -539,6 +555,7 @@ export type DashboardRun = {
     readonly role: string
     readonly status: WorkerStatus
     readonly summary: string
+    readonly launchAttempts: WorkerLaunchAttemptHandle[]
   }[]
   readonly gates: DashboardGate[]
   readonly artifacts: ArtifactHandle[]
@@ -571,6 +588,7 @@ export interface Interface {
   readonly admitLoopRun: (input: LoopRunAdmissionServiceInput) => Effect.Effect<LoopRunAdmissionResult>
   readonly superviseScheduledLoops: (input: SchedulerSupervisorServiceInput) => Effect.Effect<SchedulerSupervisorResult>
   readonly admitScheduledLoopRuns: (input: LoopSchedulerTickServiceInput) => Effect.Effect<LoopSchedulerTickResult>
+  readonly launchWorker: (input: WorkerLaunchServiceInput) => Effect.Effect<WorkerLaunchResult>
   readonly readGoalRunTree: (goalID: GoalID) => Effect.Effect<GoalRunTree | undefined>
   readonly seedTracerBullet: (input?: {
     readonly accountName?: string
@@ -671,6 +689,13 @@ export const layer = Layer.effect(
       }),
       admitScheduledLoopRuns: Effect.fn("Lightbulb.admitScheduledLoopRuns")(function* (input) {
         return yield* admitScheduledLoopRunsInDb(db, { ...input, now: input.now ?? Date.now() }, { run: RunID.create, event: EventID.create })
+      }),
+      launchWorker: Effect.fn("Lightbulb.launchWorker")(function* (input) {
+        return yield* launchWorkerInDb(
+          db,
+          { ...input, now: input.now ?? Date.now() },
+          { launchAttempt: WorkerLaunchAttemptID.create, event: EventID.create },
+        )
       }),
       readGoalRunTree: Effect.fn("Lightbulb.readGoalRunTree")(function* (goalID) {
         const goal = yield* db
@@ -1039,6 +1064,13 @@ export const layer = Layer.effect(
           .orderBy(asc(LightbulbWorkerTable.time_created))
           .all()
           .pipe(Effect.orDie)
+        const launchAttempts = yield* db
+          .select()
+          .from(LightbulbWorkerLaunchAttemptTable)
+          .where(eq(LightbulbWorkerLaunchAttemptTable.run_id, runID))
+          .orderBy(asc(LightbulbWorkerLaunchAttemptTable.time_created))
+          .all()
+          .pipe(Effect.orDie)
         const gates = yield* db
           .select()
           .from(LightbulbGateTable)
@@ -1081,6 +1113,9 @@ export const layer = Layer.effect(
             role: worker.role,
             status: worker.status,
             summary: worker.summary,
+            launchAttempts: launchAttempts
+              .filter((attempt) => attempt.worker_id === worker.id)
+              .map(toWorkerLaunchAttemptHandle),
           })),
           gates: gates.map((gate) => ({
             id: gate.id,
@@ -1151,6 +1186,13 @@ function readAccountGraphFromDb(
         .from(LightbulbTaskPacketTable)
         .where(eq(LightbulbTaskPacketTable.account_id, accountID))
         .orderBy(asc(LightbulbTaskPacketTable.time_created))
+        .all()
+        .pipe(Effect.orDie),
+      workerLaunchAttempts: yield* db
+        .select()
+        .from(LightbulbWorkerLaunchAttemptTable)
+        .where(eq(LightbulbWorkerLaunchAttemptTable.account_id, accountID))
+        .orderBy(asc(LightbulbWorkerLaunchAttemptTable.time_created))
         .all()
         .pipe(Effect.orDie),
       routes: yield* db
