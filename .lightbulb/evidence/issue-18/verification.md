@@ -6,6 +6,7 @@
 - `cd packages/core && bun test test/lightbulb-worker-report.test.ts test/lightbulb-worker-launch.test.ts test/lightbulb-review-gate.test.ts test/lightbulb.test.ts` - pass, 37 tests.
 - `cd packages/core && bun typecheck` - pass.
 - `git diff --check` - pass.
+- `bun run script/adversarial-review.ts --base origin/lightbulb --head HEAD --event /tmp/lightbulb-pr104-event.json --markdown .lightbulb/evidence/issue-18/adversarial-review.md` - pass, no blockers.
 
 ## Read-Model Evidence
 
