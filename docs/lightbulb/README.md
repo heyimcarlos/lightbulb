@@ -87,6 +87,18 @@ worker consumes more resources. Review gates happen after output exists: they de
 output as integrated account state. A `needs-rework` review gate remains visible in the dashboard inbox as a blocked
 human-review item, while an approved gate leaves the inbox and records `review_status=approved`.
 
+## Worker Final Reports
+
+Worker final-report ingestion is the boundary where Lightbulb accepts child output as durable control-plane state. The
+input names the run, worker, task packet, terminal status, summary, report artifact handles, verification evidence, and
+usage totals. Raw child transcripts are rejected; parents store compact summaries and artifact handles only.
+
+Report ingestion updates the worker, task packet, run, launch attempt, artifact lineage, usage metadata, and append-only
+event evidence in one operator-visible path. Completed reports mark the run passed and approved. Failed and blocked
+reports preserve exact terminal reasons. Reports that need parent review complete the worker output but open a review
+gate against the report artifact so dashboard and parent summaries show the human-held integration state separately from
+dependency or budget holds.
+
 ## Worker Runtime Adapter Contract
 
 OpenCode-native execution is the default Lightbulb worker runtime for stable loop v0. Lightbulb is an OpenCode fork and

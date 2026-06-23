@@ -40,6 +40,7 @@ export * from "./lightbulb/scheduler"
 export * from "./lightbulb/scheduler-supervisor"
 export * from "./lightbulb/scheduler-tick"
 export * from "./lightbulb/worker-launch"
+export * from "./lightbulb/worker-report"
 export * from "./lightbulb/worker-runtime"
 
 import { and, asc, desc, eq, or } from "drizzle-orm"
@@ -153,6 +154,12 @@ import {
   type WorkerLaunchResult,
   type WorkerLaunchServiceInput,
 } from "./lightbulb/worker-launch"
+import {
+  ingestWorkerReportInDb,
+  WorkerReportRejected,
+  type IngestWorkerReportServiceInput,
+  type WorkerReportIngestionResult,
+} from "./lightbulb/worker-report"
 
 const prefixedID = <const Prefix extends string>(prefix: Prefix, brand: string) =>
   Schema.String.check(Schema.isStartsWith(`${prefix}_`)).pipe(
@@ -613,6 +620,9 @@ export interface Interface {
   readonly admitScheduledLoopRuns: (input: LoopSchedulerTickServiceInput) => Effect.Effect<LoopSchedulerTickResult>
   readonly runAccountLoopTick: (input: AccountLoopRunnerTickServiceInput) => Effect.Effect<AccountLoopRunnerTickResult>
   readonly launchWorker: (input: WorkerLaunchServiceInput) => Effect.Effect<WorkerLaunchResult>
+  readonly ingestWorkerReport: (
+    input: IngestWorkerReportServiceInput,
+  ) => Effect.Effect<WorkerReportIngestionResult, WorkerReportRejected>
   readonly readGoalRunTree: (goalID: GoalID) => Effect.Effect<GoalRunTree | undefined>
   readonly seedTracerBullet: (input?: {
     readonly accountName?: string
@@ -731,6 +741,13 @@ export const layer = Layer.effect(
           db,
           { ...input, now: input.now ?? Date.now() },
           { launchAttempt: WorkerLaunchAttemptID.create, event: EventID.create },
+        )
+      }),
+      ingestWorkerReport: Effect.fn("Lightbulb.ingestWorkerReport")(function* (input) {
+        return yield* ingestWorkerReportInDb(
+          db,
+          { ...input, now: input.now ?? Date.now() },
+          { event: EventID.create, gate: GateID.create },
         )
       }),
       readGoalRunTree: Effect.fn("Lightbulb.readGoalRunTree")(function* (goalID) {
