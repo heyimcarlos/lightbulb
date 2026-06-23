@@ -66,8 +66,16 @@ export type TransitionDecisionArtifactInput = {
 export type IssueRoutingInput = {
   readonly accountID: Lightbulb.AccountID
   readonly issueRef: string
+  readonly issueHandle?: string
   readonly title: string
+  readonly url?: string
   readonly labels?: readonly string[]
+  readonly bodyHandle?: string
+  readonly bodySummary?: string
+  readonly updatedAt?: number
+  readonly dependencyRefs?: readonly string[]
+  readonly promptHandle?: string
+  readonly instructionHandle?: string
   readonly gateID?: Lightbulb.GateID
   readonly requiredDecisionArtifactIDs?: readonly Lightbulb.ArtifactID[]
 }
@@ -82,8 +90,16 @@ export type IssueRoutingDecisionHold = {
 
 export type IssueRoutingClassification = {
   readonly issueRef: string
+  readonly issueHandle: string | null
   readonly title: string
+  readonly url: string | null
   readonly labels: readonly string[]
+  readonly bodyHandle: string | null
+  readonly bodySummary: string | null
+  readonly updatedAt: number | null
+  readonly dependencyRefs: readonly string[]
+  readonly promptHandle: string
+  readonly instructionHandle: string
   readonly status: "ready_for_afk" | "held_for_decision" | "decision_rejected" | "not_ready"
   readonly decisionArtifacts: DecisionArtifactHandle[]
   readonly decisionHolds: IssueRoutingDecisionHold[]
@@ -92,8 +108,16 @@ export type IssueRoutingClassification = {
 export type WorkerDispatchPlan = {
   readonly spawnRequests: {
     readonly issueRef: string
+    readonly issueHandle: string | null
     readonly title: string
     readonly labels: readonly string[]
+    readonly url: string | null
+    readonly bodyHandle: string | null
+    readonly bodySummary: string | null
+    readonly updatedAt: number | null
+    readonly dependencyRefs: readonly string[]
+    readonly promptHandle: string
+    readonly instructionHandle: string
     readonly summary: string
   }[]
   readonly skipped: {
@@ -365,8 +389,16 @@ export function classifyIssueRouting(db: Database.Interface["db"], input: IssueR
     ])
     return {
       issueRef: input.issueRef.trim(),
+      issueHandle: input.issueHandle ?? null,
       title: input.title,
+      url: input.url ?? null,
       labels: input.labels ?? [],
+      bodyHandle: input.bodyHandle ?? null,
+      bodySummary: input.bodySummary ?? null,
+      updatedAt: input.updatedAt ?? null,
+      dependencyRefs: input.dependencyRefs ?? [],
+      promptHandle: input.promptHandle ?? "github:" + input.issueRef.trim(),
+      instructionHandle: input.instructionHandle ?? input.bodyHandle ?? "github:" + input.issueRef.trim(),
       status:
         decisionHolds.length === 0 && (input.labels ?? []).some((label) => label === "ready-for-agent")
           ? ("ready_for_afk" as const)
@@ -389,8 +421,16 @@ export function planWorkerDispatch(db: Database.Interface["db"], input: { readon
         .filter((classification) => classification.status === "ready_for_afk")
         .map((classification) => ({
           issueRef: classification.issueRef,
+          issueHandle: classification.issueHandle ?? null,
           title: classification.title,
           labels: classification.labels,
+          url: classification.url ?? null,
+          bodyHandle: classification.bodyHandle ?? null,
+          bodySummary: classification.bodySummary ?? null,
+          updatedAt: classification.updatedAt ?? null,
+          dependencyRefs: classification.dependencyRefs ?? [],
+          promptHandle: classification.promptHandle ?? "github:" + classification.issueRef,
+          instructionHandle: classification.instructionHandle ?? classification.bodyHandle ?? "github:" + classification.issueRef,
           summary: "Issue is ready for AFK worker dispatch.",
         })),
       skipped: classifications

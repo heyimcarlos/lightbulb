@@ -329,7 +329,10 @@ function ensureWorkerRequestInDb(
             metadata: {
               runner_tick_id: input.tickID,
               issue_ref: input.issue.issueRef,
+              issue_handle: input.issue.issueHandle,
               labels: input.issue.labels,
+              prompt_handle: input.issue.promptHandle,
+              instruction_handle: input.issue.instructionHandle,
               runtime_kind: "opencode",
             },
             time_created: input.now,
@@ -347,11 +350,22 @@ function ensureWorkerRequestInDb(
           worker_id: workerID,
           title: input.issue.title,
           status: "ready",
-          instructions: "Implement " + input.issue.issueRef + " using its structured issue body and return a bounded worker report.",
+          instructions:
+            "Implement " +
+            input.issue.issueRef +
+            " using instruction handle " +
+            input.issue.instructionHandle +
+            " and return a bounded worker report.",
           metadata: {
             runner_tick_id: input.tickID,
             issue_ref: input.issue.issueRef,
-            prompt_handle: "github:" + input.issue.issueRef,
+            issue_handle: input.issue.issueHandle,
+            prompt_handle: input.issue.promptHandle,
+            instruction_handle: input.issue.instructionHandle,
+            body_handle: input.issue.bodyHandle,
+            body_summary: input.issue.bodySummary,
+            source_updated_at: input.issue.updatedAt,
+            dependency_refs: input.issue.dependencyRefs,
             context_budget: "bounded",
             expected_artifact_types: ["report", "test_result"],
             delivery_mode: "worker_report",

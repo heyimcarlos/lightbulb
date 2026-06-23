@@ -30,6 +30,7 @@ export type {
 } from "./lightbulb/context-bundle"
 export * from "./lightbulb/loop-profile"
 export * from "./lightbulb/loop-runner-tick"
+export * from "./lightbulb/issue-intake"
 export * from "./lightbulb/pr-review-candidate"
 export * from "./lightbulb/pr-review-route"
 export * from "./lightbulb/run-ledger"
@@ -86,6 +87,7 @@ import type {
   TransitionDecisionArtifactInput,
   WorkerDispatchPlan,
 } from "./lightbulb/decision-artifact"
+import { ingestIssueQueueSnapshots, type IssueQueueIntakeResult, type IssueQueueSnapshot } from "./lightbulb/issue-intake"
 import type { ContextBundleAssemblyResult, ContextBundleAssemblyServiceInput } from "./lightbulb/context-bundle"
 import {
   LightbulbAccountTable,
@@ -617,6 +619,7 @@ export interface Interface {
     input: TransitionDecisionArtifactInput,
   ) => Effect.Effect<DecisionArtifactHandle, ArtifactRegistrationRejected>
   readonly classifyIssueRouting: (input: IssueRoutingInput) => Effect.Effect<IssueRoutingClassification>
+  readonly ingestIssueQueueSnapshots: (input: { readonly snapshots: readonly IssueQueueSnapshot[] }) => Effect.Effect<IssueQueueIntakeResult>
   readonly planWorkerDispatch: (input: { readonly issues: readonly IssueRoutingInput[] }) => Effect.Effect<WorkerDispatchPlan>
   readonly discoverPRReviewCandidates: (
     input: PRReviewCandidateDiscoveryInput,
@@ -988,6 +991,9 @@ export const layer = Layer.effect(
       }),
       classifyIssueRouting: Effect.fn("Lightbulb.classifyIssueRouting")(function* (input) {
         return yield* classifyIssueRouting(db, input)
+      }),
+      ingestIssueQueueSnapshots: Effect.fn("Lightbulb.ingestIssueQueueSnapshots")(function* (input) {
+        return ingestIssueQueueSnapshots(input)
       }),
       planWorkerDispatch: Effect.fn("Lightbulb.planWorkerDispatch")(function* (input) {
         return yield* planWorkerDispatch(db, input)

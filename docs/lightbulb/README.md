@@ -151,6 +151,22 @@ before any duplicate work is admitted. Explicit dependency or recovery holds liv
 responsible gate clears them; once cleared, the next supervisor pass can select the loop again when its schedule and
 budget are open.
 
+## Issue Queue Intake
+
+Issue intake is the fakeable read-model seam before structured pickup packets and account runner ticks. It ingests compact
+GitHub-like snapshots: issue number, title, URL, labels, body handle or summary, update time, and dependency refs. It does
+not call GitHub directly in core tests and does not copy full issue bodies or comment transcripts into parent context.
+
+The intake classifier maps repo triage labels into bounded statuses: `ready`, `dependency_blocked`, `human_held`,
+`active_worker_owned`, `integrated_done`, or `not_ready`. Only `ready-for-agent` issues without dependency, human, active
+worker, or integrated labels become routing inputs. Dependency-blocked issues are skipped with exact blocker refs and
+produce no worker-spawn request.
+
+Ready issues become compact task-packet requests and `IssueRoutingInput` values with issue, prompt, instruction, and body
+handles. The runner tick can then create a durable task packet from handles such as `github:issue:12:prompt` and
+`github:issue:12:body`, leaving full issue/comment content outside the authoritative Lightbulb route/run/gate/artifact
+state.
+
 ## Account Loop Runner Ticks
 
 The account loop runner tick is the first deterministic coordinator above issue/work intake, scheduler supervision, and
