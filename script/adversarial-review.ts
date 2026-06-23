@@ -193,8 +193,10 @@ function visualEvidenceBlockers(): readonly Finding[] {
 }
 
 function hiddenAutomationBlockers(): readonly Finding[] {
-  const addedCron = addedLines().some((line) => line.match(/^\+\s*(-\s*)?cron:/) || line.match(/^\+\s*schedule:/))
-  if (!addedCron) return []
+  const additions = addedLines()
+  const addedCron = additions.some((line) => line.match(/^\+\s*(-\s*)?cron:/))
+  const addedWorkflowSchedule = workflowChanged() && additions.some((line) => line.match(/^\+\s*schedule:\s*$/))
+  if (!addedCron && !addedWorkflowSchedule) return []
   return [
     {
       title: "Scheduled automation added",
