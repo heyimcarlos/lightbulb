@@ -74,6 +74,19 @@ Dependency, human-review, budget, and context-policy holds are recorded as skipp
 reasons before any child process starts. Parent summaries and dashboard worker rows expose launch attempts as handles
 that point to heartbeat, log, and final-report artifacts; raw child transcripts stay outside parent read models.
 
+## Review And Integration Gates
+
+Review gates are the maker/checker boundary for worker output. They target a run, worker, or artifact and record the
+owner, optional reviewer, reason, opened time, and decision time in the gate metadata. The review-specific statuses are
+`opened`, `approved`, `rejected`, and `needs-rework`; they map onto the existing durable gate statuses
+`pending`, `passed`, `failed`, and `blocked` so older dashboards and retention rules continue to work.
+
+Review gates differ from dependency waits and context/budget holds. Dependency waits prevent work from being picked up
+because prerequisite issue state is not integrated yet. Context and budget holds stop or checkpoint execution before a
+worker consumes more resources. Review gates happen after output exists: they decide whether a parent can treat that
+output as integrated account state. A `needs-rework` review gate remains visible in the dashboard inbox as a blocked
+human-review item, while an approved gate leaves the inbox and records `review_status=approved`.
+
 ## Worker Runtime Adapter Contract
 
 OpenCode-native execution is the default Lightbulb worker runtime for stable loop v0. Lightbulb is an OpenCode fork and
