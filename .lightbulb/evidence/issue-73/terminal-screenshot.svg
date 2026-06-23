@@ -1,8 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="560" viewBox="0 0 1180 560" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="650" viewBox="0 0 1180 650" role="img" aria-labelledby="title desc">
   <title id="title">Issue 73 terminal verification summary</title>
   <desc id="desc">A terminal-style visual evidence card showing loop profile registry tests, scheduler adjacency tests, typecheck, and diff check passing.</desc>
-  <rect width="1180" height="560" fill="#101418"/>
-  <rect x="24" y="24" width="1132" height="512" rx="8" fill="#171d23" stroke="#34404c"/>
+  <rect width="1180" height="650" fill="#101418"/>
+  <rect x="24" y="24" width="1132" height="602" rx="8" fill="#171d23" stroke="#34404c"/>
   <rect x="24" y="24" width="1132" height="42" rx="8" fill="#222a32"/>
   <circle cx="52" cy="45" r="7" fill="#ff6b6b"/>
   <circle cx="76" cy="45" r="7" fill="#ffd166"/>
@@ -17,6 +17,8 @@
   <text x="48" y="364" fill="#7ee787" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17">$ cd packages/core &amp;&amp; bun typecheck</text>
   <text x="48" y="404" fill="#d0d7de" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17">$ tsgo --noEmit</text>
   <text x="48" y="436" fill="#7ee787" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17">core typecheck passed</text>
-  <text x="48" y="490" fill="#7ee787" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17">$ git diff --check origin/dev...HEAD</text>
-  <text x="48" y="522" fill="#7ee787" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17">whitespace check passed</text>
+  <text x="48" y="490" fill="#7ee787" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17">$ cd packages/opencode &amp;&amp; bun test test/cli/lightbulb.test.ts</text>
+  <text x="48" y="522" fill="#7ee787" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17">9 pass, 0 fail, 19 expect() calls</text>
+  <text x="48" y="576" fill="#7ee787" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17">$ cd packages/opencode &amp;&amp; bun typecheck; git diff --check origin/dev...HEAD</text>
+  <text x="48" y="608" fill="#7ee787" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17">opencode typecheck and whitespace check passed</text>
 </svg>

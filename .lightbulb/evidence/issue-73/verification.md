@@ -9,6 +9,8 @@ Worktree: `/home/ren/wt/lightbulb/loop-profiles`
 - `cd packages/core && bun test test/lightbulb.loop-profile.test.ts test/lightbulb.test.ts`
 - `cd packages/core && bun test test/lightbulb-scheduler.test.ts test/lightbulb-loop-run.test.ts test/lightbulb-scheduler-supervisor.test.ts`
 - `cd packages/core && bun typecheck`
+- `cd packages/opencode && bun test test/cli/lightbulb.test.ts`
+- `cd packages/opencode && bun typecheck`
 - `git diff --check origin/dev...HEAD`
 
 ## Results
@@ -16,6 +18,8 @@ Worktree: `/home/ren/wt/lightbulb/loop-profiles`
 - Loop profile and core dashboard regression tests: 33 pass, 0 fail, 197 expect calls.
 - Scheduler, run ledger, and supervisor adjacency tests: 19 pass, 0 fail, 74 expect calls.
 - Core typecheck: passed.
+- Opencode Lightbulb CLI formatter tests: 9 pass, 0 fail, 19 expect calls.
+- Opencode typecheck: passed.
 - Whitespace check: passed.
 
 ## Read-Model Evidence
