@@ -194,6 +194,7 @@ describe("lightbulb dashboard display", () => {
                 budget: null,
                 scheduleClassification: "not_due",
                 scheduleReason: "schedule_not_configured",
+                profile: null,
                 runs: [
                   {
                     id: runID,

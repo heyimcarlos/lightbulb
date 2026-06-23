@@ -418,6 +418,7 @@ describe("Lightbulb", () => {
                   budget: null,
                   scheduleClassification: "not_due",
                   scheduleReason: "schedule_not_configured",
+                  profile: null,
                   runs: [
                     {
                       id: seeded.runID,

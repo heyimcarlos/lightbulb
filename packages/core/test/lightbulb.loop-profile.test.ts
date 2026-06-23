@@ -32,6 +32,39 @@ function discoveryProfile() {
   return Lightbulb.standardAccountLoopProfiles.filter((profile) => profile.profileID === "discovery")
 }
 
+function profileRegistry(input: {
+  readonly name: string
+  readonly goal: string
+  readonly risk: Lightbulb.LoopProfileRisk
+  readonly skills: readonly string[]
+  readonly state: string
+  readonly readModel: string
+  readonly humanGates: readonly string[]
+  readonly readinessMode: Lightbulb.LoopProfileReadinessMode
+  readonly tokenCostTier: Lightbulb.LoopProfileTokenCostTier
+  readonly starterRef: string
+}) {
+  return {
+    name: input.name,
+    goal: input.goal,
+    cadence: "Every 1h",
+    risk: input.risk,
+    skills: input.skills,
+    state: input.state,
+    readModel: input.readModel,
+    phases: [
+      { id: "read", goal: `Read ${input.readModel}.` },
+      { id: "decide", goal: input.goal },
+    ],
+    humanGates: input.humanGates,
+    readinessMode: input.readinessMode,
+    tokenCostTier: input.tokenCostTier,
+    dailyCap: 2,
+    earlyExitRequirement: "Exit when no eligible item is ready or a human gate is blocking.",
+    starterRef: input.starterRef,
+  } satisfies Lightbulb.LoopProfileRegistryMetadata
+}
+
 describe("Lightbulb loop profile bootstrap", () => {
   it.live("creates standard account loop profiles and retries idempotently", () =>
     Effect.acquireRelease(
@@ -100,6 +133,150 @@ describe("Lightbulb loop profile bootstrap", () => {
     ),
   )
 
+  it.live("stores Cobus-style registry metadata and exposes compact profile summaries", () =>
+    Effect.acquireRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ).pipe(
+      Effect.flatMap((tmp) =>
+        Effect.gen(function* () {
+          const lightbulb = yield* Lightbulb.Service
+          const created = yield* lightbulb.createOrAdoptGoal({
+            accountName: "Registry Profile Account",
+            title: "Bootstrap registry profiles",
+            objective: "Expose compact Cobus-style loop profile read models.",
+          })
+          const profiles = [
+            {
+              profileID: "pr-review",
+              kind: "review",
+              summary: "Review pull requests waiting for integration.",
+              registry: profileRegistry({
+                name: "PR review",
+                goal: "Review ready pull requests and surface merge blockers.",
+                risk: "high",
+                skills: ["code-review", "ci-evidence"],
+                state: "review-ready",
+                readModel: "pr review candidates and route wakes",
+                humanGates: ["approval", "ci"],
+                readinessMode: "human_gate",
+                tokenCostTier: "high",
+                starterRef: "patterns/registry.yaml#pr-review",
+              }),
+            },
+            {
+              profileID: "issue-triage",
+              kind: "discovery",
+              summary: "Triage incoming issues into agent-ready slices.",
+              registry: profileRegistry({
+                name: "Issue triage",
+                goal: "Classify issues and produce bounded route stops.",
+                risk: "medium",
+                skills: ["triage", "issue-routing"],
+                state: "needs-triage",
+                readModel: "issue queue and decision artifacts",
+                humanGates: ["needs-info"],
+                readinessMode: "automatic",
+                tokenCostTier: "medium",
+                starterRef: "patterns/registry.yaml#issue-triage",
+              }),
+            },
+            {
+              profileID: "daily-triage",
+              kind: "discovery",
+              summary: "Find ready daily account work.",
+              registry: profileRegistry({
+                name: "Daily triage",
+                goal: "Find ready daily work and stop when nothing is actionable.",
+                risk: "low",
+                skills: ["triage", "scheduler"],
+                state: "scheduled",
+                readModel: "account graph and scheduler ticks",
+                humanGates: [],
+                readinessMode: "automatic",
+                tokenCostTier: "low",
+                starterRef: "patterns/registry.yaml#daily-triage",
+              }),
+            },
+            {
+              profileID: "status",
+              kind: "status",
+              summary: "Publish a compact status digest.",
+              registry: profileRegistry({
+                name: "Status digest",
+                goal: "Publish account loop health for audit and operator decisions.",
+                risk: "low",
+                skills: ["summarization", "audit"],
+                state: "reporting",
+                readModel: "dashboard loops and scheduler outcomes",
+                humanGates: [],
+                readinessMode: "automatic",
+                tokenCostTier: "low",
+                starterRef: "patterns/registry.yaml#status",
+              }),
+            },
+          ] satisfies readonly Lightbulb.LoopProfileDefinition[]
+
+          const summary = yield* lightbulb.bootstrapLoopProfiles({
+            accountID: created.goal.account_id,
+            goalID: created.goal.id,
+            profiles,
+            defaultPolicy: {
+              ...defaultPolicy,
+              schedule: {
+                enabled: true,
+                cadenceMs: 60 * 60 * 1000,
+              },
+            },
+            now,
+          })
+          const readModel = yield* lightbulb.readLoopProfileSummaries({
+            accountID: created.goal.account_id,
+            goalID: created.goal.id,
+          })
+          const dashboard = yield* lightbulb.readDashboard(created.goal.account_id)
+
+          expect(
+            summary.handles.map((handle) => [handle.profile.profileID, handle.profile.name, handle.profile.ready]),
+          ).toEqual([
+            ["pr-review", "PR review", true],
+            ["issue-triage", "Issue triage", true],
+            ["daily-triage", "Daily triage", true],
+            ["status", "Status digest", true],
+          ])
+          expect(
+            readModel.map((profile) => [
+              profile.profileID,
+              profile.readinessMode,
+              profile.tokenCostTier,
+              profile.dailyCap,
+            ]),
+          ).toEqual([
+            ["pr-review", "human_gate", "high", 2],
+            ["issue-triage", "automatic", "medium", 2],
+            ["daily-triage", "automatic", "low", 2],
+            ["status", "automatic", "low", 2],
+          ])
+          expect(dashboard?.goals[0]?.loops.map((loop) => [loop.profile?.profileID, loop.profile?.starterRef])).toEqual(
+            [
+              ["pr-review", "patterns/registry.yaml#pr-review"],
+              ["issue-triage", "patterns/registry.yaml#issue-triage"],
+              ["daily-triage", "patterns/registry.yaml#daily-triage"],
+              ["status", "patterns/registry.yaml#status"],
+            ],
+          )
+          expect(readModel[0]).toMatchObject({
+            profileID: "pr-review",
+            goal: "Review ready pull requests and surface merge blockers.",
+            humanGates: ["approval", "ci"],
+            earlyExitRequirement: "Exit when no eligible item is ready or a human gate is blocking.",
+          })
+          expect(JSON.stringify(readModel)).not.toContain("transcript")
+        }).pipe(Effect.provide(layer(tmp.path))),
+      ),
+    ),
+  )
+
   it.live("adopts partial existing profiles and creates missing profiles", () =>
     Effect.acquireRelease(
       Effect.promise(() => tmpdir()),
@@ -123,8 +300,8 @@ describe("Lightbulb loop profile bootstrap", () => {
           const summary = yield* lightbulb.bootstrapLoopProfiles({
             accountID: created.goal.account_id,
             goalID: created.goal.id,
-            profiles: Lightbulb.standardAccountLoopProfiles.filter((profile) =>
-              profile.profileID === "discovery" || profile.profileID === "implementation",
+            profiles: Lightbulb.standardAccountLoopProfiles.filter(
+              (profile) => profile.profileID === "discovery" || profile.profileID === "implementation",
             ),
             defaultPolicy,
             now,
@@ -406,6 +583,81 @@ describe("Lightbulb loop profile bootstrap", () => {
           ])
           expect(graph?.loops).toEqual([])
           expect(graph?.events.filter((event) => event.type === "lightbulb.loop_profile.created")).toEqual([])
+        }).pipe(Effect.provide(layer(tmp.path))),
+      ),
+    ),
+  )
+
+  it.live("rejects malformed registry metadata with bounded field reasons", () =>
+    Effect.acquireRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ).pipe(
+      Effect.flatMap((tmp) =>
+        Effect.gen(function* () {
+          const lightbulb = yield* Lightbulb.Service
+          const created = yield* lightbulb.createOrAdoptGoal({
+            accountName: "Invalid Registry Account",
+            title: "Invalid registry bootstrap",
+            objective: "Reject malformed profile registry metadata without leaking parse errors.",
+          })
+          const summary = yield* lightbulb.bootstrapLoopProfiles({
+            accountID: created.goal.account_id,
+            goalID: created.goal.id,
+            profiles: [
+              {
+                profileID: "bad-registry",
+                kind: "status",
+                summary: "Invalid registry shape.",
+                registry: {
+                  name: "",
+                  goal: "",
+                  cadence: "",
+                  risk: "urgent",
+                  skills: [],
+                  state: "",
+                  readModel: "",
+                  phases: [],
+                  humanGates: "approval",
+                  readinessMode: "soon",
+                  tokenCostTier: "giant",
+                  dailyCap: 0,
+                  earlyExitRequirement: "",
+                } as unknown as Lightbulb.LoopProfileRegistryMetadata,
+              },
+              {
+                profileID: "missing-registry",
+                kind: "status",
+                summary: "Missing registry object.",
+                registry: "not-a-registry" as unknown as Lightbulb.LoopProfileRegistryMetadata,
+              },
+            ],
+            defaultPolicy,
+            now,
+          })
+          const graph = yield* lightbulb.readAccountGraph(created.goal.account_id)
+
+          expect(summary.invalid.map((handle) => [handle.profileID, handle.reason])).toEqual([
+            ["bad-registry", "invalid_registry_metadata"],
+            ["missing-registry", "invalid_registry_metadata"],
+          ])
+          expect(summary.invalid[0]?.profile.invalidProfileReasons).toEqual([
+            "invalid_profile_name",
+            "invalid_profile_goal",
+            "invalid_profile_cadence",
+            "invalid_profile_risk",
+            "invalid_profile_skills",
+            "invalid_profile_state",
+            "invalid_profile_read_model",
+            "invalid_profile_phases",
+            "invalid_profile_human_gates",
+            "invalid_readiness_mode",
+            "invalid_token_cost_tier",
+            "invalid_daily_cap",
+            "invalid_early_exit_requirement",
+          ])
+          expect(summary.invalid[1]?.profile.invalidProfileReasons).toEqual(["missing_profile_metadata"])
+          expect(graph?.loops).toEqual([])
         }).pipe(Effect.provide(layer(tmp.path))),
       ),
     ),

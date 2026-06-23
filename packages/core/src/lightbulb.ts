@@ -102,7 +102,14 @@ import {
   LightbulbTaskPacketTable,
   LightbulbWorkerTable,
 } from "./lightbulb/sql"
-import { bootstrapLoopProfiles, databaseLoopProfileStorage, type LoopProfileBootstrapServiceInput, type LoopProfileBootstrapSummary } from "./lightbulb/loop-profile"
+import {
+  bootstrapLoopProfiles,
+  databaseLoopProfileStorage,
+  readLoopProfileSummariesInDb,
+  type LoopProfileBootstrapServiceInput,
+  type LoopProfileBootstrapSummary,
+  type LoopProfileCompactSummary,
+} from "./lightbulb/loop-profile"
 import { admitLoopRunInDb, type LoopRunAdmissionResult, type LoopRunAdmissionServiceInput } from "./lightbulb/run-ledger"
 import { readLoopSchedulesInDb, type LoopScheduleReadModel } from "./lightbulb/scheduler"
 import {
@@ -516,6 +523,7 @@ export type DashboardLoop = {
   readonly summary: string
   readonly profileID: string | null; readonly schedule: LoopScheduleReadModel["schedule"]; readonly budget: LoopScheduleReadModel["budget"]
   readonly scheduleClassification: LoopScheduleReadModel["classification"]; readonly scheduleReason: string | null
+  readonly profile: LoopProfileCompactSummary | null
   readonly runs: DashboardRun[]
 }
 
@@ -602,6 +610,7 @@ export interface Interface {
   }) => Effect.Effect<GatePolicyTransition | undefined>
   readonly readAccountGraph: (accountID: AccountID) => Effect.Effect<AccountGraph | undefined>
   readonly readLoopSchedules: (input: { readonly accountID: AccountID; readonly now?: number }) => Effect.Effect<LoopScheduleReadModel[]>
+  readonly readLoopProfileSummaries: (input: { readonly accountID: AccountID; readonly goalID: GoalID }) => Effect.Effect<LoopProfileCompactSummary[]>
   readonly readDashboard: (accountID: AccountID) => Effect.Effect<Dashboard | undefined>
   readonly readIssueArtifacts: (input: ReadIssueArtifactsInput) => Effect.Effect<ArtifactHandle[]>
   readonly consumeArtifact: (input: {
@@ -829,6 +838,9 @@ export const layer = Layer.effect(
       }),
       readLoopSchedules: Effect.fn("Lightbulb.readLoopSchedules")(function* (input) {
         return yield* readLoopSchedulesInDb(db, { accountID: input.accountID, now: input.now ?? Date.now() })
+      }),
+      readLoopProfileSummaries: Effect.fn("Lightbulb.readLoopProfileSummaries")(function* (input) {
+        return yield* readLoopProfileSummariesInDb(db, input)
       }),
       discoverPRReviewCandidates: Effect.fn("Lightbulb.discoverPRReviewCandidates")(function* (input) {
         return yield* discoverPRReviewCandidatesInDb(db, input, {
