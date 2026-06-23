@@ -12,6 +12,7 @@ import type {
   RunID,
 } from "../lightbulb"
 import { retentionDecisionFor, storedArtifactIntegrity, toArtifactHandle } from "./artifact"
+import { groupDiscoveryCandidates, toDiscoveryCandidateSummary } from "./discovery-inbox"
 import type { GoalLifecycle, GoalRunTree, GoalSummary } from "./goal"
 import { toPRReviewCandidateSummary } from "./pr-review-candidate"
 import { toPRReviewRouteSummary } from "./pr-review-route"
@@ -97,6 +98,7 @@ export function toDashboard(
         .filter((gate) => gate.status === "pending" || gate.status === "blocked")
         .map(toDashboardGate),
       prReviewCandidates: graph.prReviewCandidates.map(toPRReviewCandidateSummary),
+      discoveryCandidates: groupDiscoveryCandidates(graph.discoveryCandidates.map(toDiscoveryCandidateSummary)),
       prReviewRoutes: graph.prReviewRoutes.map((route) =>
         toPRReviewRouteSummary(
           route,

@@ -30,6 +30,7 @@ export type {
 } from "./lightbulb/context-bundle"
 export * from "./lightbulb/loop-profile"
 export * from "./lightbulb/loop-runner-tick"
+export * from "./lightbulb/discovery-inbox"
 export * from "./lightbulb/issue-intake"
 export * from "./lightbulb/pickup-packet"
 export * from "./lightbulb/pr-review-candidate"
@@ -66,6 +67,12 @@ import {
   type PRReviewCandidateDiscoveryResult,
 } from "./lightbulb/pr-review-candidate"
 import {
+  projectDiscoveryInboxInDb,
+  toDiscoveryCandidateSummary,
+  type DiscoveryInboxProjectionInput,
+  type DiscoveryInboxProjectionResult,
+} from "./lightbulb/discovery-inbox"
+import {
   admitPRReviewRouteInDb,
   readActivePRReviewRoutesInDb,
   recordPRReviewRouteWakeInDb,
@@ -97,6 +104,7 @@ import {
   LightbulbArtifactEdgeTable,
   LightbulbArtifactTable,
   LightbulbEventTable,
+  LightbulbDiscoveryCandidateTable,
   LightbulbGateTable,
   LightbulbGoalTable,
   LightbulbLoopTable,
@@ -192,6 +200,8 @@ export const RouteStopID = prefixedID("lbstop", "Lightbulb.RouteStopID"); export
 export const RouteSteerID = prefixedID("lbsteer", "Lightbulb.RouteSteerID"); export type RouteSteerID = typeof RouteSteerID.Type
 export const PRReviewCandidateID = prefixedID("lbprcand", "Lightbulb.PRReviewCandidateID")
 export type PRReviewCandidateID = typeof PRReviewCandidateID.Type
+export const DiscoveryCandidateID = prefixedID("lbdiscand", "Lightbulb.DiscoveryCandidateID")
+export type DiscoveryCandidateID = typeof DiscoveryCandidateID.Type
 export const PRReviewRouteWakeID = prefixedID("lbprwake", "Lightbulb.PRReviewRouteWakeID")
 export type PRReviewRouteWakeID = typeof PRReviewRouteWakeID.Type
 
@@ -284,6 +294,61 @@ export type PRReviewCandidateSummary = {
   readonly lastCheckedAt: number
   readonly routeSeed: PRReviewCandidateRouteSeed
   readonly evidence: PRReviewCandidateEvidence
+}
+
+export type DiscoveryCandidateSourceKind = "issue" | "pull_request" | "ci" | "connector"
+export type DiscoveryCandidateStatus = "open" | "held" | "blocked" | "resolved" | "ignored"
+export type DiscoveryCandidateSection =
+  | "top_actionable"
+  | "needs_human"
+  | "possible_duplicates"
+  | "watch"
+  | "noise"
+  | "recent_resolved"
+
+export type DiscoveryCandidateSourceHandles = {
+  readonly sourceRef: string
+  readonly issueRef?: string
+  readonly issueHandle?: string
+  readonly promptHandle?: string
+  readonly instructionHandle?: string
+  readonly url: string
+}
+
+export type DiscoveryCandidateSummary = {
+  readonly id: DiscoveryCandidateID
+  readonly sourceKind: DiscoveryCandidateSourceKind
+  readonly sourceID: string
+  readonly title: string
+  readonly url: string
+  readonly status: DiscoveryCandidateStatus
+  readonly section: DiscoveryCandidateSection
+  readonly score: number
+  readonly reason: string
+  readonly suggestedAction: string
+  readonly sourceHandles: DiscoveryCandidateSourceHandles
+  readonly duplicateRefs: readonly string[]
+  readonly labels: readonly string[]
+  readonly lastSeenAt: number
+  readonly lastProjectedAt: number
+}
+
+export type DiscoveryCandidateAction = {
+  readonly candidateID: DiscoveryCandidateID
+  readonly sourceID: string
+  readonly title: string
+  readonly action: string
+  readonly reason: string
+}
+
+export type DiscoveryCandidateInbox = {
+  readonly topActionable: DiscoveryCandidateSummary[]
+  readonly needsHuman: DiscoveryCandidateSummary[]
+  readonly possibleDuplicates: DiscoveryCandidateSummary[]
+  readonly proposedActions: DiscoveryCandidateAction[]
+  readonly watch: DiscoveryCandidateSummary[]
+  readonly noise: DiscoveryCandidateSummary[]
+  readonly recentResolved: DiscoveryCandidateSummary[]
 }
 
 export type PRReviewRouteWorkerHandle = {
@@ -423,6 +488,7 @@ export type AccountGraph = {
   readonly routeStops: (typeof LightbulbRouteStopTable.$inferSelect)[]
   readonly routeSteers: (typeof LightbulbRouteSteerTable.$inferSelect)[]
   readonly prReviewCandidates: (typeof LightbulbPRReviewCandidateTable.$inferSelect)[]
+  readonly discoveryCandidates: (typeof LightbulbDiscoveryCandidateTable.$inferSelect)[]
   readonly prReviewRoutes: (typeof LightbulbPRReviewRouteTable.$inferSelect)[]
   readonly prReviewRouteWakes: (typeof LightbulbPRReviewRouteWakeTable.$inferSelect)[]
   readonly artifacts: (typeof LightbulbArtifactTable.$inferSelect)[]
@@ -545,6 +611,7 @@ export type Dashboard = {
     }[]
     readonly gates: DashboardGate[]
     readonly prReviewCandidates: PRReviewCandidateSummary[]
+    readonly discoveryCandidates: DiscoveryCandidateInbox
     readonly prReviewRoutes: PRReviewRouteSummary[]
   }
   readonly operations: {
@@ -644,6 +711,7 @@ export interface Interface {
   ) => Effect.Effect<DecisionArtifactHandle, ArtifactRegistrationRejected>
   readonly classifyIssueRouting: (input: IssueRoutingInput) => Effect.Effect<IssueRoutingClassification>
   readonly ingestIssueQueueSnapshots: (input: { readonly snapshots: readonly IssueQueueSnapshot[] }) => Effect.Effect<IssueQueueIntakeResult>
+  readonly projectDiscoveryInbox: (input: DiscoveryInboxProjectionInput) => Effect.Effect<DiscoveryInboxProjectionResult>
   readonly planWorkerDispatch: (input: { readonly issues: readonly IssueRoutingInput[] }) => Effect.Effect<WorkerDispatchPlan>
   readonly discoverPRReviewCandidates: (
     input: PRReviewCandidateDiscoveryInput,
@@ -1028,6 +1096,13 @@ export const layer = Layer.effect(
       ingestIssueQueueSnapshots: Effect.fn("Lightbulb.ingestIssueQueueSnapshots")(function* (input) {
         return ingestIssueQueueSnapshots(input)
       }),
+      projectDiscoveryInbox: Effect.fn("Lightbulb.projectDiscoveryInbox")(function* (input) {
+        return yield* projectDiscoveryInboxInDb(
+          db,
+          { ...input, projectedAt: input.projectedAt ?? Date.now() },
+          { candidate: DiscoveryCandidateID.create, event: EventID.create },
+        )
+      }),
       planWorkerDispatch: Effect.fn("Lightbulb.planWorkerDispatch")(function* (input) {
         return yield* planWorkerDispatch(db, input)
       }),
@@ -1287,6 +1362,17 @@ function readAccountGraphFromDb(
         .from(LightbulbPRReviewCandidateTable)
         .where(eq(LightbulbPRReviewCandidateTable.account_id, accountID))
         .orderBy(asc(LightbulbPRReviewCandidateTable.repository), asc(LightbulbPRReviewCandidateTable.pr_number))
+        .all()
+        .pipe(Effect.orDie),
+      discoveryCandidates: yield* db
+        .select()
+        .from(LightbulbDiscoveryCandidateTable)
+        .where(eq(LightbulbDiscoveryCandidateTable.account_id, accountID))
+        .orderBy(
+          asc(LightbulbDiscoveryCandidateTable.section),
+          desc(LightbulbDiscoveryCandidateTable.score),
+          asc(LightbulbDiscoveryCandidateTable.source_id),
+        )
         .all()
         .pipe(Effect.orDie),
       prReviewRoutes: yield* db
