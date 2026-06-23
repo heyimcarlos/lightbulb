@@ -74,6 +74,28 @@ Dependency, human-review, budget, and context-policy holds are recorded as skipp
 reasons before any child process starts. Parent summaries and dashboard worker rows expose launch attempts as handles
 that point to heartbeat, log, and final-report artifacts; raw child transcripts stay outside parent read models.
 
+## Worker Runtime Adapter Contract
+
+OpenCode-native execution is the default Lightbulb worker runtime for stable loop v0. Lightbulb is an OpenCode fork and
+should use OpenCode sessions, agents, subagents, task delegation, skills, tools, plugins, permissions, server/SDK,
+durable V2 sessions, and event sequencing before replacing that substrate.
+
+The worker-runtime adapter remains replaceable. OpenCode-native execution, Codex, local processes, optional Flue, or a
+future in-house runtime must fit behind the same contract. Runtime adapters do not receive a database handle and do not
+write authoritative Lightbulb goal, route, run, gate, report, or artifact state. They return normalized launch/status
+facts, append-only runtime events, resumable stream offsets, explicit closure state, report candidates, artifact
+candidates, and opaque runtime-native handles. The Lightbulb route runner persists those facts after idempotency checks,
+epoch fencing, gates, and human steering.
+
+Durable Streams semantics should be implemented Lightbulb-native first, shaped like the Durable Streams protocol:
+append-only events, monotonic offsets, idempotent producer keys, explicit closure, channels, sandbox metadata,
+observability handles, eval markers, and structured workflow results. Importing a Durable Streams package should remain a
+later optimization only if the native contract proves insufficient.
+
+Flue is not the default runtime and is not the Lightbulb product model. It is useful as an optional future adapter and as
+a comparable for workflow admission, durable streams, channels, sandboxes, observability, and evals. Any Flue-backed
+spike must remain behind the same adapter boundary and must not become authoritative for Lightbulb control-plane state.
+
 ## Adversarial PR Review Gate
 
 Lightbulb does not rely on paid Codex, Copilot, or model API reviewer credits for its baseline PR gate. The deterministic

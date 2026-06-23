@@ -36,6 +36,7 @@ export * from "./lightbulb/scheduler"
 export * from "./lightbulb/scheduler-supervisor"
 export * from "./lightbulb/scheduler-tick"
 export * from "./lightbulb/worker-launch"
+export * from "./lightbulb/worker-runtime"
 
 import { and, asc, desc, eq, or } from "drizzle-orm"
 import { Context, Effect, Layer, Schema } from "effect"
