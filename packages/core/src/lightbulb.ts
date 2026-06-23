@@ -31,6 +31,7 @@ export type {
 export * from "./lightbulb/loop-profile"
 export * from "./lightbulb/loop-runner-tick"
 export * from "./lightbulb/issue-intake"
+export * from "./lightbulb/pickup-packet"
 export * from "./lightbulb/pr-review-candidate"
 export * from "./lightbulb/pr-review-route"
 export * from "./lightbulb/run-ledger"

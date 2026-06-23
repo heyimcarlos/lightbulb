@@ -9,6 +9,10 @@ import {
   resolveHarnessArtifactSource,
   validateArtifactRegistrationInput,
 } from "./artifact-registration"
+import {
+  createIssuePickupPacket,
+  type PickupPacket,
+} from "./pickup-packet"
 import { LightbulbArtifactEdgeTable, LightbulbArtifactTable, LightbulbGateTable } from "./sql"
 
 export type DecisionArtifactType = "prd" | "adr" | "design_discussion" | "html_decision"
@@ -76,6 +80,7 @@ export type IssueRoutingInput = {
   readonly dependencyRefs?: readonly string[]
   readonly promptHandle?: string
   readonly instructionHandle?: string
+  readonly pickupPacket?: PickupPacket
   readonly gateID?: Lightbulb.GateID
   readonly requiredDecisionArtifactIDs?: readonly Lightbulb.ArtifactID[]
 }
@@ -100,6 +105,7 @@ export type IssueRoutingClassification = {
   readonly dependencyRefs: readonly string[]
   readonly promptHandle: string
   readonly instructionHandle: string
+  readonly pickupPacket: PickupPacket
   readonly status: "ready_for_afk" | "held_for_decision" | "decision_rejected" | "not_ready"
   readonly decisionArtifacts: DecisionArtifactHandle[]
   readonly decisionHolds: IssueRoutingDecisionHold[]
@@ -118,6 +124,7 @@ export type WorkerDispatchPlan = {
     readonly dependencyRefs: readonly string[]
     readonly promptHandle: string
     readonly instructionHandle: string
+    readonly pickupPacket: PickupPacket
     readonly summary: string
   }[]
   readonly skipped: {
@@ -399,6 +406,18 @@ export function classifyIssueRouting(db: Database.Interface["db"], input: IssueR
       dependencyRefs: input.dependencyRefs ?? [],
       promptHandle: input.promptHandle ?? "github:" + input.issueRef.trim(),
       instructionHandle: input.instructionHandle ?? input.bodyHandle ?? "github:" + input.issueRef.trim(),
+      pickupPacket: input.pickupPacket ?? createIssuePickupPacket({
+        issueRef: input.issueRef.trim(),
+        issueHandle: input.issueHandle,
+        title: input.title,
+        url: input.url,
+        updatedAt: input.updatedAt,
+        bodyHandle: input.bodyHandle,
+        bodySummary: input.bodySummary,
+        dependencyRefs: input.dependencyRefs,
+        promptHandle: input.promptHandle,
+        instructionHandle: input.instructionHandle,
+      }),
       status:
         decisionHolds.length === 0 && (input.labels ?? []).some((label) => label === "ready-for-agent")
           ? ("ready_for_afk" as const)
@@ -431,6 +450,7 @@ export function planWorkerDispatch(db: Database.Interface["db"], input: { readon
           dependencyRefs: classification.dependencyRefs ?? [],
           promptHandle: classification.promptHandle ?? "github:" + classification.issueRef,
           instructionHandle: classification.instructionHandle ?? classification.bodyHandle ?? "github:" + classification.issueRef,
+          pickupPacket: classification.pickupPacket,
           summary: "Issue is ready for AFK worker dispatch.",
         })),
       skipped: classifications

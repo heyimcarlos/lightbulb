@@ -3,6 +3,7 @@ import { Effect } from "effect"
 import type { Database } from "../database/database"
 import type { Lightbulb } from "../lightbulb"
 import { planWorkerDispatch, type IssueRoutingInput, type WorkerDispatchPlan } from "./decision-artifact"
+import { renderPickupPacketWorkerInstructions } from "./pickup-packet"
 import { superviseScheduledLoopsInDb, type SchedulerSupervisorResult } from "./scheduler-supervisor"
 import { launchWorkerInDb, type WorkerLaunchMetadataValue, type WorkerLaunchResult } from "./worker-launch"
 import { LightbulbEventTable, LightbulbRunTable, LightbulbTaskPacketTable, LightbulbWorkerTable } from "./sql"
@@ -333,6 +334,7 @@ function ensureWorkerRequestInDb(
               labels: input.issue.labels,
               prompt_handle: input.issue.promptHandle,
               instruction_handle: input.issue.instructionHandle,
+              pickup_packet: input.issue.pickupPacket,
               runtime_kind: "opencode",
             },
             time_created: input.now,
@@ -350,12 +352,7 @@ function ensureWorkerRequestInDb(
           worker_id: workerID,
           title: input.issue.title,
           status: "ready",
-          instructions:
-            "Implement " +
-            input.issue.issueRef +
-            " using instruction handle " +
-            input.issue.instructionHandle +
-            " and return a bounded worker report.",
+          instructions: renderPickupPacketWorkerInstructions(input.issue.pickupPacket),
           metadata: {
             runner_tick_id: input.tickID,
             issue_ref: input.issue.issueRef,
@@ -366,6 +363,7 @@ function ensureWorkerRequestInDb(
             body_summary: input.issue.bodySummary,
             source_updated_at: input.issue.updatedAt,
             dependency_refs: input.issue.dependencyRefs,
+            pickup_packet: input.issue.pickupPacket,
             context_budget: "bounded",
             expected_artifact_types: ["report", "test_result"],
             delivery_mode: "worker_report",

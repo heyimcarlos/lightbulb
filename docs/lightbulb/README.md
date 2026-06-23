@@ -167,6 +167,19 @@ handles. The runner tick can then create a durable task packet from handles such
 `github:issue:12:body`, leaving full issue/comment content outside the authoritative Lightbulb route/run/gate/artifact
 state.
 
+## Pickup Packets
+
+Pickup packets are the structured worker handoff contract layered on top of task packets. A packet records the work
+source, scope, non-goals, blockers, affected packages/paths, preferred first command, full verification commands,
+acceptance evidence, route stop, risk notes, context handles, artifact handles, skills/templates, and attempt/escalation
+policy. The JSON-backed `## Pickup packet` Markdown section is stable for issue bodies or comments: re-parsing and
+re-rendering replaces the existing section instead of duplicating it.
+
+Issue intake and decision routing carry pickup packets as compact data. The account runner stores the packet in worker
+and task-packet metadata, and writes worker-facing instructions derived from the packet into `lightbulb_task_packet`.
+Raw issue bodies, comments, logs, and worker transcripts remain outside the durable Lightbulb route/run/gate/artifact
+state unless a later explicit artifact handle points to them.
+
 ## Account Loop Runner Ticks
 
 The account loop runner tick is the first deterministic coordinator above issue/work intake, scheduler supervision, and

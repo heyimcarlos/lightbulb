@@ -1,5 +1,6 @@
 import type { Lightbulb } from "../lightbulb"
 import type { IssueRoutingInput } from "./decision-artifact"
+import { createIssuePickupPacket, type PickupPacket } from "./pickup-packet"
 
 export type IssueQueueSnapshot = {
   readonly accountID: Lightbulb.AccountID
@@ -9,9 +10,11 @@ export type IssueQueueSnapshot = {
   readonly labels: readonly string[]
   readonly updatedAt: number
   readonly state?: "open" | "closed"
+  readonly body?: string
   readonly bodyHandle?: string
   readonly bodySummary?: string
   readonly dependencyRefs?: readonly string[]
+  readonly pickupPacket?: PickupPacket
 }
 
 export type IssueQueueStatus =
@@ -36,6 +39,7 @@ export type IssueQueueClassification = {
   readonly updatedAt: number
   readonly promptHandle: string
   readonly instructionHandle: string
+  readonly pickupPacket: PickupPacket
   readonly summary: string
 }
 
@@ -49,6 +53,7 @@ export type IssueQueueTaskPacketRequest = {
   readonly instructionHandle: string
   readonly bodyHandle: string | null
   readonly bodySummary: string | null
+  readonly pickupPacket: PickupPacket
   readonly sourceUpdatedAt: number
 }
 
@@ -102,6 +107,19 @@ export function classifyIssueQueueSnapshot(snapshot: IssueQueueSnapshot): IssueQ
   const promptHandle = "github:issue:" + snapshot.number + ":prompt"
   const instructionHandle = snapshot.bodyHandle ?? "github:issue:" + snapshot.number + ":body"
   const dependencyRefs = uniqueRefs(snapshot.dependencyRefs ?? [])
+  const pickupPacket = snapshot.pickupPacket ?? createIssuePickupPacket({
+    issueRef,
+    issueHandle,
+    title: snapshot.title,
+    url: snapshot.url,
+    updatedAt: snapshot.updatedAt,
+    body: snapshot.body,
+    bodyHandle: snapshot.bodyHandle,
+    bodySummary: snapshot.bodySummary,
+    dependencyRefs,
+    promptHandle,
+    instructionHandle,
+  })
   const status = issueQueueStatus(snapshot, labels, dependencyRefs)
   const blockerRefs = blockerRefsForStatus(snapshot, status, labels, dependencyRefs)
   return {
@@ -118,6 +136,7 @@ export function classifyIssueQueueSnapshot(snapshot: IssueQueueSnapshot): IssueQ
     updatedAt: snapshot.updatedAt,
     promptHandle,
     instructionHandle,
+    pickupPacket,
     summary: summaryForStatus(status, blockerRefs),
   }
 }
@@ -136,6 +155,7 @@ function toIssueRoutingInput(snapshot: IssueQueueSnapshot, classification: Issue
     dependencyRefs: classification.dependencyRefs,
     promptHandle: classification.promptHandle,
     instructionHandle: classification.instructionHandle,
+    pickupPacket: classification.pickupPacket,
   }
 }
 
@@ -150,6 +170,7 @@ function toTaskPacketRequest(snapshot: IssueQueueSnapshot, classification: Issue
     instructionHandle: classification.instructionHandle,
     bodyHandle: classification.bodyHandle,
     bodySummary: classification.bodySummary,
+    pickupPacket: classification.pickupPacket,
     sourceUpdatedAt: classification.updatedAt,
   }
 }
