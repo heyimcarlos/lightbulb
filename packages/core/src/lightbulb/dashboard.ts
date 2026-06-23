@@ -17,6 +17,7 @@ import { toPRReviewCandidateSummary } from "./pr-review-candidate"
 import { toPRReviewRouteSummary } from "./pr-review-route"
 import { classifyLoopSchedule } from "./scheduler"
 import { toLoopProfileCompactSummary } from "./loop-profile"
+import { toReviewGateReadModel } from "./review-gate"
 import { toWorkerLaunchAttemptHandle } from "./worker-launch"
 import type {
   LightbulbArtifactTable,
@@ -192,12 +193,14 @@ function toDashboardRun(
 }
 
 function toDashboardGate(row: typeof LightbulbGateTable.$inferSelect): DashboardGate {
+  const reviewGate = toReviewGateReadModel(row)
   return {
     id: row.id,
     kind: row.kind,
     status: row.status,
     summary: row.summary,
     artifactID: row.artifact_id,
+    ...(reviewGate ? { reviewGate } : {}),
   }
 }
 

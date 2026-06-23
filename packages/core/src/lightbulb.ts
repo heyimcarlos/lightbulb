@@ -34,6 +34,7 @@ export * from "./lightbulb/issue-intake"
 export * from "./lightbulb/pickup-packet"
 export * from "./lightbulb/pr-review-candidate"
 export * from "./lightbulb/pr-review-route"
+export * from "./lightbulb/review-gate"
 export * from "./lightbulb/run-ledger"
 export * from "./lightbulb/scheduler"
 export * from "./lightbulb/scheduler-supervisor"
@@ -109,6 +110,16 @@ import {
   LightbulbWorkerLaunchAttemptTable,
   LightbulbWorkerTable,
 } from "./lightbulb/sql"
+import {
+  openReviewGateInDb,
+  ReviewGateRejected,
+  toReviewGateReadModel,
+  transitionReviewGateInDb,
+  type OpenReviewGateServiceInput,
+  type ReviewGateHandle,
+  type ReviewGateReadModel,
+  type TransitionReviewGateServiceInput,
+} from "./lightbulb/review-gate"
 import {
   bootstrapLoopProfiles,
   databaseLoopProfileStorage,
@@ -445,6 +456,7 @@ export type ParentSummary = {
     readonly summary: string
     readonly blockedReason: string | null
     readonly artifactID: ArtifactID | null
+    readonly reviewGate?: ReviewGateReadModel
   }[]
   readonly artifacts: ArtifactHandle[]
   readonly decisionArtifacts: DecisionArtifactHandle[]
@@ -577,6 +589,7 @@ export type DashboardGate = {
   readonly status: GateStatus
   readonly summary: string
   readonly artifactID: ArtifactID | null
+  readonly reviewGate?: ReviewGateReadModel
 }
 
 export type DashboardSchedulerTick = {
@@ -638,6 +651,8 @@ export interface Interface {
     readonly policy: GatePolicyInput["thresholds"]
     readonly state: GatePolicyInput["state"]
   }) => Effect.Effect<GatePolicyTransition | undefined>
+  readonly openReviewGate: (input: OpenReviewGateServiceInput) => Effect.Effect<ReviewGateHandle, ReviewGateRejected>
+  readonly transitionReviewGate: (input: TransitionReviewGateServiceInput) => Effect.Effect<ReviewGateHandle, ReviewGateRejected>
   readonly readAccountGraph: (accountID: AccountID) => Effect.Effect<AccountGraph | undefined>
   readonly readLoopSchedules: (input: { readonly accountID: AccountID; readonly now?: number }) => Effect.Effect<LoopScheduleReadModel[]>
   readonly readLoopProfileSummaries: (input: { readonly accountID: AccountID; readonly goalID: GoalID }) => Effect.Effect<LoopProfileCompactSummary[]>
@@ -1009,6 +1024,12 @@ export const layer = Layer.effect(
       applyGatePolicy: Effect.fn("Lightbulb.applyGatePolicy")(function* (input) {
         return yield* applyGatePolicyInDb(db, input, GateID.create)
       }),
+      openReviewGate: Effect.fn("Lightbulb.openReviewGate")(function* (input) {
+        return yield* openReviewGateInDb(db, { ...input, now: input.now ?? Date.now() }, { gate: GateID.create, event: EventID.create })
+      }),
+      transitionReviewGate: Effect.fn("Lightbulb.transitionReviewGate")(function* (input) {
+        return yield* transitionReviewGateInDb(db, { ...input, now: input.now ?? Date.now() }, { event: EventID.create })
+      }),
       checkArtifact: Effect.fn("Lightbulb.checkArtifact")(function* (input) {
         return yield* readArtifactHandle(db, {
           artifactID: input.artifactID,
@@ -1141,14 +1162,18 @@ export const layer = Layer.effect(
               .filter((attempt) => attempt.worker_id === worker.id)
               .map(toWorkerLaunchAttemptHandle),
           })),
-          gates: gates.map((gate) => ({
-            id: gate.id,
-            kind: gate.kind,
-            status: gate.status,
-            summary: gate.summary,
-            blockedReason: gateBlockedReason(gate),
-            artifactID: gate.artifact_id,
-          })),
+          gates: gates.map((gate) => {
+            const reviewGate = toReviewGateReadModel(gate)
+            return {
+              id: gate.id,
+              kind: gate.kind,
+              status: gate.status,
+              summary: gate.summary,
+              blockedReason: gateBlockedReason(gate),
+              artifactID: gate.artifact_id,
+              ...(reviewGate ? { reviewGate } : {}),
+            }
+          }),
           artifacts: artifactHandles.filter((artifact): artifact is ArtifactHandle => artifact !== undefined),
           decisionArtifacts: artifactHandles
             .map((artifact) => (artifact ? toDecisionArtifactHandle(artifact) : undefined))
