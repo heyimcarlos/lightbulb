@@ -39,6 +39,7 @@ export * from "./lightbulb/scheduler-tick"
 import { and, asc, desc, eq, or } from "drizzle-orm"
 import { Context, Effect, Layer, Schema } from "effect"
 import { Database } from "./database/database"
+import { LayerNode } from "./effect/layer-node"
 import type { CreateGoalInput, CreateGoalResult, GoalLifecycle, GoalRunTree, GoalSummary, UpdateGoalStatusInput } from "./lightbulb/goal"
 import { GoalLifecycleService } from "./lightbulb/goal"
 import { withStatics } from "./schema"
@@ -59,6 +60,7 @@ import {
 } from "./lightbulb/pr-review-candidate"
 import {
   admitPRReviewRouteInDb,
+  readActivePRReviewRoutesInDb,
   recordPRReviewRouteWakeInDb,
   type PRReviewRouteAdmissionResult,
   type PRReviewRouteAdmissionServiceInput,
@@ -587,6 +589,7 @@ export interface Interface {
   ) => Effect.Effect<PRReviewCandidateDiscoveryResult>
   readonly admitPRReviewRoute: (input: PRReviewRouteAdmissionServiceInput) => Effect.Effect<PRReviewRouteAdmissionResult>
   readonly recordPRReviewRouteWake: (input: PRReviewRouteWakeServiceInput) => Effect.Effect<PRReviewRouteWakeResult>
+  readonly readActivePRReviewRoutes: () => Effect.Effect<PRReviewRouteSummary[]>
   readonly assembleContextBundle: (
     input: ContextBundleAssemblyServiceInput,
   ) => Effect.Effect<ContextBundleAssemblyResult>
@@ -848,6 +851,9 @@ export const layer = Layer.effect(
           event: EventID.create,
         })
       }),
+      readActivePRReviewRoutes: Effect.fn("Lightbulb.readActivePRReviewRoutes")(function* () {
+        return yield* readActivePRReviewRoutesInDb(db)
+      }),
       planGoalRoute: Effect.fn("Lightbulb.planGoalRoute")(function* (input) {
         return yield* planGoalRouteInDb(db, input, {
           route: RouteID.create,
@@ -1083,6 +1089,7 @@ export const layer = Layer.effect(
 )
 
 export const defaultLayer = layer.pipe(Layer.provide(Database.defaultLayer))
+export const node = LayerNode.make(layer, [Database.node])
 
 function readAccountGraphFromDb(
   db: Database.Interface["db"],

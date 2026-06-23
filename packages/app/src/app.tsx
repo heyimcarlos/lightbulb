@@ -55,6 +55,7 @@ const HomeRoute = lazy(() => import("@/pages/home"))
 const Session = lazy(() => import("@/pages/session"))
 const NewSession = lazy(() => import("@/pages/new-session"))
 const BrowserRoute = lazy(() => import("@/pages/browser"))
+const LightbulbPRReviewRoute = lazy(() => import("@/pages/lightbulb-pr-review"))
 
 const SessionRoute = Object.assign(
   () => {
@@ -452,6 +453,7 @@ export function AppInterface(props: {
             <Route component={SelectedServerLayout}>
               <Route path="/" component={HomeRoute} />
               <Route path="/browser" component={BrowserRoute} />
+              <Route path="/lightbulb/pr-review" component={LightbulbPRReviewRoute} />
               <Route path="/:dir" component={DirectoryLayout}>
                 <Route path="/" component={() => <Navigate href="session" />} />
                 <Route path="/browser" component={BrowserRoute} />

@@ -54,6 +54,7 @@ import { Database } from "@opencode-ai/core/database/database"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { httpClient } from "@opencode-ai/core/effect/layer-node-platform"
 import { EventV2 } from "@opencode-ai/core/event"
+import { Lightbulb } from "@opencode-ai/core/lightbulb"
 import { ModelsDev } from "@opencode-ai/core/models-dev"
 import { Npm } from "@opencode-ai/core/npm"
 import { ProjectV2 } from "@opencode-ai/core/project"
@@ -84,6 +85,7 @@ import { experimentalHandlers } from "./handlers/experimental"
 import { fileHandlers } from "./handlers/file"
 import { globalHandlers } from "./handlers/global"
 import { instanceHandlers } from "./handlers/instance"
+import { lightbulbHandlers } from "./handlers/lightbulb"
 import { mcpHandlers } from "./handlers/mcp"
 import { permissionHandlers } from "./handlers/permission"
 import { projectHandlers } from "./handlers/project"
@@ -148,6 +150,7 @@ const instanceApiRoutes = HttpApiBuilder.layer(InstanceHttpApi).pipe(
     experimentalHandlers,
     fileHandlers,
     instanceHandlers,
+    lightbulbHandlers,
     mcpHandlers,
     projectHandlers,
     projectCopyHandlers,
@@ -253,6 +256,7 @@ const app = LayerNode.group([
   InstanceStore.node,
   httpClient,
   EventV2.node,
+  Lightbulb.node,
   ProjectV2.node,
   ProjectCopy.node,
   PtyTicket.node,
