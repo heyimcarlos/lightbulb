@@ -17,9 +17,9 @@ Use the real `task` tool with `background: true` for immediate request-driven au
 
 Dispatch additional independent lanes with separate `task` calls only when their file scopes do not overlap. Current Lightbulb background subagents return completion asynchronously to the parent session. Use `/goal` or Kanban when work must survive beyond the active parent process.
 
-## Automation Blueprint Usage
+## Durable Automation Usage
 
-Use Hermes `/blueprint` for time-based or form-filled recurring automations. Do not use it as a generic worker primitive.
+Use Codex `/goal` for long-running work that must survive the active parent context. Use Lightbulb schedules only for genuinely time-based triggers. Do not use scheduling as a generic worker primitive.
 
 Use Lightbulb background subagents for immediate automation:
 
@@ -62,6 +62,6 @@ Run focused validation and report files changed plus command output.
 
 ```text
 Repo: /home/cyberjanitor/worktrees/lightbulb-slice
-Goal: review the current branch diff against origin/dev for correctness, repeated work, and test gaps.
+Goal: review the current branch diff against origin/lightbulb for correctness, repeated work, and test gaps.
 Do not edit files. Return blocking issues first with file:line references.
 ```

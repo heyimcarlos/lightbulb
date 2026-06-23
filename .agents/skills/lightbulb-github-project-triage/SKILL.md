@@ -17,7 +17,7 @@ git branch --show-current
 gh repo view --json nameWithOwner,url,defaultBranchRef
 ```
 
-The default branch is `dev`; do not assume `main` exists. If the worktree is dirty, identify the dirty files and protect unrelated changes.
+The default branch is `lightbulb`; do not assume `main` exists. Use `dev` only when comparing against the upstream opencode fork base. If the worktree is dirty, identify the dirty files and protect unrelated changes.
 
 ## Queue Scan
 
@@ -71,7 +71,7 @@ Before calling an issue complete:
 When the user asks to keep going autonomously, process one issue/PR at a time.
 
 1. Pick the highest-confidence autonomous item.
-2. Create or reuse a short `dev`-based branch/worktree.
+2. Create or reuse a short `lightbulb`-based branch/worktree.
 3. Implement the smallest durable slice.
 4. Verify with focused tests, typecheck when relevant, and `git diff --check`.
 5. Prepare a PR or exact handoff only when push/PR permission exists.

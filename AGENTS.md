@@ -1,6 +1,7 @@
 - To regenerate the JavaScript SDK, run `./packages/sdk/js/script/build.ts`.
-- The default branch in this repo is `dev`.
-- Local `main` ref may not exist; use `dev` or `origin/dev` for diffs.
+- The default branch in this repo is `lightbulb`.
+- The upstream opencode fork base is `dev`; use `dev` or `origin/dev` only when comparing against upstream opencode.
+- Local `main` ref may not exist; use `lightbulb` or `origin/lightbulb` for Lightbulb diffs.
 
 ## Branch Names
 

@@ -10,7 +10,7 @@ Use this under `lightbulb-maintainer-orchestrator` after queue triage chooses a 
 ## Ground Rules
 
 - Parent/root owns queue order, GitHub mutation decisions, final merge, issue closeout, and next-slice dispatch.
-- Maker thread owns implementation in a fresh `origin/dev` worktree and short branch.
+- Maker thread owns implementation in a fresh `origin/lightbulb` worktree and short branch.
 - Reviewer thread is separate, read-only, and cannot edit the maker worktree.
 - Do not reuse the maker thread as the reviewer; no worker self-approval.
 - Every PR needs visual evidence when UI, desktop, browser, or CLI output can be affected: screenshot, recording, browser artifact, terminal transcript, or explicit `not applicable` rationale.
@@ -27,10 +27,10 @@ Use this under `lightbulb-maintainer-orchestrator` after queue triage chooses a 
 
 1. Triage the live queue with `lightbulb-github-project-triage`; capture full GitHub URLs, labels, merge state, review state, checks, and blockers.
 2. Pick one bounded slice. If it is too large for one PR, file or update smaller issues before starting implementation.
-3. Spin up a maker thread with `lightbulb-delegate`: fresh worktree from `origin/dev`, exact objective, allowed files, forbidden actions, verification commands, visual evidence requirement, and PR title convention.
-4. Maker implements, verifies, commits, pushes, and opens a draft or ready PR against `dev` when parent/root has authorized that mutation.
+3. Spin up a maker thread with `lightbulb-delegate`: fresh worktree from `origin/lightbulb`, exact objective, allowed files, forbidden actions, verification commands, visual evidence requirement, and PR title convention.
+4. Maker implements, verifies, commits, pushes, and opens a draft or ready PR against `lightbulb` when parent/root has authorized that mutation.
 5. Parent records the PR URL, reads the diff, and runs or delegates `thermo-nuclear-code-quality-review` against the PR branch.
-6. Spin up a separate read-only reviewer thread; it reviews the filed PR diff against `origin/dev` for correctness, regression risk, missing tests, missing visual evidence, and redundant agent/skill/command artifacts. Use `review` or `thermo-nuclear-code-quality-review` as inputs when the scope calls for them, but keep the reviewer thread separate from the maker.
+6. Spin up a separate read-only reviewer thread; it reviews the filed PR diff against `origin/lightbulb` for correctness, regression risk, missing tests, missing visual evidence, and redundant agent/skill/command artifacts. Use `review` or `thermo-nuclear-code-quality-review` as inputs when the scope calls for them, but keep the reviewer thread separate from the maker.
 7. Parent records the current PR head SHA, polls for automatic Copilot review activity, uses one `gh pr edit <number> --add-reviewer @copilot` fallback only if no Copilot review or pending request appears, requests Codex review only when account limits allow it, then polls PR reviews, comments, checks, and merge state until a decision, timeout, or infrastructure blocker is clear. Stale reviews or comments from older head SHAs are context only.
 8. Feed actionable comments and failing checks back to the maker thread. Maker fixes in the same branch, reruns focused verification, pushes, and returns evidence plus the new head SHA.
 9. After every maker push, parent records the new head SHA, re-checks automatic Copilot and available Codex review status for that head, and asks the reviewer thread to re-check the changed diff when needed.
@@ -49,7 +49,7 @@ Use this under `lightbulb-maintainer-orchestrator` after queue triage chooses a 
 
 Include:
 
-- repo/worktree path, branch, base `origin/dev`, and target PR URL or issue URL
+- repo/worktree path, branch, base `origin/lightbulb`, and target PR URL or issue URL
 - exact slice, allowed mutation boundary, and forbidden actions
 - focused verification commands and required visual evidence
 - instruction to loop on parent-provided comments until approval-ready

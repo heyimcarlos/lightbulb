@@ -4,7 +4,8 @@ This repository uses **GitHub Issues** as the canonical request and triage surfa
 
 - Repository: `heyimcarlos/lightbulb`
 - Upstream substrate: `anomalyco/opencode`
-- Default branch: `dev`
+- Default branch: `lightbulb`
+- Upstream opencode fork base: `dev`
 - Working branch for orchestration bootstrap: `lightbulb-orchestration`
 - CLI: `gh`
 - External PRs as triageable request surface: **no for v0**. Treat PRs as review artifacts unless a maintainer explicitly routes one into triage.

@@ -1,6 +1,6 @@
 ---
 name: lightbulb-loop-maintainer
-description: Maintain Lightbulb loop health by diagnosing Hermes state, stale runs, worker dispatch, and broken automation without adding cron. Use when a Lightbulb loop, worker lane, PR review lane, or automation setup is broken or stale.
+description: Maintain Lightbulb loop health by diagnosing Codex goal state, stale runs, worker dispatch, and broken automation without adding cron. Use when a Lightbulb loop, worker lane, PR review lane, or automation setup is broken or stale.
 ---
 
 # Lightbulb Loop Maintainer
@@ -9,13 +9,13 @@ Use this when a Lightbulb loop, worker, PR review lane, or automation setup look
 
 ## Core rule
 
-This is a request-driven maintainer. Do not create a recurring cron job. Use Hermes async delegation for investigation and fixes; use `/goal` or Kanban only if the work must survive the parent process.
+This is a request-driven maintainer. Do not create a recurring cron job. Use Codex CLI delegation and `lightbulb-delegate` for investigation and fixes; use `/goal` or Kanban only if the work must survive the parent process.
 
 ## What to inspect
 
-- Hermes cron job definitions only as data, especially Lightbulb jobs.
+- Existing scheduler definitions only as data, especially Lightbulb jobs.
 - Lightbulb worktrees under `/home/cyberjanitor/worktrees/lightbulb-*`.
-- Loop state files under `.lightbulb/loops/*.json` and `~/.hermes/state/lightbulb-*`.
+- Loop state files under `.lightbulb/loops/*.json`; legacy state under `~/.hermes/state/lightbulb-*` is migration evidence only.
 - Installed skill names and qualified names.
 - Missing workdirs, stale active runs, failed script paths, bad branch state, repeated prompts/agents/skills.
 
@@ -25,7 +25,7 @@ Use `lightbulb-delegate` for background worker dispatch mechanics and its single
 
 Dispatch non-overlapping lanes through async delegation:
 
-- config lane: inspect Hermes job/tool/skill configuration and return exact broken references.
+- config lane: inspect Codex/Lightbulb goal, tool, skill, and automation configuration and return exact broken references.
 - state lane: inspect loop state files and stale process markers.
 - repo lane: inspect Lightbulb worktree status and recent commits.
 - fix lane: only after the parent approves a narrow fix or the fix is obviously reversible.

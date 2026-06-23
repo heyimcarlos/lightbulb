@@ -78,7 +78,7 @@ const routingCases = [
     expected: "lightbulb-maintainer-orchestrator",
   },
   {
-    prompt: "the Hermes loop state and worker dispatch look broken",
+    prompt: "the Codex goal loop state and worker dispatch look broken",
     expected: "lightbulb-loop-maintainer",
   },
   {

@@ -10,7 +10,7 @@ Use this when work is too broad for the main context and should be split across 
 ## Non-Negotiables
 
 - Use a fresh git worktree for implementation or destructive investigation.
-- Do not spawn workers against the shared `dev` checkout.
+- Do not spawn workers against the shared `lightbulb` checkout.
 - Do not use OpenCode/Codex wording in user-facing output; call this Lightbulb.
 - Keep parent output short. Workers return compressed evidence, not transcripts.
 - Do not create redundant agents: use `lightbulb-*` project subagents for delegation and `.agents/skills/*` skills for reusable procedures.
@@ -33,11 +33,11 @@ Do it yourself when the task is a single file read, a tiny patch, or a direct CL
 
 ### 2. Create or select an isolated worktree
 
-For implementation work, create a branch from `origin/dev` with a short branch name:
+For implementation work, create a branch from `origin/lightbulb` with a short branch name:
 
 ```bash
-git fetch origin dev
-git worktree add -b lightbulb-slice /home/cyberjanitor/worktrees/lightbulb-slice origin/dev
+git fetch origin lightbulb
+git worktree add -b lightbulb-slice /home/cyberjanitor/worktrees/lightbulb-slice origin/lightbulb
 ```
 
 If a worktree already exists for the issue, verify `git status --short --branch` and recent commits before reusing it. This step is done when each mutating worker has exactly one isolated repo path.
@@ -81,4 +81,4 @@ Implementation workers must also report branch name and commit SHA if they commi
 
 Read changed files or inspect the diff, run focused package-local tests, run `git diff --check` for PR work, and confirm `git status --short --branch`.
 
-If the user asked to proceed through PR, commit only relevant files, push the branch, open a PR against `dev`, and report PR URL, verification, and caveats. Closeout is done only after the parent has independently checked the worker claims.
+If the user asked to proceed through PR, commit only relevant files, push the branch, open a PR against `lightbulb`, and report PR URL, verification, and caveats. Closeout is done only after the parent has independently checked the worker claims.
