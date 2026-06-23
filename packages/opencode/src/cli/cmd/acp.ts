@@ -17,6 +17,27 @@ export const AcpCommand = effectCmd({
     })
   },
   handler: Effect.fn("Cli.acp")(function* (args) {
+    const stdinClosed = new Promise<void>((resolve, reject) => {
+      if (process.stdin.readableEnded || process.stdin.destroyed) return resolve()
+
+      process.stdin.once("end", onEnd)
+      process.stdin.once("error", onError)
+
+      function onEnd() {
+        cleanup()
+        resolve()
+      }
+
+      function onError(error: Error) {
+        cleanup()
+        reject(error)
+      }
+
+      function cleanup() {
+        process.stdin.off("end", onEnd)
+        process.stdin.off("error", onError)
+      }
+    })
     const { Server } = yield* Effect.promise(() => import("@/server/server"))
     const { ACP } = yield* Effect.promise(() => import("@/acp/agent"))
     ACPProfile.mark("cli.acp.handler")
@@ -62,13 +83,7 @@ export const AcpCommand = effectCmd({
 
     yield* Effect.logInfo("setup connection")
     process.stdin.resume()
-    yield* Effect.promise(
-      () =>
-        new Promise<void>((resolve, reject) => {
-          process.stdin.on("end", () => resolve())
-          process.stdin.on("error", reject)
-        }),
-    ).pipe(
+    yield* Effect.promise(() => stdinClosed).pipe(
       // Windows keeps the listener handle alive after stdin EOF unless the
       // ACP command explicitly releases its internal server.
       Effect.ensuring(Effect.promise(() => server.stop(true)).pipe(Effect.ignore)),
