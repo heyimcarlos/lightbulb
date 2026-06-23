@@ -151,7 +151,8 @@ function formatInbox(dashboard: Lightbulb.Dashboard) {
     dashboard.inbox.taskPackets.length === 0 &&
     dashboard.inbox.gates.length === 0 &&
     dashboard.inbox.prReviewCandidates.length === 0 &&
-    dashboard.inbox.prReviewRoutes.length === 0
+    dashboard.inbox.prReviewRoutes.length === 0 &&
+    countPRReviewDigestItems(dashboard.inbox.prReviewRouteDigest) === 0
   ) {
     return ["- empty"]
   }
@@ -162,6 +163,7 @@ function formatInbox(dashboard: Lightbulb.Dashboard) {
     ),
     ...dashboard.inbox.prReviewCandidates.map(formatPRReviewCandidate),
     ...dashboard.inbox.prReviewRoutes.map(formatPRReviewRoute),
+    ...formatPRReviewRouteDigest(dashboard.inbox.prReviewRouteDigest),
   ]
 }
 
@@ -180,6 +182,31 @@ function formatPRReviewRoute(route: Lightbulb.PRReviewRouteSummary) {
     `${route.blockedReason ? ` blocked=${route.blockedReason}` : ""}` +
     `${route.activeWorker ? ` worker=${route.activeWorker.id}` : ""}`
   )
+}
+
+function formatPRReviewRouteDigest(digest: Lightbulb.PRReviewRouteDigest) {
+  if (countPRReviewDigestItems(digest) === 0) return []
+  return [
+    "  PR review digest",
+    ...digest.escalated.map((item) => formatPRReviewDigestItem("escalated", item)),
+    ...digest.watched.map((item) => formatPRReviewDigestItem("watch", item)),
+    ...digest.recent.map((item) => formatPRReviewDigestItem("recent", item)),
+  ]
+}
+
+function formatPRReviewDigestItem(kind: "watch" | "escalated" | "recent", item: Lightbulb.PRReviewRouteDigestItem) {
+  return (
+    `  - pr-${kind} ${item.repository}#${item.pullNumber} [${item.status}] attempts=${item.attemptCount}/${item.maxAttempts} ` +
+    `stop=${item.currentStop ? `${item.currentStop.kind}:${item.currentStop.status}` : "none"} ` +
+    `next=${item.nextWakeSource ?? "none"} decision=${item.humanDecision ?? "none"} ` +
+    `last=${item.lastAction}` +
+    `${item.escalationReasons.length > 0 ? ` reasons=${item.escalationReasons.join(",")}` : ""}` +
+    `${item.activeWorker ? ` worker=${item.activeWorker.id}` : ""}`
+  )
+}
+
+function countPRReviewDigestItems(digest: Lightbulb.PRReviewRouteDigest) {
+  return digest.watched.length + digest.escalated.length + digest.recent.length
 }
 
 function formatArtifactHandle(artifact: Lightbulb.ArtifactHandle) {

@@ -15,6 +15,7 @@ import { retentionDecisionFor, storedArtifactIntegrity, toArtifactHandle } from 
 import type { GoalLifecycle, GoalRunTree, GoalSummary } from "./goal"
 import { toPRReviewCandidateSummary } from "./pr-review-candidate"
 import { toPRReviewRouteSummary } from "./pr-review-route"
+import { toPRReviewRouteDigest } from "./pr-review-state"
 import { classifyLoopSchedule } from "./scheduler"
 import { toLoopProfileCompactSummary } from "./loop-profile"
 import { toReviewGateReadModel } from "./review-gate"
@@ -103,6 +104,7 @@ export function toDashboard(
           graph.routeStops.filter((stop) => stop.route_id === route.id),
         ),
       ),
+      prReviewRouteDigest: toPRReviewRouteDigest(graph.prReviewRoutes, graph.routeStops, graph.prReviewRouteWakes),
     },
     operations: {
       schedulerTicks: schedulerTickEvents.map(toDashboardSchedulerTick),
