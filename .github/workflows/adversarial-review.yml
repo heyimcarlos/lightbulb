@@ -1,0 +1,78 @@
+name: adversarial-review
+
+on:
+  pull_request_target:
+    types: [opened, edited, reopened, synchronize, ready_for_review]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  adversarial-review:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout trusted base
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: ${{ github.event.pull_request.base.ref }}
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+
+      - name: Fetch pull request head for diff only
+        run: git fetch --no-tags origin "${{ github.event.pull_request.base.ref }}:lightbulb-base" "pull/${{ github.event.pull_request.number }}/head:lightbulb-pr-head"
+
+      - name: Run deterministic adversarial review
+        run: |
+          bun run script/adversarial-review.ts \
+            --base lightbulb-base \
+            --head lightbulb-pr-head \
+            --event "$GITHUB_EVENT_PATH" \
+            --out /tmp/lightbulb-adversarial-review.json \
+            --markdown /tmp/lightbulb-adversarial-review.md
+
+      - name: Comment review summary
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        with:
+          script: |
+            const fs = require("fs")
+            const marker = "<!-- lightbulb-adversarial-review -->"
+            const body = fs.readFileSync("/tmp/lightbulb-adversarial-review.md", "utf8")
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            })
+            const existing = comments.find((comment) => comment.body.includes(marker))
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              })
+              return
+            }
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            })
+
+      - name: Upload review artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: lightbulb-adversarial-review-${{ github.event.pull_request.number }}
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            /tmp/lightbulb-adversarial-review.json
+            /tmp/lightbulb-adversarial-review.md
+
+      - name: Fail on blockers
+        run: |
+          node -e 'const fs=require("fs"); const result=JSON.parse(fs.readFileSync("/tmp/lightbulb-adversarial-review.json","utf8")); process.exit(result.status === "fail" ? 1 : 0)'

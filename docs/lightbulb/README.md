@@ -59,6 +59,24 @@ where no loop exists yet. This gives paused cron, external scheduler, and recove
 worker process exists. The dashboard read model exposes the recent tick events under `operations.schedulerTicks`, and
 the text dashboard prints an `Operations` section when tick state exists.
 
+## Adversarial PR Review Gate
+
+Lightbulb does not rely on paid Codex, Copilot, or model API reviewer credits for its baseline PR gate. The deterministic
+adversarial reviewer runs from the trusted base branch, fetches the PR head only as a diff target, and comments with
+bounded blockers, warnings, passed checks, and a merge recommendation. This follows the loop-engineering dogfood shape:
+make a local audit script the source of truth, run it in CI, and post compact feedback instead of raw transcripts.
+
+The gate should fail only on high-confidence hazards: user-facing app/desktop/TUI/CLI changes without visual evidence,
+hidden cron or scheduled automation, broad workflow write permissions, pull-request-target workflows that execute PR-head
+code, raw transcript-shaped artifacts, or oversized single-file additions. Lower-confidence concerns such as missing test
+updates, missing package-local verification text, workflow changes, or large-but-not-huge additions should stay warnings
+so useful PRs are not blocked by noisy heuristics.
+
+Run the reviewer locally with `bun run script/adversarial-review.ts --base origin/dev --head HEAD`. CI runs the same
+script from `.github/workflows/adversarial-review.yml` and uploads both JSON and Markdown artifacts for parent loop
+review. For UI, desktop, browser, or CLI-affecting PRs, the PR body should include screenshot, recording, terminal
+evidence, or an explicit not-applicable rationale.
+
 ## Scheduler Supervisor Passes
 
 The recurring scheduler supervisor is the account-level controller above loop admission. A supervisor pass reads loop
