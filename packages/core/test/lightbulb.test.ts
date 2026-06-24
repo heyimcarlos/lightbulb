@@ -504,6 +504,35 @@ describe("Lightbulb", () => {
     ),
   )
 
+  it.live("reads the latest dashboard without an account id", () =>
+    Effect.acquireRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ).pipe(
+      Effect.flatMap((tmp) =>
+        Effect.gen(function* () {
+          const lightbulb = yield* Lightbulb.Service
+          yield* lightbulb.seedTracerBullet({
+            accountName: "Older Dashboard Account",
+            artifactUri: ".lightbulb/runs/older-dashboard.md",
+            artifactSummary: "Older dashboard artifact handle.",
+          })
+          yield* Effect.promise(() => Bun.sleep(2))
+          const latest = yield* lightbulb.seedTracerBullet({
+            accountName: "Latest Dashboard Account",
+            artifactUri: ".lightbulb/runs/latest-dashboard.md",
+            artifactSummary: "Latest dashboard artifact handle.",
+          })
+          const dashboard = yield* lightbulb.readLatestDashboard()
+
+          expect(dashboard?.account.id).toBe(latest.accountID)
+          expect(dashboard?.account.name).toBe("Latest Dashboard Account")
+          expect(dashboard?.artifactHandles[0]?.uri).toBe(".lightbulb/runs/latest-dashboard.md")
+        }).pipe(Effect.provide(layer(tmp.path))),
+      ),
+    ),
+  )
+
   it.live("reads a goal-rooted run tree with bounded summaries", () =>
     Effect.acquireRelease(
       Effect.promise(() => tmpdir()),

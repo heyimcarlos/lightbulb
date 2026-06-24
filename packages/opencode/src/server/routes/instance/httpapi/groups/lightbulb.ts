@@ -73,13 +73,115 @@ export const PRReviewRoutesResponse = Schema.Struct({
   routes: Schema.Array(PRReviewRouteSummary),
 }).annotate({ identifier: "LightbulbPRReviewRoutesResponse" })
 
+const StableDashboardAccount = Schema.Struct({
+  id: Lightbulb.AccountID,
+  name: Schema.String,
+  status: Schema.String,
+}).annotate({ identifier: "LightbulbStableDashboardAccount" })
+
+const StableDashboardCurrentRoute = Schema.Struct({
+  goalID: Schema.optional(Lightbulb.GoalID),
+  goalTitle: Schema.String,
+  goalStatus: Schema.String,
+  loopID: Schema.optional(Lightbulb.LoopID),
+  loopKind: Schema.optional(Schema.String),
+  loopStatus: Schema.optional(Schema.String),
+  runID: Schema.optional(Lightbulb.RunID),
+  runStatus: Schema.optional(Schema.String),
+  currentStop: Schema.String,
+  summary: Schema.String,
+}).annotate({ identifier: "LightbulbStableDashboardCurrentRoute" })
+
+const StableDashboardPickupPacket = Schema.Struct({
+  id: Lightbulb.TaskPacketID,
+  workerID: Lightbulb.WorkerID,
+  title: Schema.String,
+  status: Schema.String,
+}).annotate({ identifier: "LightbulbStableDashboardPickupPacket" })
+
+const StableDashboardLaunchAttempt = Schema.Struct({
+  id: Lightbulb.WorkerLaunchAttemptID,
+  status: Schema.String,
+  summary: Schema.String,
+  command: Schema.optional(Schema.String),
+  cwd: Schema.optional(Schema.String),
+  worktreeID: Schema.optional(Schema.String),
+  reportURI: Schema.optional(Schema.String),
+  failureReason: Schema.optional(Schema.String),
+  timeUpdated: NonNegativeInt,
+}).annotate({ identifier: "LightbulbStableDashboardLaunchAttempt" })
+
+const StableDashboardWorker = Schema.Struct({
+  id: Lightbulb.WorkerID,
+  role: Schema.String,
+  status: Schema.String,
+  summary: Schema.String,
+  latestLaunchAttempt: Schema.optional(StableDashboardLaunchAttempt),
+}).annotate({ identifier: "LightbulbStableDashboardWorker" })
+
+const StableDashboardArtifact = Schema.Struct({
+  id: Lightbulb.ArtifactID,
+  type: Schema.String,
+  uri: Schema.String,
+  summary: Schema.String,
+  status: Schema.String,
+}).annotate({ identifier: "LightbulbStableDashboardArtifact" })
+
+const StableDashboardGate = Schema.Struct({
+  id: Lightbulb.GateID,
+  kind: Schema.String,
+  status: Schema.String,
+  summary: Schema.String,
+  artifactID: Schema.optional(Lightbulb.ArtifactID),
+}).annotate({ identifier: "LightbulbStableDashboardGate" })
+
+const StableDashboardRunnerTick = Schema.Struct({
+  id: Lightbulb.EventID,
+  timeCreated: NonNegativeInt,
+  trigger: Schema.String,
+  admittedCount: NonNegativeInt,
+  skippedCount: NonNegativeInt,
+  outcomeCount: NonNegativeInt,
+}).annotate({ identifier: "LightbulbStableDashboardRunnerTick" })
+
+const StableDashboardSnapshot = Schema.Struct({
+  account: StableDashboardAccount,
+  destination: Schema.String,
+  currentRoute: StableDashboardCurrentRoute,
+  pickupPacket: Schema.optional(StableDashboardPickupPacket),
+  activeWorker: Schema.optional(StableDashboardWorker),
+  latestReportArtifact: Schema.optional(StableDashboardArtifact),
+  reviewGate: Schema.optional(StableDashboardGate),
+  runnerTick: Schema.optional(StableDashboardRunnerTick),
+  blockedReason: Schema.String,
+  nextWakeSource: Schema.String,
+  readyHumanAction: Schema.String,
+}).annotate({ identifier: "LightbulbStableDashboardSnapshot" })
+
+export const StableDashboardResponse = Schema.Struct({
+  snapshot: Schema.optional(StableDashboardSnapshot),
+}).annotate({ identifier: "LightbulbStableDashboardResponse" })
+
 export const LightbulbPaths = {
+  stableDashboard: `${root}/dashboard/stable-v0`,
   prReviewRoutes: `${root}/pr-review/routes`,
 } as const
 
 export const LightbulbApi = HttpApi.make("lightbulb")
   .add(
     HttpApiGroup.make("lightbulb")
+      .add(
+        HttpApiEndpoint.get("stableDashboard", LightbulbPaths.stableDashboard, {
+          success: described(StableDashboardResponse, "Stable-v0 dashboard snapshot"),
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "lightbulb.stableDashboard.get",
+            summary: "Get the stable-v0 dashboard snapshot",
+            description:
+              "Read the latest Lightbulb account dashboard as a compact stable-v0 operator snapshot without mutating route, worker, gate, or artifact state.",
+          }),
+        ),
+      )
       .add(
         HttpApiEndpoint.get("prReviewRoutes", LightbulbPaths.prReviewRoutes, {
           success: described(PRReviewRoutesResponse, "Active PR review routes"),
