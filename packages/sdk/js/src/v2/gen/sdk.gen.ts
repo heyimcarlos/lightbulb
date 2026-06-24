@@ -92,6 +92,8 @@ import type {
   InstanceDisposeResponses,
   LightbulbPrReviewRoutesListErrors,
   LightbulbPrReviewRoutesListResponses,
+  LightbulbStableDashboardGetErrors,
+  LightbulbStableDashboardGetResponses,
   LocationRef,
   LspStatusErrors,
   LspStatusResponses,
@@ -2226,6 +2228,21 @@ export class Formatter extends HeyApiClient {
   }
 }
 
+export class StableDashboard extends HeyApiClient {
+  /**
+   * Get the stable-v0 dashboard snapshot
+   *
+   * Read the latest Lightbulb account dashboard as a compact stable-v0 operator snapshot without mutating route, worker, gate, or artifact state.
+   */
+  public get<ThrowOnError extends boolean = false>(options?: Options<never, ThrowOnError>) {
+    return (options?.client ?? this.client).get<
+      LightbulbStableDashboardGetResponses,
+      LightbulbStableDashboardGetErrors,
+      ThrowOnError
+    >({ url: "/lightbulb/dashboard/stable-v0", ...options })
+  }
+}
+
 export class PrReviewRoutes extends HeyApiClient {
   /**
    * List active PR review routes
@@ -2242,6 +2259,11 @@ export class PrReviewRoutes extends HeyApiClient {
 }
 
 export class Lightbulb extends HeyApiClient {
+  private _stableDashboard?: StableDashboard
+  get stableDashboard(): StableDashboard {
+    return (this._stableDashboard ??= new StableDashboard({ client: this.client }))
+  }
+
   private _prReviewRoutes?: PrReviewRoutes
   get prReviewRoutes(): PrReviewRoutes {
     return (this._prReviewRoutes ??= new PrReviewRoutes({ client: this.client }))

@@ -1,0 +1,149 @@
+{
+  "account": {
+    "id": "lbacc_ef6611147001dI3l6vlgNknXGG",
+    "name": "Lightbulb Bootstrap",
+    "status": "active"
+  },
+  "goals": [
+    {
+      "id": "lbgoal_ef6611147002p9PnTBYkvVx4wS",
+      "title": "Bootstrap loop harness",
+      "status": "active",
+      "summary": "Create one durable Lightbulb goal graph.",
+      "loops": [
+        {
+          "id": "lbloop_ef6611147003lmn2ClpMGL5GEb",
+          "kind": "implementation",
+          "status": "active",
+          "summary": "Implementation loop owns the tracer bullet run.",
+          "profileID": null,
+          "schedule": null,
+          "budget": null,
+          "scheduleClassification": "not_due",
+          "scheduleReason": "schedule_not_configured",
+          "profile": null,
+          "runs": [
+            {
+              "id": "lbrun_ef6611147004SJn3lF2kNmMqt8",
+              "status": "complete",
+              "reviewStatus": "requested",
+              "debugStatus": "fixed",
+              "gateStatus": "pending",
+              "summary": "Worker produced a durable implementation report artifact.",
+              "workers": [
+                {
+                  "id": "lbworker_ef66111470051a8axc6kDWpYgo",
+                  "role": "bounded implementation worker",
+                  "status": "complete",
+                  "summary": "Implemented the schema tracer bullet and returned artifact handles.",
+                  "launchAttempts": []
+                }
+              ],
+              "gates": [
+                {
+                  "id": "lbgate_ef6611147008Xr51nIAsxv4s55",
+                  "kind": "review",
+                  "status": "pending",
+                  "summary": "Parent review is pending against the report artifact.",
+                  "artifactID": "lbartifact_ef6611147007YO32t7uS3J3bvc"
+                }
+              ],
+              "artifacts": [
+                {
+                  "id": "lbartifact_ef6611147007YO32t7uS3J3bvc",
+                  "type": "report",
+                  "uri": ".lightbulb/runs/schema-tracer-bullet.md",
+                  "summary": "Concise worker report for parent orchestration.",
+                  "status": "registered",
+                  "integrity": {
+                    "status": "unchecked",
+                    "checksum": null,
+                    "checkedAt": 1782250017095,
+                    "uncheckedReason": "tracer artifact content not checked",
+                    "expectedSizeBytes": null,
+                    "actualChecksum": null,
+                    "actualSizeBytes": null
+                  },
+                  "retentionPolicy": {
+                    "mode": "keep"
+                  },
+                  "retentionDecision": "hold-for-gate",
+                  "producerKind": "worker",
+                  "producerRunID": "lbrun_ef6611147004SJn3lF2kNmMqt8",
+                  "producerWorkerID": "lbworker_ef66111470051a8axc6kDWpYgo",
+                  "source": {},
+                  "lineage": [
+                    {
+                      "relation": "produced_by",
+                      "runID": "lbrun_ef6611147004SJn3lF2kNmMqt8",
+                      "workerID": "lbworker_ef66111470051a8axc6kDWpYgo",
+                      "summary": "Worker produced this artifact for parent review."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "inbox": {
+    "taskPackets": [
+      {
+        "id": "lbpacket_ef6611147006uiPuxIKIu6gUSn",
+        "workerID": "lbworker_ef66111470051a8axc6kDWpYgo",
+        "title": "Implement schema tracer bullet",
+        "status": "complete"
+      }
+    ],
+    "gates": [
+      {
+        "id": "lbgate_ef6611147008Xr51nIAsxv4s55",
+        "kind": "review",
+        "status": "pending",
+        "summary": "Parent review is pending against the report artifact.",
+        "artifactID": "lbartifact_ef6611147007YO32t7uS3J3bvc"
+      }
+    ],
+    "prReviewCandidates": [],
+    "prReviewRoutes": []
+  },
+  "operations": {
+    "schedulerTicks": []
+  },
+  "artifactHandles": [
+    {
+      "id": "lbartifact_ef6611147007YO32t7uS3J3bvc",
+      "type": "report",
+      "uri": ".lightbulb/runs/schema-tracer-bullet.md",
+      "summary": "Concise worker report for parent orchestration.",
+      "status": "registered",
+      "integrity": {
+        "status": "unchecked",
+        "checksum": null,
+        "checkedAt": 1782250017095,
+        "uncheckedReason": "tracer artifact content not checked",
+        "expectedSizeBytes": null,
+        "actualChecksum": null,
+        "actualSizeBytes": null
+      },
+      "retentionPolicy": {
+        "mode": "keep"
+      },
+      "retentionDecision": "hold-for-gate",
+      "producerKind": "worker",
+      "producerRunID": "lbrun_ef6611147004SJn3lF2kNmMqt8",
+      "producerWorkerID": "lbworker_ef66111470051a8axc6kDWpYgo",
+      "source": {},
+      "lineage": [
+        {
+          "relation": "produced_by",
+          "runID": "lbrun_ef6611147004SJn3lF2kNmMqt8",
+          "workerID": "lbworker_ef66111470051a8axc6kDWpYgo",
+          "summary": "Worker produced this artifact for parent review."
+        }
+      ]
+    }
+  ]
+}

@@ -2400,6 +2400,95 @@ export type FormatterStatus = {
   enabled: boolean
 }
 
+export type LightbulbStableDashboardAccount = {
+  id: string
+  name: string
+  status: string
+}
+
+export type LightbulbStableDashboardCurrentRoute = {
+  goalID?: string
+  goalTitle: string
+  goalStatus: string
+  loopID?: string
+  loopKind?: string
+  loopStatus?: string
+  runID?: string
+  runStatus?: string
+  currentStop: string
+  summary: string
+}
+
+export type LightbulbStableDashboardPickupPacket = {
+  id: string
+  workerID: string
+  title: string
+  status: string
+}
+
+export type LightbulbStableDashboardLaunchAttempt = {
+  id: string
+  status: string
+  summary: string
+  command?: string
+  cwd?: string
+  worktreeID?: string
+  reportURI?: string
+  failureReason?: string
+  timeUpdated: number
+}
+
+export type LightbulbStableDashboardWorker = {
+  id: string
+  role: string
+  status: string
+  summary: string
+  latestLaunchAttempt?: LightbulbStableDashboardLaunchAttempt
+}
+
+export type LightbulbStableDashboardArtifact = {
+  id: string
+  type: string
+  uri: string
+  summary: string
+  status: string
+}
+
+export type LightbulbStableDashboardGate = {
+  id: string
+  kind: string
+  status: string
+  summary: string
+  artifactID?: string
+}
+
+export type LightbulbStableDashboardRunnerTick = {
+  id: string
+  timeCreated: number
+  trigger: string
+  admittedCount: number
+  skippedCount: number
+  outcomeCount: number
+}
+
+export type LightbulbStableDashboardSnapshot = {
+  account: LightbulbStableDashboardAccount
+  destination: string
+  currentRoute: LightbulbStableDashboardCurrentRoute
+  pickupPacket?: LightbulbStableDashboardPickupPacket
+  activeWorker?: LightbulbStableDashboardWorker
+  latestReportArtifact?: LightbulbStableDashboardArtifact
+  reviewGate?: LightbulbStableDashboardGate
+  runnerTick?: LightbulbStableDashboardRunnerTick
+  blockedReason: string
+  nextWakeSource: string
+  readyHumanAction: string
+}
+
+export type LightbulbStableDashboardResponse = {
+  snapshot?: LightbulbStableDashboardSnapshot
+}
+
 export type LightbulbPrReviewRouteCurrentStop = {
   id: string
   kind: "discovery" | "implementation" | "debug" | "review" | "integration" | "verification" | "decision" | "cleanup"
@@ -6533,6 +6622,33 @@ export type FormatterStatusResponses = {
 }
 
 export type FormatterStatusResponse = FormatterStatusResponses[keyof FormatterStatusResponses]
+
+export type LightbulbStableDashboardGetData = {
+  body?: never
+  path?: never
+  query?: never
+  url: "/lightbulb/dashboard/stable-v0"
+}
+
+export type LightbulbStableDashboardGetErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type LightbulbStableDashboardGetError =
+  LightbulbStableDashboardGetErrors[keyof LightbulbStableDashboardGetErrors]
+
+export type LightbulbStableDashboardGetResponses = {
+  /**
+   * Stable-v0 dashboard snapshot
+   */
+  200: LightbulbStableDashboardResponse
+}
+
+export type LightbulbStableDashboardGetResponse =
+  LightbulbStableDashboardGetResponses[keyof LightbulbStableDashboardGetResponses]
 
 export type LightbulbPrReviewRoutesListData = {
   body?: never
