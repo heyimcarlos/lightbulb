@@ -332,9 +332,27 @@ for dependency-only releases, but it remains the evidence/read-model seam; the o
 durable parent-applicable proposals. Operations snapshots (#33) summarize account health and may later count or link
 outbox handles, but snapshots are read models and do not apply or author GitHub mutations.
 
-The v0 outbox has only a fake apply-result seam. It can mark proposals `applied`, `skipped`, `failed`, or `superseded`
-with compact result, issue URL, or error handles while preserving source evidence. Live GitHub writes, operator approval,
-adapter capability checks, dry-run grouping, and retry policy belong to the future operator-approved apply pass (#52).
+The outbox exposes a fake apply-result seam for tests and operator imports. It can mark proposals `applied`, `skipped`,
+`held`, `failed`, or `superseded` with compact result, issue URL, error, or hold handles while preserving source evidence.
+
+## Issue Mutation Apply Pass
+
+The issue mutation apply pass is the human-gated writer boundary for outbox proposals. It reads apply-ready issue
+creation, edit, label, and comment proposals from the outbox, checks the operator approval handle, dependency holds,
+adapter capabilities, current issue snapshots, and unsafe state-label transitions, then calls a fakeable apply adapter.
+Core tests use fake snapshots and fake adapters; live GitHub writes must stay outside core and behind this seam.
+
+Dry-run mode returns the exact actions that would be applied, grouped by source goal/loop/run and idempotency key, without
+writing apply results or reopening planner reports, worker transcripts, or full issue histories. Approved apply mode
+records bounded outcomes for each proposal: applied, skipped, held, failed, or superseded. Held outcomes preserve exact
+bounded reasons such as `missing_operator_approval`, `dependency_held`, `unsupported_adapter_capability`,
+`stale_snapshot_precondition`, `conflicting_state_label`, or `unsafe_label_removal`.
+
+The apply pass differs from issue intake (#12), dependency reconciliation (#29), and mutation proposal storage (#38).
+Intake reads compact issue snapshots into Lightbulb. Dependency reconciliation decides whether dependency evidence is
+enough to propose an unblock mutation. The outbox stores the proposed mutation and source handles. The apply pass is the
+only part of this chain that may ask an external connector to mutate GitHub, and it records compact result handles instead
+of raw connector transcripts. Operations snapshots (#33) can consume the resulting counts and handles as read-model input.
 
 ## Pickup Packets
 
