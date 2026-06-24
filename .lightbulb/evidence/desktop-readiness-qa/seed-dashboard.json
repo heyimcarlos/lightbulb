@@ -1,0 +1,363 @@
+{
+  "account": {
+    "id": "lbacc_ef9ea342f001zB6JcPxfU76U1W",
+    "name": "Lightbulb Bootstrap",
+    "status": "active"
+  },
+  "readiness": {
+    "account": {
+      "id": "lbacc_ef9ea342f001zB6JcPxfU76U1W",
+      "name": "Lightbulb Bootstrap",
+      "status": "active"
+    },
+    "generatedAt": 1782309336127,
+    "level": "draft",
+    "score": 64,
+    "summary": "Account readiness is draft: 0 unattended-ready, 0 assisted, 0 report-only, 1 draft.",
+    "access": {
+      "all": "lightbulb readiness-audit --account lbacc_ef9ea342f001zB6JcPxfU76U1W"
+    },
+    "totals": {
+      "profiles": 1,
+      "draft": 1,
+      "reportOnly": 0,
+      "assisted": 0,
+      "unattendedReady": 0
+    },
+    "profiles": [
+      {
+        "loopID": "lbloop_ef9ea342f00327wOkH0FGFFjiX",
+        "goalID": "lbgoal_ef9ea342f002NzQKBzQ0gWW4cC",
+        "kind": "implementation",
+        "status": "active",
+        "profileID": null,
+        "profileName": "implementation",
+        "level": "draft",
+        "score": 64,
+        "missingReasons": [
+          "missing_profile_metadata",
+          "missing_state_read_model",
+          "missing_budget_policy",
+          "missing_safe_write_policy"
+        ],
+        "canRunUnattended": false,
+        "checks": [
+          {
+            "key": "profile_metadata",
+            "status": "missing",
+            "reason": "missing_profile_metadata",
+            "summary": "Loop has no valid loop_profile metadata."
+          },
+          {
+            "key": "state_read_model",
+            "status": "missing",
+            "reason": "missing_state_read_model",
+            "summary": "Profile declares state and read-model ownership."
+          },
+          {
+            "key": "pickup_packet",
+            "status": "pass",
+            "reason": null,
+            "summary": "Loop has a bounded task packet linked to a worker."
+          },
+          {
+            "key": "verifier_lane",
+            "status": "pass",
+            "reason": null,
+            "summary": "Loop has a review, verification, or policy gate."
+          },
+          {
+            "key": "human_gate",
+            "status": "pass",
+            "reason": null,
+            "summary": "Loop has an explicit human gate or pending review gate."
+          },
+          {
+            "key": "budget_policy",
+            "status": "missing",
+            "reason": "missing_budget_policy",
+            "summary": "Loop has a bounded budget policy."
+          },
+          {
+            "key": "run_log_evidence",
+            "status": "pass",
+            "reason": null,
+            "summary": "Operator run log has compact actions or artifact handles."
+          },
+          {
+            "key": "connector_capability",
+            "status": "pass",
+            "reason": null,
+            "summary": "Loop has connector/runtime launch capability evidence."
+          },
+          {
+            "key": "worktree_policy",
+            "status": "pass",
+            "reason": null,
+            "summary": "Loop has worktree or ownership policy evidence."
+          },
+          {
+            "key": "recent_activity",
+            "status": "pass",
+            "reason": null,
+            "summary": "Loop has recent run or event evidence."
+          },
+          {
+            "key": "safe_write_policy",
+            "status": "missing",
+            "reason": "missing_safe_write_policy",
+            "summary": "Loop declares safe-write policy before unattended promotion."
+          }
+        ]
+      }
+    ]
+  },
+  "goals": [
+    {
+      "id": "lbgoal_ef9ea342f002NzQKBzQ0gWW4cC",
+      "title": "Bootstrap loop harness",
+      "status": "active",
+      "summary": "Create one durable Lightbulb goal graph.",
+      "loops": [
+        {
+          "id": "lbloop_ef9ea342f00327wOkH0FGFFjiX",
+          "kind": "implementation",
+          "status": "active",
+          "summary": "Implementation loop owns the tracer bullet run.",
+          "profileID": null,
+          "schedule": null,
+          "budget": null,
+          "scheduleClassification": "not_due",
+          "scheduleReason": "schedule_not_configured",
+          "profile": null,
+          "runs": [
+            {
+              "id": "lbrun_ef9ea342f004YzBbmY30DN2Jso",
+              "status": "complete",
+              "reviewStatus": "requested",
+              "debugStatus": "fixed",
+              "gateStatus": "pending",
+              "summary": "Worker produced a durable implementation report artifact.",
+              "workers": [
+                {
+                  "id": "lbworker_ef9ea342f005A5IoBjr3jV6hkO",
+                  "role": "bounded implementation worker",
+                  "status": "complete",
+                  "summary": "Implemented the schema tracer bullet and returned artifact handles.",
+                  "launchAttempts": [
+                    {
+                      "id": "lblaunch_ef9ea342f007zeJ8Dy2O1BG2I5",
+                      "accountID": "lbacc_ef9ea342f001zB6JcPxfU76U1W",
+                      "runID": "lbrun_ef9ea342f004YzBbmY30DN2Jso",
+                      "workerID": "lbworker_ef9ea342f005A5IoBjr3jV6hkO",
+                      "taskPacketID": "lbpacket_ef9ea342f006wtlWIA1sJiAKnN",
+                      "status": "complete",
+                      "trigger": "scheduler",
+                      "summary": "OpenCode-native worker launch completed for the stable-v0 tracer route.",
+                      "cwd": ".",
+                      "worktreeID": "lightbulb:bootstrap-tracer-bullet",
+                      "command": "lightbulb worker run --task-packet lbpacket_ef9ea342f006wtlWIA1sJiAKnN",
+                      "profileID": "opencode-native:bounded-implementation",
+                      "sessionID": "lightbulb:seeded-session",
+                      "processID": null,
+                      "heartbeatURI": ".lightbulb/runs/schema-tracer-bullet.heartbeat.json",
+                      "logURI": ".lightbulb/runs/schema-tracer-bullet.log",
+                      "reportURI": ".lightbulb/runs/schema-tracer-bullet.md",
+                      "failureReason": null,
+                      "metadata": {
+                        "issue_ref": "#33",
+                        "work_item_ref": "github:issue:33",
+                        "runtime": "opencode-native",
+                        "seed": "tracer_bullet"
+                      },
+                      "ownershipKeys": [],
+                      "timeCreated": 1782309336111,
+                      "timeUpdated": 1782309336111
+                    }
+                  ]
+                }
+              ],
+              "gates": [
+                {
+                  "id": "lbgate_ef9ea342f009aCko6Dasu79M0F",
+                  "kind": "review",
+                  "status": "pending",
+                  "summary": "Parent review is pending against the report artifact.",
+                  "artifactID": "lbartifact_ef9ea342f008GRPq5OQ9v3p7kZ"
+                }
+              ],
+              "artifacts": [
+                {
+                  "id": "lbartifact_ef9ea342f008GRPq5OQ9v3p7kZ",
+                  "type": "report",
+                  "uri": ".lightbulb/runs/schema-tracer-bullet.md",
+                  "summary": "Concise worker report for parent orchestration.",
+                  "status": "registered",
+                  "integrity": {
+                    "status": "unchecked",
+                    "checksum": null,
+                    "checkedAt": 1782309336111,
+                    "uncheckedReason": "tracer artifact content not checked",
+                    "expectedSizeBytes": null,
+                    "actualChecksum": null,
+                    "actualSizeBytes": null
+                  },
+                  "retentionPolicy": {
+                    "mode": "keep"
+                  },
+                  "retentionDecision": "hold-for-gate",
+                  "producerKind": "worker",
+                  "producerRunID": "lbrun_ef9ea342f004YzBbmY30DN2Jso",
+                  "producerWorkerID": "lbworker_ef9ea342f005A5IoBjr3jV6hkO",
+                  "source": {},
+                  "lineage": [
+                    {
+                      "relation": "produced_by",
+                      "runID": "lbrun_ef9ea342f004YzBbmY30DN2Jso",
+                      "workerID": "lbworker_ef9ea342f005A5IoBjr3jV6hkO",
+                      "summary": "Worker produced this artifact for parent review."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "inbox": {
+    "taskPackets": [
+      {
+        "id": "lbpacket_ef9ea342f006wtlWIA1sJiAKnN",
+        "workerID": "lbworker_ef9ea342f005A5IoBjr3jV6hkO",
+        "title": "Implement stable-v0 operations snapshot feed",
+        "status": "complete"
+      }
+    ],
+    "gates": [
+      {
+        "id": "lbgate_ef9ea342f009aCko6Dasu79M0F",
+        "kind": "review",
+        "status": "pending",
+        "summary": "Parent review is pending against the report artifact.",
+        "artifactID": "lbartifact_ef9ea342f008GRPq5OQ9v3p7kZ"
+      }
+    ],
+    "prReviewCandidates": [],
+    "discoveryCandidates": {
+      "topActionable": [
+        {
+          "id": "lbdiscand_ef9ea3436001JLW277ap1jstBJ",
+          "sourceKind": "issue",
+          "sourceID": "github:issue:33",
+          "title": "Slice 24: loop operations snapshot feed",
+          "url": "https://github.com/heyimcarlos/lightbulb/issues/33",
+          "status": "open",
+          "section": "top_actionable",
+          "score": 90,
+          "reason": "Issue is ready for bounded Lightbulb worker pickup.",
+          "suggestedAction": "create_pickup_packet",
+          "sourceHandles": {
+            "sourceRef": "github:issue:33",
+            "issueRef": "#33",
+            "issueHandle": "github:issue:33",
+            "promptHandle": "github:issue:33:prompt",
+            "instructionHandle": "github:issue:33:body",
+            "url": "https://github.com/heyimcarlos/lightbulb/issues/33"
+          },
+          "duplicateRefs": [],
+          "labels": [
+            "ready-for-agent"
+          ],
+          "lastSeenAt": 1782309336111,
+          "lastProjectedAt": 1782309336111
+        }
+      ],
+      "needsHuman": [],
+      "possibleDuplicates": [],
+      "proposedActions": [
+        {
+          "candidateID": "lbdiscand_ef9ea3436001JLW277ap1jstBJ",
+          "sourceID": "github:issue:33",
+          "title": "Slice 24: loop operations snapshot feed",
+          "action": "create_pickup_packet",
+          "reason": "Issue is ready for bounded Lightbulb worker pickup."
+        }
+      ],
+      "watch": [],
+      "noise": [],
+      "recentResolved": []
+    },
+    "prReviewRoutes": [],
+    "prReviewRouteDigest": {
+      "watched": [],
+      "escalated": [],
+      "recent": []
+    }
+  },
+  "operations": {
+    "schedulerTicks": [
+      {
+        "id": "lbevent_ef9ea34320034pAURVzN1UsHL0",
+        "timeCreated": 1782309336111,
+        "trigger": "manual",
+        "admittedCount": 1,
+        "skippedCount": 0,
+        "outcomeCount": 1,
+        "source": {
+          "seed": "tracer_bullet",
+          "issue_ref": "#33",
+          "route": "stable_loop_v0_dogfood"
+        },
+        "outcomes": [
+          {
+            "loopID": "lbloop_ef9ea342f00327wOkH0FGFFjiX",
+            "profileID": null,
+            "kind": "implementation",
+            "outcome": "admitted",
+            "runID": "lbrun_ef9ea342f004YzBbmY30DN2Jso",
+            "eventID": null,
+            "classification": "due",
+            "reason": "seeded_dogfood_smoke"
+          }
+        ]
+      }
+    ],
+    "snapshot": null
+  },
+  "artifactHandles": [
+    {
+      "id": "lbartifact_ef9ea342f008GRPq5OQ9v3p7kZ",
+      "type": "report",
+      "uri": ".lightbulb/runs/schema-tracer-bullet.md",
+      "summary": "Concise worker report for parent orchestration.",
+      "status": "registered",
+      "integrity": {
+        "status": "unchecked",
+        "checksum": null,
+        "checkedAt": 1782309336111,
+        "uncheckedReason": "tracer artifact content not checked",
+        "expectedSizeBytes": null,
+        "actualChecksum": null,
+        "actualSizeBytes": null
+      },
+      "retentionPolicy": {
+        "mode": "keep"
+      },
+      "retentionDecision": "hold-for-gate",
+      "producerKind": "worker",
+      "producerRunID": "lbrun_ef9ea342f004YzBbmY30DN2Jso",
+      "producerWorkerID": "lbworker_ef9ea342f005A5IoBjr3jV6hkO",
+      "source": {},
+      "lineage": [
+        {
+          "relation": "produced_by",
+          "runID": "lbrun_ef9ea342f004YzBbmY30DN2Jso",
+          "workerID": "lbworker_ef9ea342f005A5IoBjr3jV6hkO",
+          "summary": "Worker produced this artifact for parent review."
+        }
+      ]
+    }
+  ]
+}

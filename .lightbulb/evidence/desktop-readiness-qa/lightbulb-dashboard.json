@@ -1,0 +1,12 @@
+{
+  "capturedAt": "2026-06-24T13:56:05.591Z",
+  "durationMs": 905,
+  "route": "/lightbulb/dashboard",
+  "screenshot": "/home/ren/repos/openbulb/.lightbulb/evidence/desktop-readiness-qa/lightbulb-dashboard.png",
+  "selector": "[data-page='lightbulb-dashboard']",
+  "size": {
+    "width": 956,
+    "height": 1036
+  },
+  "url": "oc://renderer/index.html"
+}
