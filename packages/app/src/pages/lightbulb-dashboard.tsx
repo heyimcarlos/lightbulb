@@ -181,6 +181,14 @@ function StableDashboard(props: { snapshot: StableSnapshot }) {
               {(packet) => (
                 <div class="grid gap-2">
                   <StatusBadge status={packet().status} />
+                  <Show when={props.snapshot.selectedIssue}>
+                    {(issue) => (
+                      <>
+                        <MetaLine label="Issue" value={`${issue().sourceID} · ${issue().title}`} />
+                        <MetaLine label="Action" value={formatStatus(issue().suggestedAction)} />
+                      </>
+                    )}
+                  </Show>
                   <MetaLine label="Packet" value={packet().id} />
                   <MetaLine label="Worker" value={packet().workerID} />
                   <div class="text-13-regular text-text-base">{packet().title}</div>

@@ -2426,6 +2426,14 @@ export type LightbulbStableDashboardPickupPacket = {
   status: string
 }
 
+export type LightbulbStableDashboardSelectedIssue = {
+  sourceID: string
+  title: string
+  url: string
+  status: string
+  suggestedAction: string
+}
+
 export type LightbulbStableDashboardLaunchAttempt = {
   id: string
   status: string
@@ -2476,6 +2484,7 @@ export type LightbulbStableDashboardSnapshot = {
   destination: string
   currentRoute: LightbulbStableDashboardCurrentRoute
   pickupPacket?: LightbulbStableDashboardPickupPacket
+  selectedIssue?: LightbulbStableDashboardSelectedIssue
   activeWorker?: LightbulbStableDashboardWorker
   latestReportArtifact?: LightbulbStableDashboardArtifact
   reviewGate?: LightbulbStableDashboardGate
