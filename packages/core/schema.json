@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "383f2753-9f8a-491c-8d80-b15928daa27b",
+  "id": "25e5535e-9e33-4c90-8bad-12887eacbd8a",
   "prevIds": [
-    "67fb5753-6113-4479-8981-08962e26a1ed"
+    "383f2753-9f8a-491c-8d80-b15928daa27b"
   ],
   "ddl": [
     {
@@ -64,6 +64,10 @@
     },
     {
       "name": "lightbulb_goal",
+      "entityType": "tables"
+    },
+    {
+      "name": "lightbulb_issue_mutation_outbox",
       "entityType": "tables"
     },
     {
@@ -1461,6 +1465,226 @@
       "name": "time_updated",
       "entityType": "columns",
       "table": "lightbulb_goal"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "lightbulb_issue_mutation_outbox"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "account_id",
+      "entityType": "columns",
+      "table": "lightbulb_issue_mutation_outbox"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "source_goal_id",
+      "entityType": "columns",
+      "table": "lightbulb_issue_mutation_outbox"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "source_loop_id",
+      "entityType": "columns",
+      "table": "lightbulb_issue_mutation_outbox"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "source_run_id",
+      "entityType": "columns",
+      "table": "lightbulb_issue_mutation_outbox"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "repository",
+      "entityType": "columns",
+      "table": "lightbulb_issue_mutation_outbox"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "action",
+      "entityType": "columns",
+      "table": "lightbulb_issue_mutation_outbox"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "lightbulb_issue_mutation_outbox"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "target_issue_number",
+      "entityType": "columns",
+      "table": "lightbulb_issue_mutation_outbox"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "target_issue_ref",
+      "entityType": "columns",
+      "table": "lightbulb_issue_mutation_outbox"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "target_issue_url",
+      "entityType": "columns",
+      "table": "lightbulb_issue_mutation_outbox"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "desired_labels",
+      "entityType": "columns",
+      "table": "lightbulb_issue_mutation_outbox"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "desired_state",
+      "entityType": "columns",
+      "table": "lightbulb_issue_mutation_outbox"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "idempotency_key",
+      "entityType": "columns",
+      "table": "lightbulb_issue_mutation_outbox"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "source_handles",
+      "entityType": "columns",
+      "table": "lightbulb_issue_mutation_outbox"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "rendered_mutation",
+      "entityType": "columns",
+      "table": "lightbulb_issue_mutation_outbox"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "hold_reasons",
+      "entityType": "columns",
+      "table": "lightbulb_issue_mutation_outbox"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "apply_summary",
+      "entityType": "columns",
+      "table": "lightbulb_issue_mutation_outbox"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "apply_result",
+      "entityType": "columns",
+      "table": "lightbulb_issue_mutation_outbox"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "metadata",
+      "entityType": "columns",
+      "table": "lightbulb_issue_mutation_outbox"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "lightbulb_issue_mutation_outbox"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_updated",
+      "entityType": "columns",
+      "table": "lightbulb_issue_mutation_outbox"
     },
     {
       "type": "text",
@@ -4524,6 +4748,66 @@
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
+      "name": "fk_lightbulb_issue_mutation_outbox_account_id_lightbulb_account_id_fk",
+      "entityType": "fks",
+      "table": "lightbulb_issue_mutation_outbox"
+    },
+    {
+      "columns": [
+        "source_goal_id"
+      ],
+      "tableTo": "lightbulb_goal",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_lightbulb_issue_mutation_outbox_source_goal_id_lightbulb_goal_id_fk",
+      "entityType": "fks",
+      "table": "lightbulb_issue_mutation_outbox"
+    },
+    {
+      "columns": [
+        "source_loop_id"
+      ],
+      "tableTo": "lightbulb_loop",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_lightbulb_issue_mutation_outbox_source_loop_id_lightbulb_loop_id_fk",
+      "entityType": "fks",
+      "table": "lightbulb_issue_mutation_outbox"
+    },
+    {
+      "columns": [
+        "source_run_id"
+      ],
+      "tableTo": "lightbulb_run",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_lightbulb_issue_mutation_outbox_source_run_id_lightbulb_run_id_fk",
+      "entityType": "fks",
+      "table": "lightbulb_issue_mutation_outbox"
+    },
+    {
+      "columns": [
+        "account_id"
+      ],
+      "tableTo": "lightbulb_account",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
       "name": "fk_lightbulb_loop_account_id_lightbulb_account_id_fk",
       "entityType": "fks",
       "table": "lightbulb_loop"
@@ -5548,6 +5832,15 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "lightbulb_issue_mutation_outbox_pk",
+      "table": "lightbulb_issue_mutation_outbox",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "lightbulb_loop_pk",
       "table": "lightbulb_loop",
       "entityType": "pks"
@@ -6101,6 +6394,96 @@
       "name": "lightbulb_goal_account_id_idx",
       "entityType": "indexes",
       "table": "lightbulb_goal"
+    },
+    {
+      "columns": [
+        {
+          "value": "account_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "lightbulb_issue_mutation_outbox_account_idx",
+      "entityType": "indexes",
+      "table": "lightbulb_issue_mutation_outbox"
+    },
+    {
+      "columns": [
+        {
+          "value": "account_id",
+          "isExpression": false
+        },
+        {
+          "value": "status",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "lightbulb_issue_mutation_outbox_status_idx",
+      "entityType": "indexes",
+      "table": "lightbulb_issue_mutation_outbox"
+    },
+    {
+      "columns": [
+        {
+          "value": "account_id",
+          "isExpression": false
+        },
+        {
+          "value": "repository",
+          "isExpression": false
+        },
+        {
+          "value": "target_issue_number",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "lightbulb_issue_mutation_outbox_target_idx",
+      "entityType": "indexes",
+      "table": "lightbulb_issue_mutation_outbox"
+    },
+    {
+      "columns": [
+        {
+          "value": "account_id",
+          "isExpression": false
+        },
+        {
+          "value": "idempotency_key",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "lightbulb_issue_mutation_outbox_idempotency_idx",
+      "entityType": "indexes",
+      "table": "lightbulb_issue_mutation_outbox"
+    },
+    {
+      "columns": [
+        {
+          "value": "account_id",
+          "isExpression": false
+        },
+        {
+          "value": "id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "lightbulb_issue_mutation_outbox_account_id_idx",
+      "entityType": "indexes",
+      "table": "lightbulb_issue_mutation_outbox"
     },
     {
       "columns": [

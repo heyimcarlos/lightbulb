@@ -354,6 +354,43 @@ export const LightbulbOperationsSnapshotTable = sqliteTable(
   ],
 )
 
+export const LightbulbIssueMutationOutboxTable = sqliteTable(
+  "lightbulb_issue_mutation_outbox",
+  {
+    id: text().$type<Lightbulb.IssueMutationID>().primaryKey(),
+    account_id: text()
+      .$type<Lightbulb.AccountID>()
+      .notNull()
+      .references(() => LightbulbAccountTable.id, { onDelete: "cascade" }),
+    source_goal_id: text().$type<Lightbulb.GoalID>().references(() => LightbulbGoalTable.id, { onDelete: "set null" }),
+    source_loop_id: text().$type<Lightbulb.LoopID>().references(() => LightbulbLoopTable.id, { onDelete: "set null" }),
+    source_run_id: text().$type<Lightbulb.RunID>().references(() => LightbulbRunTable.id, { onDelete: "set null" }),
+    repository: text().notNull(),
+    action: text().$type<Lightbulb.IssueMutationAction>().notNull(),
+    status: text().$type<Lightbulb.IssueMutationStatus>().notNull(),
+    target_issue_number: integer(),
+    target_issue_ref: text(),
+    target_issue_url: text(),
+    desired_labels: text({ mode: "json" }).$type<readonly string[]>().notNull(),
+    desired_state: text().$type<Lightbulb.IssueMutationIssueState>(),
+    idempotency_key: text().notNull(),
+    source_handles: text({ mode: "json" }).$type<Lightbulb.IssueMutationSource>().notNull(),
+    rendered_mutation: text({ mode: "json" }).$type<Lightbulb.IssueMutationRenderedMutation>().notNull(),
+    hold_reasons: text({ mode: "json" }).$type<readonly Lightbulb.IssueMutationHoldReason[]>().notNull(),
+    apply_summary: text().notNull(),
+    apply_result: text({ mode: "json" }).$type<Lightbulb.IssueMutationApplyResult>(),
+    metadata: text({ mode: "json" }).$type<Record<string, unknown>>(),
+    ...Timestamps,
+  },
+  (table) => [
+    index("lightbulb_issue_mutation_outbox_account_idx").on(table.account_id),
+    index("lightbulb_issue_mutation_outbox_status_idx").on(table.account_id, table.status),
+    index("lightbulb_issue_mutation_outbox_target_idx").on(table.account_id, table.repository, table.target_issue_number),
+    uniqueIndex("lightbulb_issue_mutation_outbox_idempotency_idx").on(table.account_id, table.idempotency_key),
+    uniqueIndex("lightbulb_issue_mutation_outbox_account_id_idx").on(table.account_id, table.id),
+  ],
+)
+
 export const LightbulbRunTable = sqliteTable(
   "lightbulb_run",
   {
