@@ -57,6 +57,25 @@ describe("Lightbulb", () => {
             [seeded.taskPacketID, seeded.workerID, "complete"],
           ])
           expect(
+            graph?.workerLaunchAttempts.map((attempt) => [
+              attempt.id,
+              attempt.worker_id,
+              attempt.task_packet_id,
+              attempt.status,
+              attempt.command,
+              attempt.report_uri,
+            ]),
+          ).toEqual([
+            [
+              seeded.launchAttemptID,
+              seeded.workerID,
+              seeded.taskPacketID,
+              "complete",
+              "lightbulb worker run --task-packet " + seeded.taskPacketID,
+              ".lightbulb/runs/issue-2-schema-codex.md",
+            ],
+          ])
+          expect(
             graph?.artifacts.map((artifact) => [
               artifact.id,
               artifact.uri,
@@ -77,6 +96,9 @@ describe("Lightbulb", () => {
           ])
           expect(graph?.events.map((event) => [event.aggregate_type, event.aggregate_id, event.type])).toEqual([
             ["run", seeded.runID, "lightbulb.tracer.seeded"],
+            ["worker_launch_attempt", seeded.launchAttemptID, "lightbulb.worker_launch.completed"],
+            ["account", seeded.accountID, "lightbulb.scheduler_tick.completed"],
+            ["discovery_candidate_projection", seeded.accountID, "lightbulb.discovery_inbox.projected"],
           ])
         }).pipe(Effect.provide(layer(tmp.path))),
       ),
@@ -433,7 +455,18 @@ describe("Lightbulb", () => {
                           role: "bounded implementation worker",
                           status: "complete",
                           summary: "Implemented the schema tracer bullet and returned artifact handles.",
-                          launchAttempts: [],
+                          launchAttempts: [
+                            expect.objectContaining({
+                              id: seeded.launchAttemptID,
+                              accountID: seeded.accountID,
+                              runID: seeded.runID,
+                              workerID: seeded.workerID,
+                              taskPacketID: seeded.taskPacketID,
+                              status: "complete",
+                              command: "lightbulb worker run --task-packet " + seeded.taskPacketID,
+                              reportURI: ".lightbulb/runs/issue-3-dashboard.md",
+                            }),
+                          ],
                         },
                       ],
                       gates: [
@@ -483,7 +516,7 @@ describe("Lightbulb", () => {
             {
               id: seeded.taskPacketID,
               workerID: seeded.workerID,
-              title: "Implement schema tracer bullet",
+              title: "Implement stable-v0 operations snapshot feed",
               status: "complete",
             },
           ])
@@ -495,6 +528,21 @@ describe("Lightbulb", () => {
               summary: "Parent review is pending against the report artifact.",
               artifactID: seeded.artifactID,
             },
+          ])
+          expect(dashboard?.inbox.discoveryCandidates.topActionable).toEqual([
+            expect.objectContaining({
+              sourceID: "github:issue:33",
+              title: "Slice 24: loop operations snapshot feed",
+              suggestedAction: "create_pickup_packet",
+            }),
+          ])
+          expect(dashboard?.operations.schedulerTicks).toEqual([
+            expect.objectContaining({
+              trigger: "manual",
+              admittedCount: 1,
+              skippedCount: 0,
+              outcomeCount: 1,
+            }),
           ])
           expect(dashboard?.artifactHandles.map((artifact) => [artifact.id, artifact.uri])).toEqual([
             [seeded.artifactID, ".lightbulb/runs/issue-3-dashboard.md"],
@@ -667,14 +715,20 @@ describe("Lightbulb", () => {
               role: "bounded implementation worker",
               status: "complete",
               summary: "Implemented the schema tracer bullet and returned artifact handles.",
-              launchAttempts: [],
+              launchAttempts: [
+                expect.objectContaining({
+                  id: seeded.launchAttemptID,
+                  status: "complete",
+                  command: "lightbulb worker run --task-packet " + seeded.taskPacketID,
+                }),
+              ],
             },
           ])
           expect(tree?.taskPackets).toEqual([
             {
               id: seeded.taskPacketID,
               workerID: seeded.workerID,
-              title: "Implement schema tracer bullet",
+              title: "Implement stable-v0 operations snapshot feed",
               status: "complete",
             },
           ])

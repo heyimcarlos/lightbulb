@@ -62,6 +62,7 @@ import {
 import { assembleContextBundle, databaseContextBundleStorage } from "./lightbulb/context-bundle"
 import { toDashboard, toGoalRunTree } from "./lightbulb/dashboard"
 import { applyGatePolicyInDb, gateBlockedReason, type GatePolicyInput, type GatePolicyTransition } from "./lightbulb/policy"
+import { createIssuePickupPacket } from "./lightbulb/pickup-packet"
 import {
   discoverPRReviewCandidatesInDb,
   type PRReviewCandidateDiscoveryInput,
@@ -547,6 +548,7 @@ export type SeededGraph = {
   readonly runID: RunID
   readonly workerID: WorkerID
   readonly taskPacketID: TaskPacketID
+  readonly launchAttemptID: WorkerLaunchAttemptID
   readonly artifactID: ArtifactID
   readonly gateID: GateID
 }
@@ -888,6 +890,7 @@ export const layer = Layer.effect(
           runID: RunID.create(),
           workerID: WorkerID.create(),
           taskPacketID: TaskPacketID.create(),
+          launchAttemptID: WorkerLaunchAttemptID.create(),
           artifactID: ArtifactID.create(),
           gateID: GateID.create(),
         }
@@ -959,9 +962,41 @@ export const layer = Layer.effect(
                   id: ids.taskPacketID,
                   account_id: ids.accountID,
                   worker_id: ids.workerID,
-                  title: "Implement schema tracer bullet",
+                  title: "Implement stable-v0 operations snapshot feed",
                   status: "complete",
-                  instructions: "Create and verify one account goal to artifact graph.",
+                  instructions: "Use the pickup packet for GitHub issue #33 and return a compact report artifact.",
+                })
+                .run()
+              yield* tx
+                .insert(LightbulbWorkerLaunchAttemptTable)
+                .values({
+                  id: ids.launchAttemptID,
+                  account_id: ids.accountID,
+                  run_id: ids.runID,
+                  worker_id: ids.workerID,
+                  task_packet_id: ids.taskPacketID,
+                  active_key: null,
+                  status: "complete",
+                  trigger: "scheduler",
+                  summary: "OpenCode-native worker launch completed for the stable-v0 tracer route.",
+                  cwd: ".",
+                  worktree_id: "lightbulb:bootstrap-tracer-bullet",
+                  command: "lightbulb worker run --task-packet " + ids.taskPacketID,
+                  profile_id: "opencode-native:bounded-implementation",
+                  session_id: "lightbulb:seeded-session",
+                  process_id: null,
+                  heartbeat_uri: ".lightbulb/runs/schema-tracer-bullet.heartbeat.json",
+                  log_uri: ".lightbulb/runs/schema-tracer-bullet.log",
+                  report_uri: input?.artifactUri ?? ".lightbulb/runs/schema-tracer-bullet.md",
+                  failure_reason: null,
+                  metadata: {
+                    issue_ref: "#33",
+                    work_item_ref: "github:issue:33",
+                    runtime: "opencode-native",
+                    seed: "tracer_bullet",
+                  },
+                  time_created: now,
+                  time_updated: now,
                 })
                 .run()
               yield* tx
@@ -1023,9 +1058,119 @@ export const layer = Layer.effect(
                   time_created: now,
                 })
                 .run()
+              yield* tx
+                .insert(LightbulbEventTable)
+                .values({
+                  id: EventID.create(),
+                  account_id: ids.accountID,
+                  aggregate_type: "worker_launch_attempt",
+                  aggregate_id: ids.launchAttemptID,
+                  type: "lightbulb.worker_launch.completed",
+                  summary: "Worker launch attempt completed for stable-v0 issue #33.",
+                  data: {
+                    account_id: ids.accountID,
+                    goal_id: ids.goalID,
+                    loop_id: ids.loopID,
+                    run_id: ids.runID,
+                    worker_id: ids.workerID,
+                    task_packet_id: ids.taskPacketID,
+                    issue_ref: "#33",
+                    work_item_ref: "github:issue:33",
+                    environment_summary: {
+                      runtime: "opencode-native",
+                      source: "seeded_tracer",
+                    },
+                    trigger: "scheduler",
+                    attempt_id: ids.launchAttemptID,
+                    status: "complete",
+                    cwd: ".",
+                    worktree_id: "lightbulb:bootstrap-tracer-bullet",
+                    command: "lightbulb worker run --task-packet " + ids.taskPacketID,
+                    profile_id: "opencode-native:bounded-implementation",
+                    session_id: "lightbulb:seeded-session",
+                    process_id: null,
+                    heartbeat_uri: ".lightbulb/runs/schema-tracer-bullet.heartbeat.json",
+                    log_uri: ".lightbulb/runs/schema-tracer-bullet.log",
+                    report_uri: input?.artifactUri ?? ".lightbulb/runs/schema-tracer-bullet.md",
+                    failure_reason: null,
+                  },
+                  time_created: now,
+                })
+                .run()
+              yield* tx
+                .insert(LightbulbEventTable)
+                .values({
+                  id: EventID.create(),
+                  account_id: ids.accountID,
+                  aggregate_type: "account",
+                  aggregate_id: ids.accountID,
+                  type: "lightbulb.scheduler_tick.completed",
+                  summary: "Completed Lightbulb scheduler tick: 1 admitted, 0 skipped.",
+                  data: {
+                    account_id: ids.accountID,
+                    trigger: "manual",
+                    source: {
+                      seed: "tracer_bullet",
+                      issue_ref: "#33",
+                      route: "stable_loop_v0_dogfood",
+                    },
+                    admitted_count: 1,
+                    skipped_count: 0,
+                    outcome_count: 1,
+                    outcomes: [
+                      {
+                        loopID: ids.loopID,
+                        profileID: null,
+                        kind: "implementation",
+                        outcome: "admitted",
+                        runID: ids.runID,
+                        eventID: null,
+                        classification: "due",
+                        reason: "seeded_dogfood_smoke",
+                      },
+                    ],
+                  },
+                  time_created: now,
+                })
+                .run()
             }),
           )
           .pipe(Effect.orDie)
+        yield* projectDiscoveryInboxInDb(
+          db,
+          {
+            accountID: ids.accountID,
+            projectedAt: now,
+            source: {
+              seed: "tracer_bullet",
+              route: "stable_loop_v0_dogfood",
+            },
+            issues: [
+              {
+                accountID: ids.accountID,
+                number: 33,
+                title: "Slice 24: loop operations snapshot feed",
+                url: "https://github.com/heyimcarlos/lightbulb/issues/33",
+                labels: ["ready-for-agent"],
+                updatedAt: now,
+                bodyHandle: "github:issue:33:body",
+                bodySummary: "Operator surfaces need one compact feed for run, worker, gate, and wake state.",
+                pickupPacket: createIssuePickupPacket({
+                  issueRef: "#33",
+                  issueHandle: "github:issue:33",
+                  title: "Slice 24: loop operations snapshot feed",
+                  url: "https://github.com/heyimcarlos/lightbulb/issues/33",
+                  updatedAt: now,
+                  bodyHandle: "github:issue:33:body",
+                  bodySummary: "Operator surfaces need one compact feed for run, worker, gate, and wake state.",
+                  promptHandle: "github:issue:33:prompt",
+                  instructionHandle: "github:issue:33:body",
+                }),
+              },
+            ],
+          },
+          { candidate: DiscoveryCandidateID.create, event: EventID.create },
+        )
         return ids
       }),
       readAccountGraph: Effect.fn("Lightbulb.readAccountGraph")(function* (accountID) {

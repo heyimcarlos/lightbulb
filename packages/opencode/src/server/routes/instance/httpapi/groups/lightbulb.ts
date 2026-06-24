@@ -99,6 +99,14 @@ const StableDashboardPickupPacket = Schema.Struct({
   status: Schema.String,
 }).annotate({ identifier: "LightbulbStableDashboardPickupPacket" })
 
+const StableDashboardSelectedIssue = Schema.Struct({
+  sourceID: Schema.String,
+  title: Schema.String,
+  url: Schema.String,
+  status: Schema.String,
+  suggestedAction: Schema.String,
+}).annotate({ identifier: "LightbulbStableDashboardSelectedIssue" })
+
 const StableDashboardLaunchAttempt = Schema.Struct({
   id: Lightbulb.WorkerLaunchAttemptID,
   status: Schema.String,
@@ -149,6 +157,7 @@ const StableDashboardSnapshot = Schema.Struct({
   destination: Schema.String,
   currentRoute: StableDashboardCurrentRoute,
   pickupPacket: Schema.optional(StableDashboardPickupPacket),
+  selectedIssue: Schema.optional(StableDashboardSelectedIssue),
   activeWorker: Schema.optional(StableDashboardWorker),
   latestReportArtifact: Schema.optional(StableDashboardArtifact),
   reviewGate: Schema.optional(StableDashboardGate),

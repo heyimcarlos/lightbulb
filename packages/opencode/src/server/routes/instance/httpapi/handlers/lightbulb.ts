@@ -49,6 +49,11 @@ function toStableDashboardSnapshot(dashboard: Lightbulb.Dashboard | undefined) {
   const pickupPacket =
     dashboard.inbox.taskPackets.find((item) => item.workerID === worker?.id) ?? dashboard.inbox.taskPackets[0] ?? null
   const runnerTick = dashboard.operations.schedulerTicks.at(-1) ?? null
+  const selectedIssue =
+    dashboard.inbox.discoveryCandidates.topActionable[0] ??
+    dashboard.inbox.discoveryCandidates.needsHuman[0] ??
+    dashboard.inbox.discoveryCandidates.watch[0] ??
+    null
 
   return {
     account: dashboard.account,
@@ -63,6 +68,17 @@ function toStableDashboardSnapshot(dashboard: Lightbulb.Dashboard | undefined) {
       summary: routeSummary({ goal, loop, run }),
     },
     ...(pickupPacket ? { pickupPacket } : {}),
+    ...(selectedIssue
+      ? {
+          selectedIssue: {
+            sourceID: selectedIssue.sourceID,
+            title: selectedIssue.title,
+            url: selectedIssue.url,
+            status: selectedIssue.status,
+            suggestedAction: selectedIssue.suggestedAction,
+          },
+        }
+      : {}),
     ...(worker
       ? {
           activeWorker: {
