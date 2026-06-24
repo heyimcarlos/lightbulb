@@ -13,6 +13,7 @@ import type {
 } from "../lightbulb"
 import { retentionDecisionFor, storedArtifactIntegrity, toArtifactHandle } from "./artifact"
 import { groupDiscoveryCandidates, toDiscoveryCandidateSummary } from "./discovery-inbox"
+import { toHumanInboxDigest } from "./human-inbox"
 import type { GoalLifecycle, GoalRunTree, GoalSummary } from "./goal"
 import { toPRReviewCandidateSummary } from "./pr-review-candidate"
 import { toPRReviewRouteSummary } from "./pr-review-route"
@@ -110,6 +111,7 @@ export function toDashboard(
         ),
       ),
       prReviewRouteDigest: toPRReviewRouteDigest(graph.prReviewRoutes, graph.routeStops, graph.prReviewRouteWakes),
+      humanInbox: toHumanInboxDigest(graph.humanInboxItems, { accountID: graph.account.id }),
     },
     operations: {
       schedulerTicks: schedulerTickEvents.map(toDashboardSchedulerTick),

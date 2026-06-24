@@ -168,6 +168,7 @@ export function buildOperationsSnapshot(
         uri: artifact.uri,
         issueRef: artifact.source_issue_ref ?? undefined,
       })),
+    humanActions: humanInboxHandles(graph),
   } satisfies Lightbulb.OperationsSnapshotHandles
   const counts = snapshotCounts(graph, schedules, handles, latestOutcomes)
   const status = snapshotStatus(graph, counts)
@@ -207,7 +208,7 @@ export function toOperationsSnapshot(row: OperationsSnapshotRow): Lightbulb.Oper
     generatedAt: row.generated_at,
     nextWakeAt: row.next_wake_at,
     counts: normalizeSnapshotCounts(row.counts),
-    handles: row.handles,
+    handles: normalizeSnapshotHandles(row.handles),
     metadata: row.metadata ?? null,
     timeCreated: row.time_created,
     timeUpdated: row.time_updated,
@@ -285,6 +286,17 @@ function snapshotCounts(
           stringField(event.data, "reason") === "ownership_collision",
       ).length,
     },
+    humanInbox: {
+      actionRequired: handles.humanActions.length,
+      approvalNeeded: graph.humanInboxItems.filter((item) => item.status === "open" && item.type === "approval_needed").length,
+      needsInfo: graph.humanInboxItems.filter((item) => item.status === "open" && item.type === "needs_info").length,
+      conflicts: graph.humanInboxItems.filter((item) => item.status === "open" && item.type === "conflict").length,
+      escalated: graph.humanInboxItems.filter(
+        (item) =>
+          item.status === "open" &&
+          ["stale_worker", "budget_kill_switch", "max_attempts", "reroute_proposal"].includes(item.type),
+      ).length,
+    },
   }
 }
 
@@ -295,6 +307,20 @@ function normalizeSnapshotCounts(counts: Lightbulb.OperationsSnapshotCounts): Li
       ...counts.launchAttempts,
       collisionHolds: counts.launchAttempts.collisionHolds ?? 0,
     },
+    humanInbox: {
+      actionRequired: counts.humanInbox?.actionRequired ?? 0,
+      approvalNeeded: counts.humanInbox?.approvalNeeded ?? 0,
+      needsInfo: counts.humanInbox?.needsInfo ?? 0,
+      conflicts: counts.humanInbox?.conflicts ?? 0,
+      escalated: counts.humanInbox?.escalated ?? 0,
+    },
+  }
+}
+
+function normalizeSnapshotHandles(handles: Lightbulb.OperationsSnapshotHandles): Lightbulb.OperationsSnapshotHandles {
+  return {
+    ...handles,
+    humanActions: handles.humanActions ?? [],
   }
 }
 
@@ -316,7 +342,8 @@ function snapshotStatus(graph: Lightbulb.AccountGraph, counts: Lightbulb.Operati
     counts.workers.failed > 0 ||
     counts.loops.stale > 0 ||
     counts.loops.recoveryRequired > 0 ||
-    counts.launchAttempts.collisionHolds > 0
+    counts.launchAttempts.collisionHolds > 0 ||
+    counts.humanInbox.actionRequired > 0
   ) {
     return "attention_required"
   }
@@ -338,6 +365,7 @@ function snapshotSummary(
       counts.loops.stale ? `${counts.loops.stale} stale worker hold(s)` : undefined,
       counts.loops.recoveryRequired ? `${counts.loops.recoveryRequired} recovery hold(s)` : undefined,
       counts.launchAttempts.collisionHolds ? `${counts.launchAttempts.collisionHolds} ownership collision(s)` : undefined,
+      counts.humanInbox.actionRequired ? `${counts.humanInbox.actionRequired} human inbox item(s)` : undefined,
     ]
       .filter((part): part is string => Boolean(part))
       .join(", ") + " need operator attention."
@@ -455,6 +483,29 @@ function reviewGateHandles(graph: Lightbulb.AccountGraph): Lightbulb.OperationsS
       summary: gate.summary,
       uri: gate.artifact_id ?? undefined,
     }))
+}
+
+function humanInboxHandles(graph: Lightbulb.AccountGraph): Lightbulb.OperationsSnapshotCompactHandle[] {
+  return graph.humanInboxItems
+    .filter((item) => item.status === "open")
+    .slice()
+    .sort((left, right) => priorityRank(left.priority) - priorityRank(right.priority) || left.first_seen_at - right.first_seen_at)
+    .slice(0, 8)
+    .map((item) => ({
+      id: item.id,
+      kind: item.type,
+      status: item.status,
+      summary: item.summary,
+      uri: item.source.issueURL,
+      issueRef: item.source.issueRef,
+      reason: item.reason,
+    }))
+}
+
+function priorityRank(priority: Lightbulb.HumanInboxPriority) {
+  if (priority === "high") return 0
+  if (priority === "medium") return 1
+  return 2
 }
 
 function budgetHoldHandles(

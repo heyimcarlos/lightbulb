@@ -387,9 +387,14 @@ async function captureDesktopQa(win: BrowserWindow) {
 
   const started = Date.now()
   const selector = process.env.OPENCODE_DESKTOP_QA_SELECTOR ?? "[data-page='browser-surface']"
+  const scrollSelector = process.env.OPENCODE_DESKTOP_QA_SCROLL_SELECTOR
   logger.log("desktop QA capture started", { selector, screenshot })
   await waitForReadyToShow(win)
   await waitForRendererSelector(win, selector)
+  if (scrollSelector) {
+    await waitForRendererSelector(win, scrollSelector)
+    await scrollRendererSelector(win, scrollSelector)
+  }
   const image = nativeImage.createFromBuffer(await captureRendererPng(win))
   await mkdir(dirname(screenshot), { recursive: true })
   await writeFile(screenshot, image.toPNG())
@@ -400,6 +405,7 @@ async function captureDesktopQa(win: BrowserWindow) {
         capturedAt: new Date().toISOString(),
         durationMs: Date.now() - started,
         route: process.env.OPENCODE_DESKTOP_QA_ROUTE ?? null,
+        scrollSelector: scrollSelector ?? null,
         screenshot,
         selector,
         size: image.getSize(),
@@ -411,6 +417,17 @@ async function captureDesktopQa(win: BrowserWindow) {
   )
   logger.log("desktop QA capture finished", { screenshot, durationMs: Date.now() - started })
   app.quit()
+}
+
+async function scrollRendererSelector(win: BrowserWindow, selector: string) {
+  await win.webContents.executeJavaScript(`
+    {
+      const target = document.querySelector(${JSON.stringify(selector)})
+      if (!target) throw new Error("Timed out waiting for " + ${JSON.stringify(selector)})
+      target.scrollIntoView({ block: "center", inline: "nearest" })
+    }
+  `)
+  await delay(250)
 }
 
 async function captureRendererPng(win: BrowserWindow) {

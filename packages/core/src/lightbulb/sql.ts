@@ -354,6 +354,38 @@ export const LightbulbOperationsSnapshotTable = sqliteTable(
   ],
 )
 
+export const LightbulbHumanInboxItemTable = sqliteTable(
+  "lightbulb_human_inbox_item",
+  {
+    id: text().$type<Lightbulb.HumanInboxItemID>().primaryKey(),
+    account_id: text()
+      .$type<Lightbulb.AccountID>()
+      .notNull()
+      .references(() => LightbulbAccountTable.id, { onDelete: "cascade" }),
+    item_key: text().notNull(),
+    type: text().$type<Lightbulb.HumanInboxDecisionType>().notNull(),
+    status: text().$type<Lightbulb.HumanInboxItemStatus>().notNull(),
+    priority: text().$type<Lightbulb.HumanInboxPriority>().notNull(),
+    summary: text().notNull(),
+    reason: text().notNull(),
+    suggested_decision: text().notNull(),
+    last_action: text().notNull(),
+    source: text({ mode: "json" }).$type<Lightbulb.HumanInboxSource>().notNull(),
+    first_seen_at: integer().notNull(),
+    last_seen_at: integer().notNull(),
+    resolved_at: integer(),
+    metadata: text({ mode: "json" }).$type<Record<string, unknown>>(),
+    ...Timestamps,
+  },
+  (table) => [
+    index("lightbulb_human_inbox_item_account_idx").on(table.account_id),
+    index("lightbulb_human_inbox_item_status_idx").on(table.account_id, table.status, table.priority),
+    index("lightbulb_human_inbox_item_type_idx").on(table.account_id, table.type, table.status),
+    uniqueIndex("lightbulb_human_inbox_item_key_idx").on(table.account_id, table.item_key),
+    uniqueIndex("lightbulb_human_inbox_item_account_id_idx").on(table.account_id, table.id),
+  ],
+)
+
 export const LightbulbIssueMutationOutboxTable = sqliteTable(
   "lightbulb_issue_mutation_outbox",
   {

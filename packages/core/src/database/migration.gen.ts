@@ -51,5 +51,6 @@ export const migrations = (
     import("./migration/20260624041642_lightbulb_operations_snapshot"),
     import("./migration/20260624060023_lightbulb_issue_mutation_outbox"),
     import("./migration/20260624100400_lightbulb_budget_usage_ledger"),
+    import("./migration/20260624153000_lightbulb_human_inbox"),
   ])
 ).map((module) => module.default) satisfies DatabaseMigration.Migration[]

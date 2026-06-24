@@ -54,6 +54,7 @@ function toStableDashboardSnapshot(dashboard: Lightbulb.Dashboard | undefined) {
     dashboard.inbox.discoveryCandidates.needsHuman[0] ??
     dashboard.inbox.discoveryCandidates.watch[0] ??
     null
+  const humanAction = dashboard.inbox.humanInbox.actionRequired[0] ?? null
 
   return {
     account: dashboard.account,
@@ -126,7 +127,7 @@ function toStableDashboardSnapshot(dashboard: Lightbulb.Dashboard | undefined) {
       : {}),
     blockedReason: blockedReason({ loop, run, gate }),
     nextWakeSource: nextWakeSource({ loop, gate, runnerTick }),
-    readyHumanAction: readyHumanAction({ gate, reportArtifact, pickupPacket }),
+    readyHumanAction: readyHumanAction({ humanAction, gate, reportArtifact, pickupPacket }),
   }
 }
 
@@ -209,10 +210,12 @@ function nextWakeSource(input: {
 }
 
 function readyHumanAction(input: {
+  readonly humanAction: Lightbulb.HumanInboxItem | null
   readonly gate: Lightbulb.DashboardGate | null
   readonly reportArtifact: Lightbulb.ArtifactHandle | null
   readonly pickupPacket: Lightbulb.Dashboard["inbox"]["taskPackets"][number] | null
 }) {
+  if (input.humanAction) return humanDecisionLabel(input.humanAction.type) + ": " + input.humanAction.summary
   if (input.gate?.status === "pending") {
     return input.reportArtifact
       ? `Review ${input.reportArtifact.type} artifact ${input.reportArtifact.id}`
@@ -220,4 +223,14 @@ function readyHumanAction(input: {
   }
   if (input.pickupPacket?.status === "ready") return `Launch worker for pickup packet ${input.pickupPacket.id}`
   return "No human action is ready"
+}
+
+function humanDecisionLabel(type: Lightbulb.HumanInboxDecisionType) {
+  if (type === "approval_needed") return "Approval needed"
+  if (type === "needs_info") return "Needs info"
+  if (type === "conflict") return "Conflict"
+  if (type === "stale_worker") return "Stale worker"
+  if (type === "budget_kill_switch") return "Budget hold"
+  if (type === "max_attempts") return "Max attempts"
+  return "Reroute"
 }
