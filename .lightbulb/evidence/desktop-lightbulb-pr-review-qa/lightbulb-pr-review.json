@@ -1,0 +1,12 @@
+{
+  "capturedAt": "2026-06-23T21:09:00.614Z",
+  "durationMs": 861,
+  "route": "/lightbulb/pr-review",
+  "screenshot": "/home/ren/wt/lightbulb/desktop-qa/.lightbulb/evidence/desktop-lightbulb-pr-review-qa/lightbulb-pr-review.png",
+  "selector": "[data-page='lightbulb-pr-review']",
+  "size": {
+    "width": 956,
+    "height": 1036
+  },
+  "url": "oc://renderer/index.html"
+}

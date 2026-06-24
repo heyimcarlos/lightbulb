@@ -320,10 +320,18 @@ const scenarios: Scenario[] = [
       headers: ctx.headers(),
     }))
     .json(404, object, "status"),
-  http.protected.get("/lightbulb/pr-review/routes", "lightbulb.prReviewRoutes").json(200, (body) => {
-    object(body)
-    array(body.routes)
-  }),
+  http.protected
+    .get("/lightbulb/dashboard/stable-v0", "lightbulb.stableDashboard")
+    .json(200, (body) => {
+      object(body)
+      if (body.snapshot !== undefined && body.snapshot !== null) object(body.snapshot)
+    }),
+  http.protected
+    .get("/lightbulb/pr-review/routes", "lightbulb.prReviewRoutes")
+    .json(200, (body) => {
+      object(body)
+      array(body.routes)
+    }),
   http.protected
     .get("/file", "file.list")
     .seeded((ctx) => ctx.file("hello.txt", "hello\n"))

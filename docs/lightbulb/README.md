@@ -154,6 +154,24 @@ and exits. It uses `OPENCODE_DESKTOP_QA=1`, an in-memory database, a temporary u
 `OPENCODE_DESKTOP_REMOTE_DEBUGGING_PORT=off` so it can run next to a normal desktop dev session without stealing the
 default single-instance lock or DevTools port.
 
+Stable-v0 desktop surfaces can point the same harness at a seeded Lightbulb database:
+
+```bash
+OPENCODE_DB=/tmp/lightbulb-stable.db ./packages/opencode/bin/lightbulb dashboard --seed --format json
+cd packages/desktop
+OPENCODE_DB=/tmp/lightbulb-stable.db \
+  OPENCODE_DESKTOP_QA_ROUTE=/lightbulb/dashboard \
+  OPENCODE_DESKTOP_QA_SELECTOR="[data-page='lightbulb-dashboard']" \
+  bun run qa:browser -- --out ../../.lightbulb/evidence/desktop-stable-dashboard-qa
+```
+
+When `OPENCODE_DB` is omitted the QA harness still uses an isolated in-memory database. When it is provided, the desktop
+sidecar preserves it so the captured route can render real seeded goal, route, run, worker, artifact, and gate state.
+
+Use `OPENCODE_DESKTOP_QA_ROUTE=/lightbulb/pr-review` to capture the Lightbulb route monitor. The harness waits for the
+route's own `data-page` marker and writes `lightbulb-pr-review.png` plus `lightbulb-pr-review.json`. For new visual
+routes, use a stable `data-page` marker that matches the route slug, or set `OPENCODE_DESKTOP_QA_SELECTOR` explicitly.
+
 ## Scheduler Supervisor Passes
 
 The recurring scheduler supervisor is the account-level controller above loop admission. A supervisor pass reads loop
@@ -191,6 +209,18 @@ Ready issues become compact task-packet requests and `IssueRoutingInput` values 
 handles. The runner tick can then create a durable task packet from handles such as `github:issue:12:prompt` and
 `github:issue:12:body`, leaving full issue/comment content outside the authoritative Lightbulb route/run/gate/artifact
 state.
+
+## Dependency Unblock Reconciliation
+
+Dependency reconciliation is the fakeable read-model seam between issue intake and worker pickup. It accepts compact
+issue snapshots plus explicit evidence handles for closed dependencies, integrated issues, accepted review gates, or
+base-branch proof. It never rereads full issue histories, calls GitHub, or launches workers in core tests.
+
+When all dependency refs are satisfied, reconciliation proposes a bounded mutation that removes only the dependency hold,
+sets the blocked reason to `None - dependency satisfied by <evidence>.`, emits one idempotent reconciliation event, and
+returns an operator summary with compact issue, gate, or git handles. Mixed holds keep their human, budget, context, or
+ADR labels and remain out of worker dispatch until those separate holds clear. Missing or pending evidence leaves the
+issue dependency-held with an exact skipped reason.
 
 ## Pickup Packets
 

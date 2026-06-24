@@ -97,7 +97,14 @@ import type {
   TransitionDecisionArtifactInput,
   WorkerDispatchPlan,
 } from "./lightbulb/decision-artifact"
-import { ingestIssueQueueSnapshots, type IssueQueueIntakeResult, type IssueQueueSnapshot } from "./lightbulb/issue-intake"
+import {
+  ingestIssueQueueSnapshots,
+  reconcileDependencyUnblocks,
+  type DependencyUnblockReconciliationInput,
+  type DependencyUnblockReconciliationResult,
+  type IssueQueueIntakeResult,
+  type IssueQueueSnapshot,
+} from "./lightbulb/issue-intake"
 import type { ContextBundleAssemblyResult, ContextBundleAssemblyServiceInput } from "./lightbulb/context-bundle"
 import {
   LightbulbAccountTable,
@@ -712,6 +719,9 @@ export interface Interface {
   readonly classifyIssueRouting: (input: IssueRoutingInput) => Effect.Effect<IssueRoutingClassification>
   readonly ingestIssueQueueSnapshots: (input: { readonly snapshots: readonly IssueQueueSnapshot[] }) => Effect.Effect<IssueQueueIntakeResult>
   readonly projectDiscoveryInbox: (input: DiscoveryInboxProjectionInput) => Effect.Effect<DiscoveryInboxProjectionResult>
+  readonly reconcileDependencyUnblocks: (
+    input: DependencyUnblockReconciliationInput,
+  ) => Effect.Effect<DependencyUnblockReconciliationResult>
   readonly planWorkerDispatch: (input: { readonly issues: readonly IssueRoutingInput[] }) => Effect.Effect<WorkerDispatchPlan>
   readonly discoverPRReviewCandidates: (
     input: PRReviewCandidateDiscoveryInput,
@@ -735,6 +745,7 @@ export interface Interface {
   readonly readLoopSchedules: (input: { readonly accountID: AccountID; readonly now?: number }) => Effect.Effect<LoopScheduleReadModel[]>
   readonly readLoopProfileSummaries: (input: { readonly accountID: AccountID; readonly goalID: GoalID }) => Effect.Effect<LoopProfileCompactSummary[]>
   readonly readDashboard: (accountID: AccountID) => Effect.Effect<Dashboard | undefined>
+  readonly readLatestDashboard: () => Effect.Effect<Dashboard | undefined>
   readonly readIssueArtifacts: (input: ReadIssueArtifactsInput) => Effect.Effect<ArtifactHandle[]>
   readonly consumeArtifact: (input: {
     readonly artifactID: ArtifactID
@@ -1032,10 +1043,10 @@ export const layer = Layer.effect(
         return yield* readGoalRouteFromDb(db, routeID)
       }),
       readDashboard: Effect.fn("Lightbulb.readDashboard")(function* (accountID) {
-        const graph = yield* readAccountGraphFromDb(db, accountID, { events: "none" })
-        if (!graph) return
-        const schedulerTicks = yield* readRecentSchedulerTicksFromDb(db, accountID)
-        return toDashboard(graph, schedulerTicks)
+        return yield* readDashboardFromDb(db, accountID)
+      }),
+      readLatestDashboard: Effect.fn("Lightbulb.readLatestDashboard")(function* () {
+        return yield* readLatestDashboardFromDb(db)
       }),
       readIssueArtifacts: Effect.fn("Lightbulb.readIssueArtifacts")(function* (input) {
         return yield* readIssueArtifactsInDb(db, input)
@@ -1102,6 +1113,9 @@ export const layer = Layer.effect(
           { ...input, projectedAt: input.projectedAt ?? Date.now() },
           { candidate: DiscoveryCandidateID.create, event: EventID.create },
         )
+      }),
+      reconcileDependencyUnblocks: Effect.fn("Lightbulb.reconcileDependencyUnblocks")(function* (input) {
+        return reconcileDependencyUnblocks(input)
       }),
       planWorkerDispatch: Effect.fn("Lightbulb.planWorkerDispatch")(function* (input) {
         return yield* planWorkerDispatch(db, input)
@@ -1278,6 +1292,32 @@ export const layer = Layer.effect(
 
 export const defaultLayer = layer.pipe(Layer.provide(Database.defaultLayer))
 export const node = LayerNode.make(layer, [Database.node])
+
+function readLatestDashboardFromDb(db: Database.Interface["db"]) {
+  return Effect.gen(function* () {
+    const account = yield* db
+      .select()
+      .from(LightbulbAccountTable)
+      .orderBy(
+        desc(LightbulbAccountTable.time_updated),
+        desc(LightbulbAccountTable.time_created),
+        desc(LightbulbAccountTable.id),
+      )
+      .get()
+      .pipe(Effect.orDie)
+    if (!account) return
+    return yield* readDashboardFromDb(db, account.id)
+  })
+}
+
+function readDashboardFromDb(db: Database.Interface["db"], accountID: AccountID) {
+  return Effect.gen(function* () {
+    const graph = yield* readAccountGraphFromDb(db, accountID, { events: "none" })
+    if (!graph) return
+    const schedulerTicks = yield* readRecentSchedulerTicksFromDb(db, accountID)
+    return toDashboard(graph, schedulerTicks)
+  })
+}
 
 function readAccountGraphFromDb(
   db: Database.Interface["db"],
