@@ -1,0 +1,12 @@
+{
+  "capturedAt": "2026-06-24T00:41:03.548Z",
+  "durationMs": 863,
+  "route": "/browser",
+  "screenshot": "/tmp/lightbulb-migration-alias-desktop-qa-20260624/browser-surface.png",
+  "selector": "[data-page='browser-surface']",
+  "size": {
+    "width": 956,
+    "height": 1036
+  },
+  "url": "oc://renderer/index.html"
+}
