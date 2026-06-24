@@ -237,7 +237,12 @@ export type WorkerStatus = "queued" | "running" | "blocked" | "complete" | "fail
 export type TaskPacketStatus = "ready" | "claimed" | "complete" | "blocked"
 export type WorkerLaunchStatus = "requested" | "launching" | "running" | "launch_failed" | "blocked" | "complete" | "cancelled"
 export type WorkerLaunchTrigger = "scheduler" | "manual" | "recovery"
-export type WorkerLaunchHoldReason = "dependency_held" | "human_review_held" | "budget_held" | "context_policy_held"
+export type WorkerLaunchHoldReason =
+  | "dependency_held"
+  | "human_review_held"
+  | "budget_held"
+  | "context_policy_held"
+  | "ownership_collision"
 export type ArtifactType =
   | "report"
   | "plan"
@@ -503,6 +508,7 @@ export type OperationsSnapshotCounts = {
     readonly active: number
     readonly failed: number
     readonly complete: number
+    readonly collisionHolds: number
   }
 }
 

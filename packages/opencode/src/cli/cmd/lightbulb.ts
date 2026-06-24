@@ -136,7 +136,10 @@ function formatOperationsSnapshot(snapshot: Lightbulb.OperationsSnapshot) {
     `    nextWake=${snapshot.nextWakeAt ?? "none"} hash=${snapshot.sourceHash}`,
     `    counts ready=${snapshot.counts.loops.ready} activeOwners=${snapshot.handles.activeOwnership.length} ` +
       `reviewGates=${snapshot.counts.gates.pendingReview} budgetHeld=${snapshot.counts.budget.held} ` +
-      `dependencyReleased=${snapshot.counts.dependencies.released}`,
+      `dependencyReleased=${snapshot.counts.dependencies.released} collisionHolds=${snapshot.counts.launchAttempts.collisionHolds}`,
+    ...snapshot.handles.activeOwnership.map(
+      (item) => `    owner ${item.id} [${item.status ?? "unknown"}] ${item.summary}${item.reason ? ` (${item.reason})` : ""}`,
+    ),
     ...snapshot.handles.readyWork.map((item) => `    ready ${item.id} ${item.kind} ${item.summary}`),
     ...snapshot.handles.reviewGates.map((item) => `    review ${item.id} [${item.status ?? "unknown"}] ${item.summary}`),
   ]

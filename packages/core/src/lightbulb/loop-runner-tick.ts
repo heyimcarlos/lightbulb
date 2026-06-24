@@ -11,7 +11,7 @@ import { LightbulbEventTable, LightbulbRunTable, LightbulbTaskPacketTable, Light
 export type AccountLoopRunnerTickReason =
   | "launched" | "already_active" | "no_ready_work" | "dependency_held" | "human_review_held" | "context_policy_held"
   | "budget_held" | "disabled" | "no_due_loops" | "already_active_run" | "stale_worker" | "recovery_required"
-  | "admission_skipped" | "no_loops" | "launch_skipped" | "launch_failed" | "blocked"
+  | "admission_skipped" | "no_loops" | "launch_skipped" | "launch_failed" | "blocked" | "ownership_collision"
 
 export type AccountLoopRunnerWorkerRequest = {
   readonly runID: Lightbulb.RunID
@@ -248,6 +248,13 @@ export function databaseAccountLoopRunnerTickStorage(
           holdReason: input.tick.launchHoldReason,
           issueRef: input.issue.issueRef,
           workItemRef: input.issue.issueRef,
+          ownership: {
+            issueRef: input.issue.issueRef,
+            workItemRef: input.issue.issueHandle ?? input.issue.issueRef,
+            routeID: routeID(input.issue.pickupPacket.routeStop?.routeID),
+            worktreeID: input.tick.worktreeID,
+            pathGroup: pathGroup(input.issue.pickupPacket.affectedPaths),
+          },
           environmentSummary: input.tick.environmentSummary,
           summary: launchSummary(input.issue, input.tick.launchStatus ?? "requested"),
           cwd: input.tick.cwd ?? "/tmp/lightbulb-worker",
@@ -481,6 +488,7 @@ function tickOutcomeForLaunch(launch: WorkerLaunchResult): AccountLoopRunnerTick
 }
 
 function tickReasonForLaunch(launch: WorkerLaunchResult): AccountLoopRunnerTickReason {
+  if (launch.outcome === "skipped" && launch.reason === "ownership_collision") return "ownership_collision"
   if (launch.outcome === "skipped") return "launch_skipped"
   if (launch.outcome === "already_active") return "already_active"
   if (launch.attempt.status === "launch_failed") return "launch_failed"
@@ -501,6 +509,16 @@ function workerLaunchTrigger(trigger: Lightbulb.LoopRunTrigger): Lightbulb.Worke
 
 function defaultTickID(input: { readonly accountID: Lightbulb.AccountID; readonly now: number }, trigger: Lightbulb.LoopRunTrigger) {
   return "account-loop-runner:" + input.accountID + ":" + trigger + ":" + input.now
+}
+
+function routeID(value: string | undefined) {
+  if (!value?.startsWith("lbroute_")) return undefined
+  return value as Lightbulb.RouteID
+}
+
+function pathGroup(paths: readonly string[]) {
+  if (paths.length === 0) return undefined
+  return paths.slice().sort().join("\n")
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
