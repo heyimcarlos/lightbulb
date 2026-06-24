@@ -30,6 +30,18 @@ async function runPackageBin(args: readonly string[]) {
   return { stdout, stderr, exitCode }
 }
 
+function emptyDiscoveryInbox(): Lightbulb.DiscoveryCandidateInbox {
+  return {
+    topActionable: [],
+    needsHuman: [],
+    possibleDuplicates: [],
+    proposedActions: [],
+    watch: [],
+    noise: [],
+    recentResolved: [],
+  }
+}
+
 describe("lightbulb CLI entrypoint", () => {
   test("runs the direct package binary wrapper for the primary command path", async () => {
     const lightbulb = await runPackageBin(["dashboard", "--help"])
@@ -124,6 +136,7 @@ describe("lightbulb dashboard display", () => {
     const workerID = Lightbulb.WorkerID.make("lbworker_demo")
     const artifactID = Lightbulb.ArtifactID.make("lbartifact_demo")
     const decisionArtifactID = Lightbulb.ArtifactID.make("lbartifact_decision")
+    const discoveryCandidateID = Lightbulb.DiscoveryCandidateID.make("lbdiscand_demo")
     const prReviewRouteID = Lightbulb.RouteID.make("lbroute_pr_review")
     const prReviewStopID = Lightbulb.RouteStopID.make("lbstop_pr_review")
     const lineage = [
@@ -145,6 +158,30 @@ describe("lightbulb dashboard display", () => {
     }
     const retentionPolicy = { mode: "keep" as const }
     const retentionDecision = "keep" as const
+    const discoveryCandidate = {
+      id: discoveryCandidateID,
+      sourceKind: "issue" as const,
+      sourceID: "github:issue:77",
+      title: "System discovery candidate inbox",
+      url: "https://github.com/heyimcarlos/lightbulb/issues/77",
+      status: "open" as const,
+      section: "top_actionable" as const,
+      score: 90,
+      reason: "Issue is ready for bounded Lightbulb worker pickup.",
+      suggestedAction: "create_pickup_packet",
+      sourceHandles: {
+        sourceRef: "github:issue:77",
+        issueRef: "#77",
+        issueHandle: "github:issue:77",
+        promptHandle: "github:issue:77:prompt",
+        instructionHandle: "github:issue:77:body",
+        url: "https://github.com/heyimcarlos/lightbulb/issues/77",
+      },
+      duplicateRefs: [],
+      labels: ["ready-for-agent"],
+      lastSeenAt: Date.UTC(2026, 0, 1),
+      lastProjectedAt: Date.UTC(2026, 0, 1),
+    } satisfies Lightbulb.DiscoveryCandidateSummary
 
     const artifactHandle = {
       id: artifactID,
@@ -246,6 +283,19 @@ describe("lightbulb dashboard display", () => {
               artifactID,
             },
           ],
+          discoveryCandidates: {
+            ...emptyDiscoveryInbox(),
+            topActionable: [discoveryCandidate],
+            proposedActions: [
+              {
+                candidateID: discoveryCandidateID,
+                sourceID: "github:issue:77",
+                title: "System discovery candidate inbox",
+                action: "create_pickup_packet",
+                reason: "Issue is ready for bounded Lightbulb worker pickup.",
+              },
+            ],
+          },
           prReviewCandidates: [
             {
               id: Lightbulb.PRReviewCandidateID.make("lbprcand_demo"),
@@ -356,6 +406,7 @@ Work
 Queue
 - gate lbgate_demo review [pending] artifact=lbartifact_demo - Parent review is pending.
 - packet lbpacket_demo Render Lightbulb dashboard [complete] worker=lbworker_demo
+- issue-candidate #77 top [open] score=90 action=create_pickup_packet System discovery candidate inbox
 - pr-candidate heyimcarlos/lightbulb#65 [ready/open] Discover PR review goal candidates base=dev head=pr-candidates
 - pr-route heyimcarlos/lightbulb#65 [active] Discover PR review goal candidates stop=review:active next=worker_report mergeReady=no
 
@@ -376,6 +427,7 @@ Artifacts
         inbox: {
           taskPackets: [],
           gates: [],
+          discoveryCandidates: emptyDiscoveryInbox(),
           prReviewCandidates: [],
           prReviewRoutes: [],
         },

@@ -47,5 +47,6 @@ export const migrations = (
     import("./migration/20260622220640_lightbulb_pr_review_routes"),
     import("./migration/20260622221630_lightbulb_pr_review_route_active_key"),
     import("./migration/20260623033253_lightbulb_worker_launch_attempt"),
+    import("./migration/20260623224954_lightbulb_discovery_candidates"),
   ])
 ).map((module) => module.default) satisfies DatabaseMigration.Migration[]

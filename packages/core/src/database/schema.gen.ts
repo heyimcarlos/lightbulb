@@ -161,6 +161,30 @@ export default {
         );
       `)
       yield* tx.run(`
+        CREATE TABLE \`lightbulb_discovery_candidate\` (
+          \`id\` text PRIMARY KEY,
+          \`account_id\` text NOT NULL,
+          \`source_kind\` text NOT NULL,
+          \`source_id\` text NOT NULL,
+          \`title\` text NOT NULL,
+          \`url\` text NOT NULL,
+          \`status\` text NOT NULL,
+          \`section\` text NOT NULL,
+          \`score\` integer NOT NULL,
+          \`reason\` text NOT NULL,
+          \`suggested_action\` text NOT NULL,
+          \`source_handles\` text NOT NULL,
+          \`duplicate_refs\` text NOT NULL,
+          \`labels\` text NOT NULL,
+          \`last_seen_at\` integer NOT NULL,
+          \`last_projected_at\` integer NOT NULL,
+          \`metadata\` text,
+          \`time_created\` integer NOT NULL,
+          \`time_updated\` integer NOT NULL,
+          CONSTRAINT \`fk_lightbulb_discovery_candidate_account_id_lightbulb_account_id_fk\` FOREIGN KEY (\`account_id\`) REFERENCES \`lightbulb_account\`(\`id\`) ON DELETE CASCADE
+        );
+      `)
+      yield* tx.run(`
         CREATE TABLE \`lightbulb_event\` (
           \`id\` text PRIMARY KEY,
           \`account_id\` text NOT NULL,
@@ -622,6 +646,9 @@ export default {
       yield* tx.run(`CREATE INDEX \`lightbulb_artifact_source_run_idx\` ON \`lightbulb_artifact\` (\`source_run_id\`);`)
       yield* tx.run(`CREATE INDEX \`lightbulb_artifact_source_gate_idx\` ON \`lightbulb_artifact\` (\`source_gate_id\`);`)
       yield* tx.run(`CREATE UNIQUE INDEX \`lightbulb_artifact_account_id_idx\` ON \`lightbulb_artifact\` (\`account_id\`,\`id\`);`)
+      yield* tx.run(`CREATE INDEX \`lightbulb_discovery_candidate_account_idx\` ON \`lightbulb_discovery_candidate\` (\`account_id\`);`)
+      yield* tx.run(`CREATE INDEX \`lightbulb_discovery_candidate_section_idx\` ON \`lightbulb_discovery_candidate\` (\`account_id\`,\`section\`,\`score\`);`)
+      yield* tx.run(`CREATE UNIQUE INDEX \`lightbulb_discovery_candidate_identity_idx\` ON \`lightbulb_discovery_candidate\` (\`account_id\`,\`source_kind\`,\`source_id\`);`)
       yield* tx.run(`CREATE INDEX \`lightbulb_event_account_idx\` ON \`lightbulb_event\` (\`account_id\`);`)
       yield* tx.run(`CREATE INDEX \`lightbulb_event_aggregate_idx\` ON \`lightbulb_event\` (\`aggregate_type\`,\`aggregate_id\`,\`time_created\`);`)
       yield* tx.run(`CREATE INDEX \`lightbulb_gate_account_idx\` ON \`lightbulb_gate\` (\`account_id\`);`)

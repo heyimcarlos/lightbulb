@@ -150,6 +150,7 @@ function formatInbox(dashboard: Lightbulb.Dashboard) {
   if (
     dashboard.inbox.taskPackets.length === 0 &&
     dashboard.inbox.gates.length === 0 &&
+    countDiscoveryCandidates(dashboard.inbox.discoveryCandidates) === 0 &&
     dashboard.inbox.prReviewCandidates.length === 0 &&
     dashboard.inbox.prReviewRoutes.length === 0
   ) {
@@ -160,9 +161,40 @@ function formatInbox(dashboard: Lightbulb.Dashboard) {
     ...dashboard.inbox.taskPackets.map(
       (packet) => `- packet ${packet.id} ${packet.title} [${packet.status}] worker=${packet.workerID}`,
     ),
+    ...formatDiscoveryInbox(dashboard.inbox.discoveryCandidates),
     ...dashboard.inbox.prReviewCandidates.map(formatPRReviewCandidate),
     ...dashboard.inbox.prReviewRoutes.map(formatPRReviewRoute),
   ]
+}
+
+function formatDiscoveryInbox(inbox: Lightbulb.DiscoveryCandidateInbox) {
+  return [
+    ...inbox.topActionable.map((candidate) => formatDiscoveryCandidate("top", candidate)),
+    ...inbox.needsHuman.map((candidate) => formatDiscoveryCandidate("human", candidate)),
+    ...inbox.possibleDuplicates.map((candidate) => formatDiscoveryCandidate("duplicate", candidate)),
+    ...inbox.watch.map((candidate) => formatDiscoveryCandidate("watch", candidate)),
+    ...inbox.noise.map((candidate) => formatDiscoveryCandidate("noise", candidate)),
+    ...inbox.recentResolved.map((candidate) => formatDiscoveryCandidate("resolved", candidate)),
+  ]
+}
+
+function formatDiscoveryCandidate(section: string, candidate: Lightbulb.DiscoveryCandidateSummary) {
+  const duplicates = candidate.duplicateRefs.length ? ` duplicates=${candidate.duplicateRefs.join(",")}` : ""
+  return (
+    `- issue-candidate ${candidate.sourceHandles.issueRef ?? candidate.sourceID} ${section} ` +
+    `[${candidate.status}] score=${candidate.score} action=${candidate.suggestedAction}${duplicates} ${candidate.title}`
+  )
+}
+
+function countDiscoveryCandidates(inbox: Lightbulb.DiscoveryCandidateInbox) {
+  return (
+    inbox.topActionable.length +
+    inbox.needsHuman.length +
+    inbox.possibleDuplicates.length +
+    inbox.watch.length +
+    inbox.noise.length +
+    inbox.recentResolved.length
+  )
 }
 
 function formatPRReviewCandidate(candidate: Lightbulb.PRReviewCandidateSummary) {

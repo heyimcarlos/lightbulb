@@ -295,6 +295,38 @@ export const LightbulbPRReviewRouteWakeTable = sqliteTable(
   ],
 )
 
+export const LightbulbDiscoveryCandidateTable = sqliteTable(
+  "lightbulb_discovery_candidate",
+  {
+    id: text().$type<Lightbulb.DiscoveryCandidateID>().primaryKey(),
+    account_id: text()
+      .$type<Lightbulb.AccountID>()
+      .notNull()
+      .references(() => LightbulbAccountTable.id, { onDelete: "cascade" }),
+    source_kind: text().$type<Lightbulb.DiscoveryCandidateSourceKind>().notNull(),
+    source_id: text().notNull(),
+    title: text().notNull(),
+    url: text().notNull(),
+    status: text().$type<Lightbulb.DiscoveryCandidateStatus>().notNull(),
+    section: text().$type<Lightbulb.DiscoveryCandidateSection>().notNull(),
+    score: integer().notNull(),
+    reason: text().notNull(),
+    suggested_action: text().notNull(),
+    source_handles: text({ mode: "json" }).$type<Lightbulb.DiscoveryCandidateSourceHandles>().notNull(),
+    duplicate_refs: text({ mode: "json" }).$type<readonly string[]>().notNull(),
+    labels: text({ mode: "json" }).$type<readonly string[]>().notNull(),
+    last_seen_at: integer().notNull(),
+    last_projected_at: integer().notNull(),
+    metadata: text({ mode: "json" }).$type<Record<string, unknown>>(),
+    ...Timestamps,
+  },
+  (table) => [
+    index("lightbulb_discovery_candidate_account_idx").on(table.account_id),
+    index("lightbulb_discovery_candidate_section_idx").on(table.account_id, table.section, table.score),
+    uniqueIndex("lightbulb_discovery_candidate_identity_idx").on(table.account_id, table.source_kind, table.source_id),
+  ],
+)
+
 export const LightbulbRunTable = sqliteTable(
   "lightbulb_run",
   {

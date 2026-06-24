@@ -20,6 +20,7 @@ export type IssueQueueSnapshot = {
   readonly bodyHandle?: string
   readonly bodySummary?: string
   readonly dependencyRefs?: readonly string[]
+  readonly possibleDuplicateRefs?: readonly string[]
   readonly blockedReason?: string | null
   readonly comments?: readonly IssueQueueCommentSnapshot[]
   readonly eventKeys?: readonly string[]
@@ -128,6 +129,7 @@ export type IssueQueueClassification = {
   readonly bodyHandle: string | null
   readonly bodySummary: string | null
   readonly dependencyRefs: readonly string[]
+  readonly possibleDuplicateRefs: readonly string[]
   readonly blockerRefs: readonly string[]
   readonly updatedAt: number
   readonly promptHandle: string
@@ -212,6 +214,7 @@ export function classifyIssueQueueSnapshot(snapshot: IssueQueueSnapshot): IssueQ
   const promptHandle = "github:issue:" + snapshot.number + ":prompt"
   const instructionHandle = snapshot.bodyHandle ?? "github:issue:" + snapshot.number + ":body"
   const dependencyRefs = uniqueRefs(snapshot.dependencyRefs ?? [])
+  const possibleDuplicateRefs = uniqueRefs(snapshot.possibleDuplicateRefs ?? [])
   const pickupPacket = snapshot.pickupPacket ?? createIssuePickupPacket({
     issueRef,
     issueHandle,
@@ -237,6 +240,7 @@ export function classifyIssueQueueSnapshot(snapshot: IssueQueueSnapshot): IssueQ
     bodyHandle: snapshot.bodyHandle ?? null,
     bodySummary: snapshot.bodySummary ?? null,
     dependencyRefs,
+    possibleDuplicateRefs,
     blockerRefs,
     updatedAt: snapshot.updatedAt,
     promptHandle,
