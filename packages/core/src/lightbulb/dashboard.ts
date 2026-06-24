@@ -75,6 +75,7 @@ export function toGoalRunTree(graph: AccountGraph, goal: GoalLifecycle): GoalRun
 export function toDashboard(
   graph: AccountGraph,
   schedulerTickEvents: readonly (typeof LightbulbEventTable.$inferSelect)[],
+  readiness?: Dashboard["readiness"],
 ): Dashboard {
   return {
     account: {
@@ -82,6 +83,7 @@ export function toDashboard(
       name: graph.account.name,
       status: graph.account.status,
     },
+    ...(readiness ? { readiness } : {}),
     goals: graph.goals.map((goal) => ({
       id: goal.id,
       title: goal.title,

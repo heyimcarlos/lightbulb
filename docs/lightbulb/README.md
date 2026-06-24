@@ -134,6 +134,30 @@ exists. The run-log export emits one compact entry per run with profile, duratio
 usage estimates, and report/artifact/gate handles. None of the sections include raw worker transcripts, full issue
 histories, or credentials.
 
+## Loop Readiness Audit
+
+The loop readiness audit is Lightbulb-native. It reads durable account graph state instead of checking for Cobus-style
+files in the repository root. The audit scores each loop from profile metadata, state/read-model ownership, pickup
+packets, verifier lanes, human gates, budget policy, compact run-log evidence, connector capability, worktree policy,
+recent activity, and safe-write policy.
+
+Use the CLI to inspect readiness:
+
+```bash
+lightbulb readiness-audit --account <lbacc_...>
+lightbulb readiness-audit --account <lbacc_...> --format json
+```
+
+Readiness levels are `draft`, `report-only`, `assisted`, and `unattended-ready`. `draft` means the durable profile or
+state/read-model spine is missing. `report-only` means the loop can be inspected but lacks enough task-packet, verifier,
+human-gate, or budget policy evidence to run. `assisted` means the main spine exists but some promotion evidence is
+missing. `unattended-ready` requires all checks to pass; it cannot pass without budget policy, run-log evidence,
+verifier/human gates, recent activity, worktree/connector evidence, and explicit safe-write policy.
+
+The dashboard includes the account-level readiness summary and per-loop missing reasons when readiness has been
+projected for the account. The audit output is bounded and does not include task-packet instructions, raw worker
+metadata, raw worker transcripts, full issue bodies, or credentials.
+
 ## Worker Runtime Adapter Contract
 
 OpenCode-native execution is the default Lightbulb worker runtime for stable loop v0. Lightbulb is an OpenCode fork and

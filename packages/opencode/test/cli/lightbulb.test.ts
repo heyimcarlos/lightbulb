@@ -104,6 +104,22 @@ describe("lightbulb CLI entrypoint", () => {
   )
 
   cliIt.live(
+    "seeds and prints the readiness audit through the top-level Lightbulb command",
+    ({ opencode }) =>
+      Effect.gen(function* () {
+        const result = yield* opencode.spawn(["readiness-audit", "--seed", "--format", "json"], { env: lightbulbEnv })
+
+        opencode.expectExit(result, 0, "lightbulb readiness-audit --seed --format json")
+        const readiness = JSON.parse(result.stdout) as Lightbulb.LoopReadinessAudit
+        expect(readiness.account.id).toStartWith("lbacc_")
+        expect(readiness.profiles).toHaveLength(1)
+        expect(readiness.profiles[0]?.level).toBe("draft")
+        expect(readiness.profiles[0]?.missingReasons).toContain("missing_profile_metadata")
+      }),
+    60_000,
+  )
+
+  cliIt.live(
     "rejects the retired nested Lightbulb dashboard compatibility path",
     ({ opencode }) =>
       Effect.gen(function* () {
@@ -458,7 +474,8 @@ Operator Exports
 - lightbulb operator-export --account lbacc_demo
 - lightbulb operator-export --account lbacc_demo --section state
 - lightbulb operator-export --account lbacc_demo --section budget
-- lightbulb operator-export --account lbacc_demo --section run-log`)
+- lightbulb operator-export --account lbacc_demo --section run-log
+- lightbulb readiness-audit --account lbacc_demo`)
   })
 
   test("renders recent scheduler ticks as bounded operations state", () => {
@@ -543,7 +560,8 @@ Operator Exports
 - lightbulb operator-export --account lbacc_ops
 - lightbulb operator-export --account lbacc_ops --section state
 - lightbulb operator-export --account lbacc_ops --section budget
-- lightbulb operator-export --account lbacc_ops --section run-log`)
+- lightbulb operator-export --account lbacc_ops --section run-log
+- lightbulb readiness-audit --account lbacc_ops`)
   })
 
   test("renders the operations snapshot as bounded operator state", () => {
@@ -657,7 +675,8 @@ Operator Exports
 - lightbulb operator-export --account lbacc_ops
 - lightbulb operator-export --account lbacc_ops --section state
 - lightbulb operator-export --account lbacc_ops --section budget
-- lightbulb operator-export --account lbacc_ops --section run-log`)
+- lightbulb operator-export --account lbacc_ops --section run-log
+- lightbulb readiness-audit --account lbacc_ops`)
   })
 
 })

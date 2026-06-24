@@ -48,6 +48,7 @@ export * from "./lightbulb/worker-report"
 export * from "./lightbulb/worker-runtime"
 export * from "./lightbulb/budget-ledger"
 export * from "./lightbulb/operator-export"
+export * from "./lightbulb/loop-readiness"
 
 import { and, asc, desc, eq, or } from "drizzle-orm"
 import { Context, Effect, Layer, Schema } from "effect"
@@ -95,6 +96,7 @@ import {
   publishOperationsSnapshotInDb,
 } from "./lightbulb/operations-snapshot"
 import { buildOperatorExport, type OperatorExport } from "./lightbulb/operator-export"
+import { buildLoopReadinessAudit, type LoopReadinessAudit } from "./lightbulb/loop-readiness"
 import { planGoalRoute as planGoalRouteInDb, readGoalRoute as readGoalRouteFromDb, steerGoalRoute as steerGoalRouteInDb } from "./lightbulb/route"
 import {
   classifyIssueRouting,
@@ -949,6 +951,7 @@ export type Dashboard = {
     readonly status: AccountStatus
   }
   readonly goals: DashboardGoal[]
+  readonly readiness?: LoopReadinessAudit
   readonly inbox: {
     readonly taskPackets: {
       readonly id: TaskPacketID
@@ -1100,6 +1103,10 @@ export interface Interface {
     readonly accountID: AccountID
     readonly now?: number
   }) => Effect.Effect<OperatorExport | undefined>
+  readonly readLoopReadiness: (input: {
+    readonly accountID: AccountID
+    readonly now?: number
+  }) => Effect.Effect<LoopReadinessAudit | undefined>
   readonly proposeIssueMutation: (input: IssueMutationProposalInput) => Effect.Effect<IssueMutationProposalResult>
   readonly readIssueMutationOutbox: (input: IssueMutationOutboxReadInput) => Effect.Effect<IssueMutationOutboxItem[]>
   readonly recordIssueMutationApplyResult: (
@@ -1531,6 +1538,13 @@ export const layer = Layer.effect(
           now: input.now ?? Date.now(),
         })
       }),
+      readLoopReadiness: Effect.fn("Lightbulb.readLoopReadiness")(function* (input) {
+        const graph = yield* readAccountGraphFromDb(db, input.accountID)
+        if (!graph) return
+        const now = input.now ?? Date.now()
+        const operatorExport = buildOperatorExport(graph, yield* readRecentSchedulerTicksFromDb(db, input.accountID), { now })
+        return buildLoopReadinessAudit(graph, operatorExport, { now })
+      }),
       proposeIssueMutation: Effect.fn("Lightbulb.proposeIssueMutation")(function* (input) {
         return yield* proposeIssueMutationInDb(
           db,
@@ -1867,7 +1881,9 @@ function readDashboardFromDb(db: Database.Interface["db"], accountID: AccountID)
     const graph = yield* readAccountGraphFromDb(db, accountID, { events: "none" })
     if (!graph) return
     const schedulerTicks = yield* readRecentSchedulerTicksFromDb(db, accountID)
-    return toDashboard(graph, schedulerTicks)
+    const now = Date.now()
+    const operatorExport = buildOperatorExport(graph, schedulerTicks, { now })
+    return toDashboard(graph, schedulerTicks, buildLoopReadinessAudit(graph, operatorExport, { now }))
   })
 }
 
