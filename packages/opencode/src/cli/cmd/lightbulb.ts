@@ -110,10 +110,11 @@ function formatGoal(goal: Lightbulb.DashboardGoal) {
 }
 
 function formatOperations(dashboard: Lightbulb.Dashboard) {
-  if (dashboard.operations.schedulerTicks.length === 0) return []
+  if (!dashboard.operations.snapshot && dashboard.operations.schedulerTicks.length === 0) return []
   return [
     "",
     "Operations",
+    ...(dashboard.operations.snapshot ? formatOperationsSnapshot(dashboard.operations.snapshot) : []),
     ...dashboard.operations.schedulerTicks.flatMap((tick) => [
       `  scheduler tick ${tick.id} trigger=${tick.trigger} admitted=${tick.admittedCount} ` +
         `skipped=${tick.skippedCount} outcomes=${tick.outcomeCount}`,
@@ -125,6 +126,19 @@ function formatOperations(dashboard: Lightbulb.Dashboard) {
           `run=${outcome.runID ?? "none"}`,
       ),
     ]),
+  ]
+}
+
+function formatOperationsSnapshot(snapshot: Lightbulb.OperationsSnapshot) {
+  return [
+    `  snapshot ${snapshot.id} [${snapshot.status}] key=${snapshot.snapshotKey}`,
+    `    ${snapshot.summary}`,
+    `    nextWake=${snapshot.nextWakeAt ?? "none"} hash=${snapshot.sourceHash}`,
+    `    counts ready=${snapshot.counts.loops.ready} activeOwners=${snapshot.handles.activeOwnership.length} ` +
+      `reviewGates=${snapshot.counts.gates.pendingReview} budgetHeld=${snapshot.counts.budget.held} ` +
+      `dependencyReleased=${snapshot.counts.dependencies.released}`,
+    ...snapshot.handles.readyWork.map((item) => `    ready ${item.id} ${item.kind} ${item.summary}`),
+    ...snapshot.handles.reviewGates.map((item) => `    review ${item.id} [${item.status ?? "unknown"}] ${item.summary}`),
   ]
 }
 

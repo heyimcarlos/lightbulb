@@ -250,6 +250,24 @@ export default {
         );
       `)
       yield* tx.run(`
+        CREATE TABLE \`lightbulb_operations_snapshot\` (
+          \`id\` text PRIMARY KEY,
+          \`account_id\` text NOT NULL,
+          \`snapshot_key\` text NOT NULL,
+          \`status\` text NOT NULL,
+          \`summary\` text NOT NULL,
+          \`source_hash\` text NOT NULL,
+          \`generated_at\` integer NOT NULL,
+          \`next_wake_at\` integer,
+          \`counts\` text NOT NULL,
+          \`handles\` text NOT NULL,
+          \`metadata\` text,
+          \`time_created\` integer NOT NULL,
+          \`time_updated\` integer NOT NULL,
+          CONSTRAINT \`fk_lightbulb_operations_snapshot_account_id_lightbulb_account_id_fk\` FOREIGN KEY (\`account_id\`) REFERENCES \`lightbulb_account\`(\`id\`) ON DELETE CASCADE
+        );
+      `)
+      yield* tx.run(`
         CREATE TABLE \`lightbulb_pr_review_candidate\` (
           \`id\` text PRIMARY KEY,
           \`account_id\` text NOT NULL,
@@ -659,6 +677,10 @@ export default {
       yield* tx.run(`CREATE INDEX \`lightbulb_loop_account_idx\` ON \`lightbulb_loop\` (\`account_id\`);`)
       yield* tx.run(`CREATE INDEX \`lightbulb_loop_goal_idx\` ON \`lightbulb_loop\` (\`goal_id\`);`)
       yield* tx.run(`CREATE UNIQUE INDEX \`lightbulb_loop_account_id_idx\` ON \`lightbulb_loop\` (\`account_id\`,\`id\`);`)
+      yield* tx.run(`CREATE INDEX \`lightbulb_operations_snapshot_account_idx\` ON \`lightbulb_operations_snapshot\` (\`account_id\`);`)
+      yield* tx.run(`CREATE INDEX \`lightbulb_operations_snapshot_status_idx\` ON \`lightbulb_operations_snapshot\` (\`account_id\`,\`status\`);`)
+      yield* tx.run(`CREATE UNIQUE INDEX \`lightbulb_operations_snapshot_key_idx\` ON \`lightbulb_operations_snapshot\` (\`account_id\`,\`snapshot_key\`);`)
+      yield* tx.run(`CREATE UNIQUE INDEX \`lightbulb_operations_snapshot_account_id_idx\` ON \`lightbulb_operations_snapshot\` (\`account_id\`,\`id\`);`)
       yield* tx.run(`CREATE INDEX \`lightbulb_pr_review_candidate_account_idx\` ON \`lightbulb_pr_review_candidate\` (\`account_id\`);`)
       yield* tx.run(`CREATE INDEX \`lightbulb_pr_review_candidate_repository_idx\` ON \`lightbulb_pr_review_candidate\` (\`account_id\`,\`repository\`);`)
       yield* tx.run(`CREATE UNIQUE INDEX \`lightbulb_pr_review_candidate_identity_idx\` ON \`lightbulb_pr_review_candidate\` (\`account_id\`,\`repository\`,\`pr_number\`);`)
