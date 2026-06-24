@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "cdaadf16-94f4-46a3-b593-1da28ebcf482",
+  "id": "67fb5753-6113-4479-8981-08962e26a1ed",
   "prevIds": [
-    "98d0fc2e-49d1-4060-8dc6-1c754326c775"
+    "cdaadf16-94f4-46a3-b593-1da28ebcf482"
   ],
   "ddl": [
     {
@@ -48,6 +48,10 @@
     },
     {
       "name": "lightbulb_artifact",
+      "entityType": "tables"
+    },
+    {
+      "name": "lightbulb_discovery_candidate",
       "entityType": "tables"
     },
     {
@@ -943,6 +947,196 @@
       "name": "time_updated",
       "entityType": "columns",
       "table": "lightbulb_artifact"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "lightbulb_discovery_candidate"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "account_id",
+      "entityType": "columns",
+      "table": "lightbulb_discovery_candidate"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "source_kind",
+      "entityType": "columns",
+      "table": "lightbulb_discovery_candidate"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "source_id",
+      "entityType": "columns",
+      "table": "lightbulb_discovery_candidate"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "title",
+      "entityType": "columns",
+      "table": "lightbulb_discovery_candidate"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "url",
+      "entityType": "columns",
+      "table": "lightbulb_discovery_candidate"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "lightbulb_discovery_candidate"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "section",
+      "entityType": "columns",
+      "table": "lightbulb_discovery_candidate"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "score",
+      "entityType": "columns",
+      "table": "lightbulb_discovery_candidate"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "reason",
+      "entityType": "columns",
+      "table": "lightbulb_discovery_candidate"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "suggested_action",
+      "entityType": "columns",
+      "table": "lightbulb_discovery_candidate"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "source_handles",
+      "entityType": "columns",
+      "table": "lightbulb_discovery_candidate"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "duplicate_refs",
+      "entityType": "columns",
+      "table": "lightbulb_discovery_candidate"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "labels",
+      "entityType": "columns",
+      "table": "lightbulb_discovery_candidate"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "last_seen_at",
+      "entityType": "columns",
+      "table": "lightbulb_discovery_candidate"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "last_projected_at",
+      "entityType": "columns",
+      "table": "lightbulb_discovery_candidate"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "metadata",
+      "entityType": "columns",
+      "table": "lightbulb_discovery_candidate"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "lightbulb_discovery_candidate"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_updated",
+      "entityType": "columns",
+      "table": "lightbulb_discovery_candidate"
     },
     {
       "type": "text",
@@ -4089,6 +4283,21 @@
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
+      "name": "fk_lightbulb_discovery_candidate_account_id_lightbulb_account_id_fk",
+      "entityType": "fks",
+      "table": "lightbulb_discovery_candidate"
+    },
+    {
+      "columns": [
+        "account_id"
+      ],
+      "tableTo": "lightbulb_account",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
       "name": "fk_lightbulb_event_account_id_lightbulb_account_id_fk",
       "entityType": "fks",
       "table": "lightbulb_event"
@@ -5154,6 +5363,15 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "lightbulb_discovery_candidate_pk",
+      "table": "lightbulb_discovery_candidate",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "lightbulb_event_pk",
       "table": "lightbulb_event",
       "entityType": "pks"
@@ -5553,6 +5771,64 @@
       "name": "lightbulb_artifact_account_id_idx",
       "entityType": "indexes",
       "table": "lightbulb_artifact"
+    },
+    {
+      "columns": [
+        {
+          "value": "account_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "lightbulb_discovery_candidate_account_idx",
+      "entityType": "indexes",
+      "table": "lightbulb_discovery_candidate"
+    },
+    {
+      "columns": [
+        {
+          "value": "account_id",
+          "isExpression": false
+        },
+        {
+          "value": "section",
+          "isExpression": false
+        },
+        {
+          "value": "score",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "lightbulb_discovery_candidate_section_idx",
+      "entityType": "indexes",
+      "table": "lightbulb_discovery_candidate"
+    },
+    {
+      "columns": [
+        {
+          "value": "account_id",
+          "isExpression": false
+        },
+        {
+          "value": "source_kind",
+          "isExpression": false
+        },
+        {
+          "value": "source_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "lightbulb_discovery_candidate_identity_idx",
+      "entityType": "indexes",
+      "table": "lightbulb_discovery_candidate"
     },
     {
       "columns": [
