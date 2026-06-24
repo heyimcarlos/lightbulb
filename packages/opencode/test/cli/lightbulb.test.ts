@@ -354,6 +354,43 @@ describe("lightbulb dashboard display", () => {
               lastWokeAt: Date.UTC(2026, 0, 1),
             },
           ],
+          prReviewRouteDigest: {
+            watched: [
+              {
+                routeID: prReviewRouteID,
+                candidateID: Lightbulb.PRReviewCandidateID.make("lbprcand_demo"),
+                repository: "heyimcarlos/lightbulb",
+                pullNumber: 65,
+                title: "Discover PR review goal candidates",
+                url: "https://github.com/heyimcarlos/lightbulb/pull/65",
+                status: "idle",
+                routeStatus: "active",
+                currentStop: {
+                  id: prReviewStopID,
+                  kind: "review",
+                  title: "Collect review evidence",
+                  status: "active",
+                },
+                attemptCount: 0,
+                maxAttempts: 2,
+                lastAction: "Admitted PR review route.",
+                latestEvidence: {
+                  observedAt: Date.UTC(2026, 0, 1),
+                  source: "schedule_tick",
+                  summary: "Admitted PR review route.",
+                },
+                activeWorker: null,
+                humanDecision: null,
+                blockedReason: null,
+                escalationReasons: [],
+                nextWakeSource: "worker_report",
+                mergeReady: false,
+                lastWokeAt: Date.UTC(2026, 0, 1),
+              },
+            ],
+            escalated: [],
+            recent: [],
+          },
         },
         operations: {
           schedulerTicks: [],
@@ -409,6 +446,8 @@ Queue
 - issue-candidate #77 top [open] score=90 action=create_pickup_packet System discovery candidate inbox
 - pr-candidate heyimcarlos/lightbulb#65 [ready/open] Discover PR review goal candidates base=dev head=pr-candidates
 - pr-route heyimcarlos/lightbulb#65 [active] Discover PR review goal candidates stop=review:active next=worker_report mergeReady=no
+  PR review digest
+  - pr-watch heyimcarlos/lightbulb#65 [idle] attempts=0/2 stop=review:active next=worker_report decision=none last=Admitted PR review route.
 
 Artifacts
 - handle lbartifact_demo report [registered] .lightbulb/runs/issue-3-dashboard.md
@@ -430,6 +469,11 @@ Artifacts
           discoveryCandidates: emptyDiscoveryInbox(),
           prReviewCandidates: [],
           prReviewRoutes: [],
+          prReviewRouteDigest: {
+            watched: [],
+            escalated: [],
+            recent: [],
+          },
         },
         operations: {
           schedulerTicks: [

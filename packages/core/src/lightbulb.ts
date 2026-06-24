@@ -35,6 +35,7 @@ export * from "./lightbulb/issue-intake"
 export * from "./lightbulb/pickup-packet"
 export * from "./lightbulb/pr-review-candidate"
 export * from "./lightbulb/pr-review-route"
+export * from "./lightbulb/pr-review-state"
 export * from "./lightbulb/review-gate"
 export * from "./lightbulb/run-ledger"
 export * from "./lightbulb/scheduler"
@@ -81,6 +82,10 @@ import {
   type PRReviewRouteWakeResult,
   type PRReviewRouteWakeServiceInput,
 } from "./lightbulb/pr-review-route"
+import {
+  readPRReviewRouteDigestInDb,
+  type PRReviewRouteDigestInput,
+} from "./lightbulb/pr-review-state"
 import { planGoalRoute as planGoalRouteInDb, readGoalRoute as readGoalRouteFromDb, steerGoalRoute as steerGoalRouteInDb } from "./lightbulb/route"
 import {
   classifyIssueRouting,
@@ -399,6 +404,37 @@ export type PRReviewRouteSummary = {
   readonly lastWokeAt: number | null
 }
 
+export type PRReviewRouteDigestStatus = "ci_red" | "changes_requested" | "ready" | "blocked" | "idle"
+
+export type PRReviewRouteDigestItem = {
+  readonly routeID: RouteID
+  readonly candidateID: PRReviewCandidateID
+  readonly repository: string
+  readonly pullNumber: number
+  readonly title: string
+  readonly url: string
+  readonly status: PRReviewRouteDigestStatus
+  readonly routeStatus: PRReviewRouteStatus
+  readonly currentStop: PRReviewRouteCurrentStop | null
+  readonly attemptCount: number
+  readonly maxAttempts: number
+  readonly lastAction: string
+  readonly latestEvidence: PRReviewRouteEvidence | null
+  readonly activeWorker: PRReviewRouteWorkerHandle | null
+  readonly humanDecision: string | null
+  readonly blockedReason: string | null
+  readonly escalationReasons: string[]
+  readonly nextWakeSource: PRReviewRouteWakeSource | null
+  readonly mergeReady: boolean
+  readonly lastWokeAt: number | null
+}
+
+export type PRReviewRouteDigest = {
+  readonly watched: PRReviewRouteDigestItem[]
+  readonly escalated: PRReviewRouteDigestItem[]
+  readonly recent: PRReviewRouteDigestItem[]
+}
+
 export type ArtifactRetentionDecision =
   | "keep"
   | "expire"
@@ -620,6 +656,7 @@ export type Dashboard = {
     readonly prReviewCandidates: PRReviewCandidateSummary[]
     readonly discoveryCandidates: DiscoveryCandidateInbox
     readonly prReviewRoutes: PRReviewRouteSummary[]
+    readonly prReviewRouteDigest: PRReviewRouteDigest
   }
   readonly operations: {
     readonly schedulerTicks: DashboardSchedulerTick[]
@@ -729,6 +766,7 @@ export interface Interface {
   readonly admitPRReviewRoute: (input: PRReviewRouteAdmissionServiceInput) => Effect.Effect<PRReviewRouteAdmissionResult>
   readonly recordPRReviewRouteWake: (input: PRReviewRouteWakeServiceInput) => Effect.Effect<PRReviewRouteWakeResult>
   readonly readActivePRReviewRoutes: () => Effect.Effect<PRReviewRouteSummary[]>
+  readonly readPRReviewRouteDigest: (input: PRReviewRouteDigestInput) => Effect.Effect<PRReviewRouteDigest>
   readonly assembleContextBundle: (
     input: ContextBundleAssemblyServiceInput,
   ) => Effect.Effect<ContextBundleAssemblyResult>
@@ -1022,6 +1060,9 @@ export const layer = Layer.effect(
       }),
       readActivePRReviewRoutes: Effect.fn("Lightbulb.readActivePRReviewRoutes")(function* () {
         return yield* readActivePRReviewRoutesInDb(db)
+      }),
+      readPRReviewRouteDigest: Effect.fn("Lightbulb.readPRReviewRouteDigest")(function* (input) {
+        return yield* readPRReviewRouteDigestInDb(db, input)
       }),
       planGoalRoute: Effect.fn("Lightbulb.planGoalRoute")(function* (input) {
         return yield* planGoalRouteInDb(db, input, {
