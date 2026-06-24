@@ -15,6 +15,7 @@ import eventSourcedSessionInputMigration from "@opencode-ai/core/database/migrat
 import contextEpochAgentMigration from "@opencode-ai/core/database/migration/20260605042240_add_context_epoch_agent"
 import simplifyIntegrationCredentialsMigration from "@opencode-ai/core/database/migration/20260611192811_lush_chimera"
 import harnessArtifactsMigration from "@opencode-ai/core/database/migration/20260621093000_lightbulb_harness_artifacts"
+import workerLaunchMigration from "@opencode-ai/core/database/migration/20260623033253_lightbulb_worker_launch_attempt"
 import { ProjectV2 } from "@opencode-ai/core/project"
 import { ProjectTable } from "@opencode-ai/core/project/sql"
 import { AbsolutePath } from "@opencode-ai/core/schema"
@@ -568,6 +569,29 @@ describe("DatabaseMigration", () => {
           { id: "20260511173437_session-metadata" },
           { id: "20260530232709_lovely_romulus" },
         ])
+      }),
+    )
+  })
+
+  test("accepts the previous worker launch migration id", async () => {
+    await run(
+      Effect.gen(function* () {
+        const db = yield* makeDb
+        yield* DatabaseMigration.applyOnly(db, [
+          { ...workerLaunchMigration, id: "20260622073318_lightbulb_worker_launch_attempt" },
+        ])
+
+        yield* DatabaseMigration.applyOnly(db, [workerLaunchMigration])
+
+        expect(yield* db.all(sql`SELECT id FROM migration WHERE id LIKE '%worker_launch%' ORDER BY id`)).toEqual([
+          { id: "20260622073318_lightbulb_worker_launch_attempt" },
+          { id: "20260623033253_lightbulb_worker_launch_attempt" },
+        ])
+        expect(
+          yield* db.get(
+            sql`SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'lightbulb_worker_launch_attempt'`,
+          ),
+        ).toEqual({ name: "lightbulb_worker_launch_attempt" })
       }),
     )
   })

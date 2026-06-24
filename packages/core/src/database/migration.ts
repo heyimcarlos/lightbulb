@@ -9,6 +9,9 @@ import schema from "./schema.gen"
 type Database = EffectDrizzleSqlite.EffectSQLiteDatabase
 type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0]
 const lock = Semaphore.makeUnsafe(1)
+const migrationAliases = new Map([
+  ["20260623033253_lightbulb_worker_launch_attempt", ["20260622073318_lightbulb_worker_launch_attempt"]],
+])
 
 export type Migration = {
   id: string
@@ -68,6 +71,14 @@ export function applyOnly(db: Database, input: Migration[]) {
 
     for (const migration of input) {
       if (completed.has(migration.id)) continue
+      if (migrationAliases.get(migration.id)?.some((id) => completed.has(id))) {
+        yield* db.run(sql`
+          INSERT OR IGNORE INTO ${sql.identifier("migration")} (id, time_completed)
+          VALUES (${migration.id}, ${Date.now()})
+        `)
+        completed.add(migration.id)
+        continue
+      }
       yield* db.transaction((tx) =>
         Effect.gen(function* () {
           yield* migration.up(tx)

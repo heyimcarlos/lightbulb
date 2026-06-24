@@ -168,6 +168,10 @@ OPENCODE_DB=/tmp/lightbulb-stable.db \
 When `OPENCODE_DB` is omitted the QA harness still uses an isolated in-memory database. When it is provided, the desktop
 sidecar preserves it so the captured route can render real seeded goal, route, run, worker, artifact, and gate state.
 
+Use `OPENCODE_DESKTOP_QA_ROUTE=/lightbulb/pr-review` to capture the Lightbulb route monitor. The harness waits for the
+route's own `data-page` marker and writes `lightbulb-pr-review.png` plus `lightbulb-pr-review.json`. For new visual
+routes, use a stable `data-page` marker that matches the route slug, or set `OPENCODE_DESKTOP_QA_SELECTOR` explicitly.
+
 ## Scheduler Supervisor Passes
 
 The recurring scheduler supervisor is the account-level controller above loop admission. A supervisor pass reads loop

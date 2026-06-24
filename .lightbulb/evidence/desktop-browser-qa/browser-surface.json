@@ -1,0 +1,12 @@
+{
+  "capturedAt": "2026-06-23T21:08:26.301Z",
+  "durationMs": 880,
+  "route": "/browser",
+  "screenshot": "/home/ren/wt/lightbulb/desktop-qa/.lightbulb/evidence/desktop-browser-qa/browser-surface.png",
+  "selector": "[data-page='browser-surface']",
+  "size": {
+    "width": 956,
+    "height": 1036
+  },
+  "url": "oc://renderer/index.html"
+}
