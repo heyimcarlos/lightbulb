@@ -44,6 +44,34 @@ export type LoopProfileRegistryMetadata = {
   readonly starterRef?: string
 }
 
+export type LoopProfileStarterRouteStop = {
+  readonly id: string
+  readonly kind: Lightbulb.RouteStopKind
+  readonly title: string
+  readonly objective: string
+  readonly evidence: string
+}
+
+export type LoopProfileRouteSeed = {
+  readonly destination: string
+  readonly summary: string
+  readonly stops: readonly LoopProfileStarterRouteStop[]
+}
+
+export type LoopProfileRunLogPolicy = {
+  readonly mode: "compact"
+  readonly requiredHandles: readonly string[]
+  readonly retention: "operator-summary"
+  readonly rawTranscriptPolicy: "forbidden"
+}
+
+export type LoopProfileStarterMetadata = {
+  readonly starterID: string
+  readonly firstWakePrompt: string
+  readonly routeSeed: LoopProfileRouteSeed
+  readonly runLogPolicy: LoopProfileRunLogPolicy
+}
+
 export type LoopProfileInvalidFieldReason =
   | "missing_profile_metadata"
   | "invalid_profile_name"
@@ -98,6 +126,7 @@ export type LoopProfileDefinition = {
   readonly kind: Lightbulb.LoopKind
   readonly summary: string
   readonly registry?: LoopProfileRegistryMetadata
+  readonly starter?: LoopProfileStarterMetadata
   readonly schedule?: LoopProfileScheduleOverride
   readonly budget?: LoopProfileBudgetOverride
 }
@@ -121,6 +150,7 @@ export type LoopProfileCompactSummary = {
   readonly dailyCap: number
   readonly earlyExitRequirement: string
   readonly starterRef?: string
+  readonly starter?: LoopProfileStarterMetadata
   readonly ready: boolean
   readonly invalidProfileReasons: readonly LoopProfileInvalidFieldReason[]
 }
@@ -248,6 +278,7 @@ export type LoopProfileMetadata = {
   readonly schedule: LoopProfileScheduleEnvelope & { readonly custom: boolean }
   readonly budget: LoopProfileBudgetEnvelope & { readonly custom: boolean }
   readonly registry: LoopProfileRegistryMetadata | null
+  readonly starter?: LoopProfileStarterMetadata
   readonly invalidProfileReasons: readonly LoopProfileInvalidFieldReason[]
 }
 
@@ -760,6 +791,7 @@ function invalidProfile(
       schedule: null,
       budget: null,
       registry,
+      starter: definition.starter,
       invalidProfileReasons,
     }),
   }
@@ -787,6 +819,7 @@ function toHandle(
     readonly schedule: LoopProfileScheduleEnvelope | null
     readonly budget: LoopProfileBudgetEnvelope | null
     readonly registry?: LoopProfileRegistryMetadata | null
+    readonly starter?: LoopProfileStarterMetadata
     readonly invalidProfileReasons?: readonly LoopProfileInvalidFieldReason[]
   },
 ): LoopProfileHandle {
@@ -857,6 +890,23 @@ function toLoopProfileMetadata(
         early_exit_requirement: profile.registry.earlyExitRequirement,
         starter_ref: profile.registry.starterRef,
       },
+      starter: profile.definition.starter
+        ? {
+            starter_id: profile.definition.starter.starterID,
+            first_wake_prompt: profile.definition.starter.firstWakePrompt,
+            route_seed: {
+              destination: profile.definition.starter.routeSeed.destination,
+              summary: profile.definition.starter.routeSeed.summary,
+              stops: profile.definition.starter.routeSeed.stops,
+            },
+            run_log_policy: {
+              mode: profile.definition.starter.runLogPolicy.mode,
+              required_handles: profile.definition.starter.runLogPolicy.requiredHandles,
+              retention: profile.definition.starter.runLogPolicy.retention,
+              raw_transcript_policy: profile.definition.starter.runLogPolicy.rawTranscriptPolicy,
+            },
+          }
+        : undefined,
       bootstrapped_at: now,
       refreshed_at: now,
     },
@@ -906,7 +956,8 @@ function loopMatches(
     current.budget.maxContextTokens === profile.budget.maxContextTokens &&
     current.budget.holdReason === profile.budget.holdReason &&
     current.invalidProfileReasons.length === 0 &&
-    loopRegistryMatches(current.registry, profile.registry)
+    loopRegistryMatches(current.registry, profile.registry) &&
+    starterMatches(current.starter, profile.definition.starter)
   )
 }
 
@@ -1009,6 +1060,7 @@ export function readLoopProfileMetadata(metadata: Record<string, unknown> | null
       custom: budget.custom === true,
     },
     registry: registry.registry,
+    starter: readStoredStarter(loopProfile.starter),
     invalidProfileReasons: registry.invalidProfileReasons,
   }
 }
@@ -1021,6 +1073,7 @@ export function toLoopProfileCompactSummary(loop: LoopProfileStoredLoop): LoopPr
     loopID: loop.id,
     kind: loop.kind,
     registry: metadata.registry ?? defaultRegistryForLoop(loop, metadata),
+    starter: metadata.starter,
     schedule: metadata.schedule,
     budget: metadata.budget,
     invalidProfileReasons: metadata.invalidProfileReasons,
@@ -1161,6 +1214,7 @@ function toCompactProfileSummary(input: {
   readonly loopID: Lightbulb.LoopID | null
   readonly kind: Lightbulb.LoopKind | null
   readonly registry: LoopProfileRegistryMetadata
+  readonly starter?: LoopProfileStarterMetadata
   readonly schedule: LoopProfileScheduleEnvelope | null
   readonly budget: LoopProfileBudgetEnvelope | null
   readonly invalidProfileReasons: readonly LoopProfileInvalidFieldReason[]
@@ -1184,6 +1238,7 @@ function toCompactProfileSummary(input: {
     dailyCap: input.registry.dailyCap,
     earlyExitRequirement: input.registry.earlyExitRequirement,
     starterRef: input.registry.starterRef,
+    starter: input.starter,
     ready:
       input.invalidProfileReasons.length === 0 && input.schedule?.enabled === true && input.budget?.status === "open",
     invalidProfileReasons: input.invalidProfileReasons,
@@ -1255,6 +1310,122 @@ function isReadinessMode(value: unknown): value is LoopProfileReadinessMode {
 
 function isTokenCostTier(value: unknown): value is LoopProfileTokenCostTier {
   return value === "low" || value === "medium" || value === "high"
+}
+
+function readStoredStarter(value: unknown): LoopProfileStarterMetadata | undefined {
+  if (!isRecord(value)) return
+  const routeSeed = isRecord(value.route_seed) ? value.route_seed : value.routeSeed
+  const runLogPolicy = isRecord(value.run_log_policy) ? value.run_log_policy : value.runLogPolicy
+  if (!nonEmptyString(value.starter_id ?? value.starterID)) return
+  if (!nonEmptyString(value.first_wake_prompt ?? value.firstWakePrompt)) return
+  const parsedRouteSeed = readStoredRouteSeed(routeSeed)
+  const parsedRunLogPolicy = readStoredRunLogPolicy(runLogPolicy)
+  if (!parsedRouteSeed || !parsedRunLogPolicy) return
+  return {
+    starterID: String(value.starter_id ?? value.starterID).trim(),
+    firstWakePrompt: String(value.first_wake_prompt ?? value.firstWakePrompt).trim(),
+    routeSeed: parsedRouteSeed,
+    runLogPolicy: parsedRunLogPolicy,
+  }
+}
+
+function readStoredRouteSeed(value: unknown): LoopProfileRouteSeed | undefined {
+  if (!isRecord(value) || !nonEmptyString(value.destination) || !nonEmptyString(value.summary)) return
+  const stops = readStoredRouteStops(value.stops)
+  if (stops.length === 0) return
+  return {
+    destination: value.destination.trim(),
+    summary: value.summary.trim(),
+    stops,
+  }
+}
+
+function readStoredRouteStops(value: unknown): readonly LoopProfileStarterRouteStop[] {
+  if (!Array.isArray(value)) return []
+  return value
+    .map((stop) => {
+      if (!isRecord(stop)) return
+      if (!nonEmptyString(stop.id) || !isRouteStopKind(stop.kind)) return
+      if (!nonEmptyString(stop.title) || !nonEmptyString(stop.objective) || !nonEmptyString(stop.evidence)) return
+      return {
+        id: stop.id.trim(),
+        kind: stop.kind,
+        title: stop.title.trim(),
+        objective: stop.objective.trim(),
+        evidence: stop.evidence.trim(),
+      }
+    })
+    .filter((stop): stop is LoopProfileStarterRouteStop => stop !== undefined)
+}
+
+function readStoredRunLogPolicy(value: unknown): LoopProfileRunLogPolicy | undefined {
+  if (!isRecord(value)) return
+  const requiredHandles = stringList(value.required_handles ?? value.requiredHandles, true)
+  const rawTranscriptPolicy = value.raw_transcript_policy ?? value.rawTranscriptPolicy
+  if (value.mode !== "compact" || value.retention !== "operator-summary" || rawTranscriptPolicy !== "forbidden") return
+  if (!requiredHandles) return
+  return {
+    mode: "compact",
+    requiredHandles,
+    retention: "operator-summary",
+    rawTranscriptPolicy: "forbidden",
+  }
+}
+
+function starterMatches(
+  current: LoopProfileStarterMetadata | undefined,
+  next: LoopProfileStarterMetadata | undefined,
+) {
+  if (!current && !next) return true
+  if (!current || !next) return false
+  return (
+    current.starterID === next.starterID &&
+    current.firstWakePrompt === next.firstWakePrompt &&
+    routeSeedMatches(current.routeSeed, next.routeSeed) &&
+    runLogPolicyMatches(current.runLogPolicy, next.runLogPolicy)
+  )
+}
+
+function routeSeedMatches(current: LoopProfileRouteSeed, next: LoopProfileRouteSeed) {
+  return (
+    current.destination === next.destination &&
+    current.summary === next.summary &&
+    current.stops.length === next.stops.length &&
+    current.stops.every((stop, index) => routeStopMatches(stop, next.stops[index]))
+  )
+}
+
+function routeStopMatches(current: LoopProfileStarterRouteStop, next: LoopProfileStarterRouteStop | undefined) {
+  return (
+    next !== undefined &&
+    current.id === next.id &&
+    current.kind === next.kind &&
+    current.title === next.title &&
+    current.objective === next.objective &&
+    current.evidence === next.evidence
+  )
+}
+
+function runLogPolicyMatches(current: LoopProfileRunLogPolicy, next: LoopProfileRunLogPolicy) {
+  return (
+    current.mode === next.mode &&
+    current.retention === next.retention &&
+    current.rawTranscriptPolicy === next.rawTranscriptPolicy &&
+    stringListMatches(current.requiredHandles, next.requiredHandles)
+  )
+}
+
+function isRouteStopKind(value: unknown): value is Lightbulb.RouteStopKind {
+  return (
+    value === "discovery" ||
+    value === "implementation" ||
+    value === "debug" ||
+    value === "review" ||
+    value === "integration" ||
+    value === "verification" ||
+    value === "decision" ||
+    value === "cleanup"
+  )
 }
 
 function toStoredLoop(row: typeof LightbulbLoopTable.$inferSelect): LoopProfileStoredLoop {

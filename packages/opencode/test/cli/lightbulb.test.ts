@@ -120,6 +120,28 @@ describe("lightbulb CLI entrypoint", () => {
   )
 
   cliIt.live(
+    "lists loop starters and bootstraps them through the top-level Lightbulb command",
+    ({ opencode }) =>
+      Effect.gen(function* () {
+        const listed = yield* opencode.spawn(["loop-starters", "--format", "json"], { env: lightbulbEnv })
+        opencode.expectExit(listed, 0, "lightbulb loop-starters --format json")
+        const starters = JSON.parse(listed.stdout) as Lightbulb.LoopStarterDefinition[]
+        expect(starters.map((starter) => starter.starterID)).toContain("pr-review-babysitter")
+        expect(starters.every((starter) => starter.profile.registry?.readinessMode === "human_gate")).toBe(true)
+
+        const bootstrapped = yield* opencode.spawn(["loop-starters", "--bootstrap", "--seed", "--format", "json"], {
+          env: lightbulbEnv,
+        })
+        opencode.expectExit(bootstrapped, 0, "lightbulb loop-starters --bootstrap --seed --format json")
+        const summary = JSON.parse(bootstrapped.stdout) as Lightbulb.LoopStarterBootstrapSummary
+        expect(summary.starters).toHaveLength(6)
+        expect(summary.starters.every((starter) => starter.loopID?.startsWith("lbloop_"))).toBe(true)
+        expect(summary.starters.every((starter) => starter.promoted === false)).toBe(true)
+      }),
+    60_000,
+  )
+
+  cliIt.live(
     "rejects the retired nested Lightbulb dashboard compatibility path",
     ({ opencode }) =>
       Effect.gen(function* () {
