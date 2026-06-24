@@ -665,12 +665,18 @@ describe("Lightbulb worker launch attempts", () => {
               failureReason: "human_review_held",
             },
           })
-          expect(requested.outcome === "launched" ? requested.attempt.metadata : null).toEqual({
+          expect(requested.outcome === "launched" ? requested.attempt.metadata : null).toMatchObject({
             launch_hold_reason: null,
             issue_ref: "#22",
             work_item_ref: null,
             environment_summary: null,
           })
+          expect(requested.outcome === "launched" ? requested.attempt.ownershipKeys : []).toContainEqual(
+            expect.objectContaining({
+              kind: "issue",
+              key: "issue:#22",
+            }),
+          )
           expect(events.map((event) => event.type)).toEqual([
             "lightbulb.worker_launch.requested",
             "lightbulb.worker_launch.launching",

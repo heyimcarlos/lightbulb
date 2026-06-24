@@ -576,7 +576,7 @@ Artifacts
               budget: { open: 0, held: 1, exhausted: 0 },
               dependencies: { released: 1, blocked: 0 },
               artifacts: { reports: 1, recent: 1 },
-              launchAttempts: { active: 1, failed: 0, complete: 0 },
+              launchAttempts: { active: 1, failed: 0, complete: 0, collisionHolds: 1 },
             },
             handles: {
               selectedLoop: null,
@@ -586,6 +586,7 @@ Artifacts
                   kind: "worker",
                   status: "running",
                   summary: "Implementation worker owns the active run.",
+                  reason: "branch collision-guards, path group packages/core",
                 },
               ],
               readyWork: [
@@ -629,7 +630,8 @@ Operations
   snapshot lbops_demo [attention_required] key=latest
     1 ready loops, 1 review gates, 1 budget holds, 1 dependency releases.
     nextWake=1767225600000 hash=sha256-demo
-    counts ready=1 activeOwners=1 reviewGates=1 budgetHeld=1 dependencyReleased=1
+    counts ready=1 activeOwners=1 reviewGates=1 budgetHeld=1 dependencyReleased=1 collisionHolds=1
+    owner lbworker_active [running] Implementation worker owns the active run. (branch collision-guards, path group packages/core)
     ready lbpacket_ready task_packet Implement operations snapshot
     review lbgate_review [pending] Parent review pending
 

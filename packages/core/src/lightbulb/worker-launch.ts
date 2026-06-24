@@ -15,6 +15,35 @@ type LightbulbTransaction = Parameters<Parameters<Database.Interface["db"]["tran
 
 export type WorkerLaunchMetadataValue = string | number | boolean | null
 
+export type WorkerLaunchOwnershipKind = "task_packet" | "issue" | "work_item" | "route" | "pr" | "branch" | "worktree" | "path_group"
+
+export type WorkerLaunchOwnershipKey = {
+  readonly kind: WorkerLaunchOwnershipKind
+  readonly key: string
+  readonly summary: string
+}
+
+export type WorkerLaunchOwnershipInput = {
+  readonly issueRef?: string
+  readonly workItemRef?: string
+  readonly routeID?: Lightbulb.RouteID
+  readonly prRef?: string
+  readonly branchRef?: string
+  readonly worktreeID?: string
+  readonly pathGroup?: string
+}
+
+export type WorkerLaunchOwnershipCollision = {
+  readonly reason: "ownership_collision"
+  readonly key: WorkerLaunchOwnershipKey
+  readonly activeAttemptID: Lightbulb.WorkerLaunchAttemptID
+  readonly activeRunID: Lightbulb.RunID
+  readonly activeWorkerID: Lightbulb.WorkerID
+  readonly activeTaskPacketID: Lightbulb.TaskPacketID
+  readonly activeStatus: Lightbulb.WorkerLaunchStatus
+  readonly activeSummary: string
+}
+
 export type WorkerLaunchServiceInput = {
   readonly accountID: Lightbulb.AccountID
   readonly workerID: Lightbulb.WorkerID
@@ -25,6 +54,7 @@ export type WorkerLaunchServiceInput = {
   readonly holdReason?: Lightbulb.WorkerLaunchHoldReason
   readonly issueRef?: string
   readonly workItemRef?: string
+  readonly ownership?: WorkerLaunchOwnershipInput
   readonly environmentSummary?: Record<string, WorkerLaunchMetadataValue>
   readonly summary?: string
   readonly cwd: string
@@ -64,6 +94,7 @@ export type WorkerLaunchAttemptHandle = {
   readonly reportURI: string | null
   readonly failureReason: string | null
   readonly metadata: Record<string, unknown> | null
+  readonly ownershipKeys: readonly WorkerLaunchOwnershipKey[]
   readonly timeCreated: number
   readonly timeUpdated: number
 }
@@ -82,6 +113,7 @@ export type WorkerLaunchResult =
   | {
       readonly outcome: "skipped"
       readonly reason: string
+      readonly collision?: WorkerLaunchOwnershipCollision
       readonly eventID: Lightbulb.EventID
     }
 
@@ -177,6 +209,8 @@ export function launchWorkerInDb(
         }
 
         if (input.holdReason) return yield* blockHeldLaunchRequest(tx, input, trigger, ids.event(), run, loop)
+        const collision = yield* activeOwnershipCollision(tx, input)
+        if (collision) return yield* blockCollisionLaunchRequest(tx, input, trigger, ids.event(), run, loop, worker, packet, collision)
         const skipReason = launchSkipReason(run, worker, packet)
         if (skipReason) return yield* insertSkippedEvent(tx, input, trigger, ids.event(), skipReason, run.id, loop.id, loop.goal_id)
 
@@ -286,6 +320,7 @@ export function toWorkerLaunchAttemptHandle(
     reportURI: row.report_uri,
     failureReason: row.failure_reason,
     metadata: row.metadata ?? null,
+    ownershipKeys: storedOwnershipKeys(row),
     timeCreated: row.time_created,
     timeUpdated: row.time_updated,
   }
@@ -329,6 +364,7 @@ function insertSkippedEvent(
   runID?: Lightbulb.RunID,
   loopID?: Lightbulb.LoopID,
   goalID?: Lightbulb.GoalID,
+  collision?: WorkerLaunchOwnershipCollision,
 ) {
   return Effect.gen(function* () {
     yield* tx
@@ -344,11 +380,13 @@ function insertSkippedEvent(
           ...eventData(input, trigger, runID, loopID, goalID),
           reason,
           hold_reason: input.holdReason ?? null,
+          ownership_keys: ownershipKeys(input),
+          collision: collision ?? null,
         },
         time_created: input.now,
       })
       .run()
-    return { outcome: "skipped" as const, reason, eventID }
+    return { outcome: "skipped" as const, reason, collision, eventID }
   })
 }
 
@@ -385,6 +423,7 @@ function insertLaunchEvent(
         log_uri: attempt.log_uri,
         report_uri: attempt.report_uri,
         failure_reason: attempt.failure_reason,
+        ownership_keys: storedOwnershipKeys(attempt),
       },
       time_created: input.now,
     })
@@ -419,6 +458,7 @@ function launchMetadata(input: WorkerLaunchInput) {
     issue_ref: input.issueRef ?? null,
     work_item_ref: input.workItemRef ?? null,
     environment_summary: input.environmentSummary ?? null,
+    ownership_keys: ownershipKeys(input),
   }
 }
 
@@ -430,7 +470,83 @@ function mergeLaunchMetadata(existing: Record<string, unknown> | null, input: Wo
     issue_ref: input.issueRef ?? existing?.issue_ref ?? null,
     work_item_ref: input.workItemRef ?? existing?.work_item_ref ?? null,
     environment_summary: input.environmentSummary ?? existing?.environment_summary ?? null,
+    ownership_keys: ownershipKeys(input, existing),
   }
+}
+
+function blockCollisionLaunchRequest(
+  tx: LightbulbTransaction,
+  input: WorkerLaunchInput,
+  trigger: Lightbulb.WorkerLaunchTrigger,
+  eventID: Lightbulb.EventID,
+  run: typeof LightbulbRunTable.$inferSelect,
+  loop: typeof LightbulbLoopTable.$inferSelect,
+  worker: typeof LightbulbWorkerTable.$inferSelect,
+  packet: typeof LightbulbTaskPacketTable.$inferSelect,
+  collision: WorkerLaunchOwnershipCollision,
+) {
+  return Effect.gen(function* () {
+    const summary = ownershipCollisionSummary(collision)
+    yield* tx
+      .update(LightbulbRunTable)
+      .set({
+        status: "blocked",
+        gate_status: "blocked",
+        summary,
+        metadata: mergeBlockedMetadata(run.metadata, collision),
+        time_updated: input.now,
+      })
+      .where(and(eq(LightbulbRunTable.account_id, input.accountID), eq(LightbulbRunTable.id, run.id)))
+      .run()
+    yield* tx
+      .update(LightbulbWorkerTable)
+      .set({ status: "blocked", summary, metadata: mergeBlockedMetadata(worker.metadata, collision), time_updated: input.now })
+      .where(and(eq(LightbulbWorkerTable.account_id, input.accountID), eq(LightbulbWorkerTable.id, input.workerID)))
+      .run()
+    yield* tx
+      .update(LightbulbTaskPacketTable)
+      .set({ status: "blocked", metadata: mergeBlockedMetadata(packet.metadata, collision), time_updated: input.now })
+      .where(and(eq(LightbulbTaskPacketTable.account_id, input.accountID), eq(LightbulbTaskPacketTable.id, input.taskPacketID)))
+      .run()
+    return yield* insertSkippedEvent(tx, input, trigger, eventID, "ownership_collision", run.id, loop.id, loop.goal_id, collision)
+  })
+}
+
+function activeOwnershipCollision(tx: LightbulbTransaction, input: WorkerLaunchInput) {
+  return tx
+    .select()
+    .from(LightbulbWorkerLaunchAttemptTable)
+    .where(eq(LightbulbWorkerLaunchAttemptTable.account_id, input.accountID))
+    .orderBy(asc(LightbulbWorkerLaunchAttemptTable.time_created))
+    .all()
+    .pipe(
+      Effect.map((attempts) => {
+        const candidateKeys = ownershipKeys(input).filter((key) => key.kind !== "task_packet")
+        if (candidateKeys.length === 0) return null
+        const active = attempts.filter((attempt) => activeOwnershipAttempt(attempt, input.taskPacketID))
+        return active.flatMap((attempt) =>
+          storedOwnershipKeys(attempt)
+            .filter((key) => key.kind !== "task_packet")
+            .flatMap((key) => {
+              const collisionKey = candidateKeys.find((candidate) => candidate.kind === key.kind && candidate.key === key.key)
+              if (!collisionKey) return []
+              return [
+                {
+                  reason: "ownership_collision",
+                  key: collisionKey,
+                  activeAttemptID: attempt.id,
+                  activeRunID: attempt.run_id,
+                  activeWorkerID: attempt.worker_id,
+                  activeTaskPacketID: attempt.task_packet_id,
+                  activeStatus: attempt.status,
+                  activeSummary: attempt.summary,
+                } satisfies WorkerLaunchOwnershipCollision,
+              ]
+            }),
+        )[0] ?? null
+      }),
+      Effect.orDie,
+    )
 }
 
 function updateLaunchReadModel(
@@ -512,6 +628,7 @@ function defaultHoldSummary(reason: Lightbulb.WorkerLaunchHoldReason | undefined
   if (reason === "human_review_held") return "Worker launch is held for human review."
   if (reason === "budget_held") return "Worker launch is held by the budget policy."
   if (reason === "context_policy_held") return "Worker launch is held by context policy."
+  if (reason === "ownership_collision") return "Worker launch is held by an active ownership collision."
   return "Worker launch is held before process execution."
 }
 
@@ -583,6 +700,91 @@ function metadataHoldReason(metadata: Record<string, unknown> | null | undefined
   if (typeof metadata.blocked_reason === "string") return metadata.blocked_reason
   if (isRecord(metadata.launch_hold) && typeof metadata.launch_hold.reason === "string") return metadata.launch_hold.reason
   return null
+}
+
+function activeOwnershipAttempt(
+  attempt: typeof LightbulbWorkerLaunchAttemptTable.$inferSelect,
+  taskPacketID: Lightbulb.TaskPacketID,
+) {
+  return attempt.task_packet_id !== taskPacketID && isActiveWorkerLaunchStatus(attempt.status)
+}
+
+function ownershipKeys(
+  input: WorkerLaunchInput,
+  existing?: Record<string, unknown> | null,
+): readonly WorkerLaunchOwnershipKey[] {
+  const explicit = input.ownership ?? {}
+  const keys = [
+    ownershipKey("task_packet", input.taskPacketID, "task packet " + input.taskPacketID),
+    ownershipKey("issue", explicit.issueRef ?? input.issueRef, "issue " + (explicit.issueRef ?? input.issueRef)),
+    ownershipKey("work_item", explicit.workItemRef ?? input.workItemRef, "work item " + (explicit.workItemRef ?? input.workItemRef)),
+    ownershipKey("route", explicit.routeID, "route " + explicit.routeID),
+    ownershipKey("pr", explicit.prRef, "PR " + explicit.prRef),
+    ownershipKey("branch", explicit.branchRef, "branch " + explicit.branchRef),
+    ownershipKey("worktree", explicit.worktreeID ?? input.worktreeID, "worktree " + (explicit.worktreeID ?? input.worktreeID)),
+    ownershipKey("path_group", explicit.pathGroup, "path group " + explicit.pathGroup),
+  ].filter((key): key is WorkerLaunchOwnershipKey => key !== undefined)
+  if (keys.length > 1 || !existing) return uniqueOwnershipKeys(keys)
+  return storedOwnershipKeys({ metadata: existing } as typeof LightbulbWorkerLaunchAttemptTable.$inferSelect)
+}
+
+function ownershipKey(kind: WorkerLaunchOwnershipKind, value: string | null | undefined, summary: string) {
+  const key = typeof value === "string" ? value.trim() : ""
+  if (key.length === 0) return
+  return {
+    kind,
+    key: kind + ":" + key.toLowerCase(),
+    summary,
+  } satisfies WorkerLaunchOwnershipKey
+}
+
+function uniqueOwnershipKeys(keys: readonly WorkerLaunchOwnershipKey[]) {
+  return keys.filter((key, index) => keys.findIndex((item) => item.kind === key.kind && item.key === key.key) === index)
+}
+
+function storedOwnershipKeys(row: Pick<typeof LightbulbWorkerLaunchAttemptTable.$inferSelect, "metadata">) {
+  const value = row.metadata?.ownership_keys
+  if (!Array.isArray(value)) return []
+  return value
+    .map((item) => {
+      if (!isRecord(item)) return
+      if (!ownershipKeyKind(item.kind) || typeof item.key !== "string" || typeof item.summary !== "string") return
+      return {
+        kind: item.kind,
+        key: item.key,
+        summary: item.summary,
+      } satisfies WorkerLaunchOwnershipKey
+    })
+    .filter((key): key is WorkerLaunchOwnershipKey => key !== undefined)
+}
+
+function ownershipKeyKind(value: unknown): value is WorkerLaunchOwnershipKind {
+  return (
+    value === "task_packet" ||
+    value === "issue" ||
+    value === "work_item" ||
+    value === "route" ||
+    value === "pr" ||
+    value === "branch" ||
+    value === "worktree" ||
+    value === "path_group"
+  )
+}
+
+function ownershipCollisionSummary(collision: WorkerLaunchOwnershipCollision) {
+  return "Worker launch held because active attempt " + collision.activeAttemptID + " owns " + collision.key.summary + "."
+}
+
+function mergeBlockedMetadata(
+  metadata: Record<string, unknown> | null,
+  collision: WorkerLaunchOwnershipCollision,
+) {
+  return {
+    ...(metadata ?? {}),
+    launch_hold_reason: "ownership_collision",
+    ownership_collision: collision,
+    blocked_reason: "ownership_collision",
+  }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

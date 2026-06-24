@@ -204,7 +204,7 @@ export function toOperationsSnapshot(row: OperationsSnapshotRow): Lightbulb.Oper
     sourceHash: row.source_hash,
     generatedAt: row.generated_at,
     nextWakeAt: row.next_wake_at,
-    counts: row.counts,
+    counts: normalizeSnapshotCounts(row.counts),
     handles: row.handles,
     metadata: row.metadata ?? null,
     timeCreated: row.time_created,
@@ -277,6 +277,21 @@ function snapshotCounts(
       active: graph.workerLaunchAttempts.filter((attempt) => activeLaunchStatus(attempt.status)).length,
       failed: graph.workerLaunchAttempts.filter((attempt) => attempt.status === "launch_failed").length,
       complete: graph.workerLaunchAttempts.filter((attempt) => attempt.status === "complete").length,
+      collisionHolds: graph.events.filter(
+        (event) =>
+          event.type === "lightbulb.worker_launch.skipped" &&
+          stringField(event.data, "reason") === "ownership_collision",
+      ).length,
+    },
+  }
+}
+
+function normalizeSnapshotCounts(counts: Lightbulb.OperationsSnapshotCounts): Lightbulb.OperationsSnapshotCounts {
+  return {
+    ...counts,
+    launchAttempts: {
+      ...counts.launchAttempts,
+      collisionHolds: counts.launchAttempts.collisionHolds ?? 0,
     },
   }
 }
@@ -298,7 +313,8 @@ function snapshotStatus(graph: Lightbulb.AccountGraph, counts: Lightbulb.Operati
     counts.workers.blocked > 0 ||
     counts.workers.failed > 0 ||
     counts.loops.stale > 0 ||
-    counts.loops.recoveryRequired > 0
+    counts.loops.recoveryRequired > 0 ||
+    counts.launchAttempts.collisionHolds > 0
   ) {
     return "attention_required"
   }
@@ -319,6 +335,7 @@ function snapshotSummary(
       counts.workers.failed ? `${counts.workers.failed} failed worker(s)` : undefined,
       counts.loops.stale ? `${counts.loops.stale} stale worker hold(s)` : undefined,
       counts.loops.recoveryRequired ? `${counts.loops.recoveryRequired} recovery hold(s)` : undefined,
+      counts.launchAttempts.collisionHolds ? `${counts.launchAttempts.collisionHolds} ownership collision(s)` : undefined,
     ]
       .filter((part): part is string => Boolean(part))
       .join(", ") + " need operator attention."
@@ -367,6 +384,7 @@ function activeOwnershipHandles(graph: Lightbulb.AccountGraph): Lightbulb.Operat
         summary: attempt.summary,
         uri: attempt.report_uri ?? attempt.log_uri ?? undefined,
         issueRef: stringMetadata(attempt.metadata, "issue_ref"),
+        reason: ownershipSummary(attempt.metadata),
       })),
   ]
 }
@@ -535,6 +553,18 @@ function stringField(data: Record<string, unknown>, key: string) {
 function stringMetadata(data: Record<string, unknown> | null | undefined, key: string) {
   const value = data?.[key]
   return typeof value === "string" ? value : undefined
+}
+
+function ownershipSummary(data: Record<string, unknown> | null | undefined) {
+  if (!Array.isArray(data?.ownership_keys)) return undefined
+  return data.ownership_keys
+    .flatMap((item) => {
+      if (!isRecord(item) || typeof item.summary !== "string") return []
+      return [item.summary]
+    })
+    .filter((summary) => !summary.startsWith("task packet "))
+    .slice(0, 3)
+    .join(", ") || undefined
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
