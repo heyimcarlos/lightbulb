@@ -33,6 +33,7 @@ export * from "./lightbulb/loop-starter"
 export * from "./lightbulb/loop-runner-tick"
 export * from "./lightbulb/operations-snapshot"
 export * from "./lightbulb/discovery-inbox"
+export * from "./lightbulb/issue-mutation-apply"
 export * from "./lightbulb/issue-mutation-outbox"
 export * from "./lightbulb/issue-intake"
 export * from "./lightbulb/pickup-packet"
@@ -127,6 +128,11 @@ import {
   readIssueMutationOutboxInDb,
   recordIssueMutationApplyResultInDb,
 } from "./lightbulb/issue-mutation-outbox"
+import {
+  runIssueMutationApplyPassInDb,
+  type IssueMutationApplyPassInput,
+  type IssueMutationApplyPassResult,
+} from "./lightbulb/issue-mutation-apply"
 import type { ContextBundleAssemblyResult, ContextBundleAssemblyServiceInput } from "./lightbulb/context-bundle"
 import {
   LightbulbAccountTable,
@@ -319,7 +325,10 @@ export type IssueMutationHoldReason =
   | "conflicting_state_label"
   | "unsafe_label_removal"
   | "stale_snapshot_precondition"
-export type IssueMutationApplyStatus = "applied" | "skipped" | "failed" | "superseded"
+  | "missing_operator_approval"
+  | "dependency_held"
+  | "unsupported_adapter_capability"
+export type IssueMutationApplyStatus = "applied" | "skipped" | "held" | "failed" | "superseded"
 
 export type IssueMutationSource = {
   readonly goalID?: GoalID
@@ -447,6 +456,7 @@ export type IssueMutationApplyResultInput = {
   readonly resultHandle?: string
   readonly errorHandle?: string
   readonly appliedAt?: number
+  readonly holdReasons?: readonly IssueMutationHoldReason[]
   readonly metadata?: Record<string, unknown>
 }
 
@@ -1119,6 +1129,9 @@ export interface Interface {
   readonly recordIssueMutationApplyResult: (
     input: IssueMutationApplyResultInput,
   ) => Effect.Effect<IssueMutationApplyRecordResult>
+  readonly runIssueMutationApplyPass: (
+    input: IssueMutationApplyPassInput,
+  ) => Effect.Effect<IssueMutationApplyPassResult>
   readonly readDashboard: (accountID: AccountID) => Effect.Effect<Dashboard | undefined>
   readonly readLatestDashboard: () => Effect.Effect<Dashboard | undefined>
   readonly readIssueArtifacts: (input: ReadIssueArtifactsInput) => Effect.Effect<ArtifactHandle[]>
@@ -1573,6 +1586,13 @@ export const layer = Layer.effect(
         return yield* recordIssueMutationApplyResultInDb(
           db,
           { ...input, appliedAt: input.appliedAt ?? Date.now() },
+          { event: EventID.create },
+        )
+      }),
+      runIssueMutationApplyPass: Effect.fn("Lightbulb.runIssueMutationApplyPass")(function* (input) {
+        return yield* runIssueMutationApplyPassInDb(
+          db,
+          { ...input, now: input.now ?? Date.now() },
           { event: EventID.create },
         )
       }),

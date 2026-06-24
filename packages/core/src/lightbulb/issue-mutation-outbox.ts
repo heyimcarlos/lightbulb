@@ -162,7 +162,12 @@ export function recordIssueMutationApplyResultInDb(
         if (!existing) return yield* Effect.die(new Error("Lightbulb issue mutation not found: " + input.mutationID))
 
         const applyResult = normalizeApplyResult(input)
-        if (existing.status === input.status && sameApplyResult(existing.apply_result ?? null, applyResult)) {
+        const holdReasons = input.holdReasons ?? existing.hold_reasons
+        if (
+          existing.status === input.status &&
+          sameApplyResult(existing.apply_result ?? null, applyResult) &&
+          stringListMatches(existing.hold_reasons, holdReasons)
+        ) {
           return {
             item: toIssueMutationOutboxItem(existing),
             changed: false,
@@ -175,6 +180,7 @@ export function recordIssueMutationApplyResultInDb(
           .set({
             status: input.status,
             apply_result: applyResult,
+            hold_reasons: holdReasons,
             time_updated: applyResult.appliedAt,
           })
           .where(eq(LightbulbIssueMutationOutboxTable.id, input.mutationID))
@@ -199,6 +205,7 @@ export function recordIssueMutationApplyResultInDb(
               issue_url: applyResult.issueURL,
               result_handle: applyResult.resultHandle,
               error_handle: applyResult.errorHandle,
+              hold_reasons: holdReasons,
               source: row.source_handles,
             },
             time_created: applyResult.appliedAt,
@@ -491,6 +498,10 @@ function normalizeApplyResult(input: Lightbulb.IssueMutationApplyResultInput): L
 
 function sameApplyResult(left: Lightbulb.IssueMutationApplyResult | null, right: Lightbulb.IssueMutationApplyResult) {
   return Boolean(left) && JSON.stringify(left) === JSON.stringify(right)
+}
+
+function stringListMatches(current: readonly string[], next: readonly string[]) {
+  return current.length === next.length && current.every((value, index) => value === next[index])
 }
 
 function cleanOptionalText(value: string | null | undefined) {
