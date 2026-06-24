@@ -1,6 +1,7 @@
 # SolidStart Dependency Evidence
 
 Issue: https://github.com/heyimcarlos/lightbulb/issues/116
+Related CI blocker: https://github.com/heyimcarlos/lightbulb/issues/118
 
 ## Dependency Selection
 
@@ -21,6 +22,13 @@ Issue: https://github.com/heyimcarlos/lightbulb/issues/116
 - `cd packages/stats/app && bun run build`: pass.
 - `cd packages/enterprise && bun run build`: pass.
 - `git diff --check`: pass.
+
+## CI Follow-Up
+
+- PR #117 e2e linux, e2e windows, unit linux, standards, compliance, and adversarial review passed after replacing the dead dependency.
+- PR #117 unit windows failed twice in `opencode acp lifecycle subprocess > stdin EOF exits cleanly`.
+- Failing runs timed out at the test's explicit 5s `Effect.timeout`, with observed durations of 5266ms and 5546ms.
+- The ACP command already explicitly releases its internal server on stdin EOF; the follow-up keeps the exit-code assertion and gives Windows process teardown a 15s deadline.
 
 ## Visual Evidence
 
