@@ -520,7 +520,16 @@ function issueMutationDecisionType(
   if (item.hold_reasons.includes("missing_operator_approval")) return "approval_needed"
   if (
     item.hold_reasons.some((reason) =>
-      ["conflicting_state_label", "unsafe_label_removal", "stale_snapshot_precondition", "unsupported_adapter_capability"].includes(reason),
+      [
+        "conflicting_state_label",
+        "unsafe_label_removal",
+        "stale_snapshot_precondition",
+        "unsupported_adapter_capability",
+        "safe_write_path_denied",
+        "safe_write_label_denied",
+        "safe_write_issue_type_denied",
+        "safe_write_risk_denied",
+      ].includes(reason),
     )
   ) {
     return "conflict"

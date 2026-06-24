@@ -339,11 +339,13 @@ labels or state; a deterministic idempotency key; a bounded apply summary; and t
 the same proposal returns the existing item and does not duplicate outbox rows or proposal events.
 
 The outbox holds unsafe or ambiguous proposals instead of treating them as apply-ready. Missing create title/body fields,
-conflicting state and triage-label requests, unsafe removals of human/budget/context/review labels, and stale snapshot
-preconditions are recorded as bounded hold reasons. Dependency reconciliation (#29) may produce mutation-shaped requests
-for dependency-only releases, but it remains the evidence/read-model seam; the outbox is where those requests become
-durable parent-applicable proposals. Operations snapshots (#33) summarize account health and may later count or link
-outbox handles, but snapshots are read models and do not apply or author GitHub mutations.
+conflicting state and triage-label requests, unsafe removals of human/budget/context/review labels, stale snapshot
+preconditions, and explicit safe-write policy denials are recorded as bounded hold reasons. Safe-write policy evaluations
+carry compact handles in proposal metadata: connector profile, required authority, risk, issue type, touched labels,
+path refs, and exact hold reasons. Dependency reconciliation (#29) may produce mutation-shaped requests for
+dependency-only releases, but it remains the evidence/read-model seam; the outbox is where those requests become durable
+parent-applicable proposals. Operations snapshots (#33) summarize account health and may later count or link outbox
+handles, but snapshots are read models and do not apply or author GitHub mutations.
 
 The outbox exposes a fake apply-result seam for tests and operator imports. It can mark proposals `applied`, `skipped`,
 `held`, `failed`, or `superseded` with compact result, issue URL, error, or hold handles while preserving source evidence.
@@ -352,14 +354,22 @@ The outbox exposes a fake apply-result seam for tests and operator imports. It c
 
 The issue mutation apply pass is the human-gated writer boundary for outbox proposals. It reads apply-ready issue
 creation, edit, label, and comment proposals from the outbox, checks the operator approval handle, dependency holds,
-adapter capabilities, current issue snapshots, and unsafe state-label transitions, then calls a fakeable apply adapter.
-Core tests use fake snapshots and fake adapters; live GitHub writes must stay outside core and behind this seam.
+adapter capabilities, current issue snapshots, unsafe state-label transitions, and the current safe-write policy, then
+calls a fakeable apply adapter. Core tests use fake snapshots and fake adapters; live GitHub writes must stay outside
+core and behind this seam.
+
+Safe-write connector profiles distinguish read, comment, label, edit, branch/PR, and merge authority even though the
+current issue mutation apply pass only exposes issue/comment/label/edit actions. The default posture is least privilege:
+no broad write, no auto-merge, and no live connector write without a bounded proposal plus operator approval. Policy may
+hold proposals by denied or unapproved path refs, labels, issue type, risk, or missing approval, and those holds project
+into the human inbox as approval or conflict actions.
 
 Dry-run mode returns the exact actions that would be applied, grouped by source goal/loop/run and idempotency key, without
 writing apply results or reopening planner reports, worker transcripts, or full issue histories. Approved apply mode
 records bounded outcomes for each proposal: applied, skipped, held, failed, or superseded. Held outcomes preserve exact
 bounded reasons such as `missing_operator_approval`, `dependency_held`, `unsupported_adapter_capability`,
-`stale_snapshot_precondition`, `conflicting_state_label`, or `unsafe_label_removal`.
+`stale_snapshot_precondition`, `conflicting_state_label`, `unsafe_label_removal`, `safe_write_path_denied`,
+`safe_write_label_denied`, `safe_write_issue_type_denied`, or `safe_write_risk_denied`.
 
 The apply pass differs from issue intake (#12), dependency reconciliation (#29), and mutation proposal storage (#38).
 Intake reads compact issue snapshots into Lightbulb. Dependency reconciliation decides whether dependency evidence is

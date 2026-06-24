@@ -1,0 +1,13 @@
+{
+  "capturedAt": "2026-06-24T16:56:26.888Z",
+  "durationMs": 904,
+  "route": "/lightbulb/dashboard",
+  "scrollSelector": null,
+  "screenshot": "/home/ren/wt/lightbulb/safe-write-gates/.lightbulb/evidence/issue-80-desktop-qa/lightbulb-dashboard.png",
+  "selector": "[data-page='lightbulb-dashboard']",
+  "size": {
+    "width": 956,
+    "height": 1036
+  },
+  "url": "oc://renderer/index.html"
+}

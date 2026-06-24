@@ -36,6 +36,7 @@ export * from "./lightbulb/discovery-inbox"
 export * from "./lightbulb/human-inbox"
 export * from "./lightbulb/issue-mutation-apply"
 export * from "./lightbulb/issue-mutation-outbox"
+export * from "./lightbulb/safe-write-policy"
 export * from "./lightbulb/issue-intake"
 export * from "./lightbulb/pickup-packet"
 export * from "./lightbulb/pr-review-candidate"
@@ -140,6 +141,7 @@ import {
   type IssueMutationApplyPassInput,
   type IssueMutationApplyPassResult,
 } from "./lightbulb/issue-mutation-apply"
+import type { SafeWritePolicyInput } from "./lightbulb/safe-write-policy"
 import type { ContextBundleAssemblyResult, ContextBundleAssemblyServiceInput } from "./lightbulb/context-bundle"
 import {
   LightbulbAccountTable,
@@ -348,6 +350,10 @@ export type IssueMutationHoldReason =
   | "missing_operator_approval"
   | "dependency_held"
   | "unsupported_adapter_capability"
+  | "safe_write_path_denied"
+  | "safe_write_label_denied"
+  | "safe_write_issue_type_denied"
+  | "safe_write_risk_denied"
 export type IssueMutationApplyStatus = "applied" | "skipped" | "held" | "failed" | "superseded"
 
 export type IssueMutationSource = {
@@ -394,6 +400,7 @@ export type IssueMutationProposalInput = {
   readonly state?: IssueMutationIssueState
   readonly comment?: IssueMutationCommentProposal
   readonly precondition?: IssueMutationSnapshotPrecondition
+  readonly safeWritePolicy?: SafeWritePolicyInput
   readonly applySummary?: string
   readonly idempotencyKey?: string
   readonly now?: number

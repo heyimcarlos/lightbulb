@@ -3,6 +3,13 @@ import { Effect } from "effect"
 import type { Database } from "../database/database"
 import type { Lightbulb } from "../lightbulb"
 import { recordIssueMutationApplyResultInDb } from "./issue-mutation-outbox"
+import {
+  evaluateIssueMutationSafeWritePolicy,
+  safeWritePolicyEvaluationMetadata,
+  type SafeWriteConnectorCapabilityProfile,
+  type SafeWritePolicyEvaluation,
+  type SafeWritePolicyInput,
+} from "./safe-write-policy"
 import { LightbulbIssueMutationOutboxTable } from "./sql"
 
 type IssueMutationRow = typeof LightbulbIssueMutationOutboxTable.$inferSelect
@@ -59,6 +66,7 @@ export type IssueMutationApplyAdapterResult = {
 
 export type IssueMutationApplyAdapter = {
   readonly capabilities: readonly Lightbulb.IssueMutationAction[]
+  readonly capabilityProfile?: SafeWriteConnectorCapabilityProfile
   readonly apply: (action: IssueMutationApplyAction) => Effect.Effect<IssueMutationApplyAdapterResult>
 }
 
@@ -67,6 +75,7 @@ export type IssueMutationApplyPassInput = {
   readonly mode: IssueMutationApplyPassMode
   readonly approval?: IssueMutationApplyApproval
   readonly adapter: IssueMutationApplyAdapter
+  readonly safeWritePolicy?: SafeWritePolicyInput
   readonly issueSnapshots?: readonly IssueMutationCurrentIssueSnapshot[]
   readonly dependencyHolds?: readonly IssueMutationDependencyHold[]
   readonly retryFailed?: boolean
@@ -157,7 +166,8 @@ export function runIssueMutationApplyPassInDb(
     const outcomes = yield* Effect.forEach(rows, (row) =>
       Effect.gen(function* () {
         const action = toApplyAction(row)
-        const holdReasons = passHoldReasons(row, action, input)
+        const safeWriteEvaluation = safeWriteEvaluationForApply(action, input)
+        const holdReasons = passHoldReasons(row, action, input, safeWriteEvaluation)
         if (holdReasons.length > 0) {
           const recorded = yield* recordIssueMutationApplyResultInDb(
             db,
@@ -168,9 +178,7 @@ export function runIssueMutationApplyPassInDb(
               errorHandle: "lightbulb:issue-mutation:" + row.id + ":held",
               appliedAt,
               holdReasons,
-              metadata: {
-                approval_handle: input.approval?.approvalHandle ?? null,
-              },
+              metadata: applyMetadata(input.approval, safeWriteEvaluation),
             },
             ids,
           )
@@ -188,7 +196,7 @@ export function runIssueMutationApplyPassInDb(
             resultHandle: applied.resultHandle,
             errorHandle: applied.errorHandle,
             appliedAt,
-            metadata: applied.metadata,
+            metadata: applyResultMetadata(applied.metadata, safeWriteEvaluation),
           },
           ids,
         )
@@ -268,6 +276,7 @@ function passHoldReasons(
   row: IssueMutationRow,
   action: IssueMutationApplyAction,
   input: IssueMutationApplyPassInput,
+  safeWriteEvaluation: SafeWritePolicyEvaluation | null,
 ): readonly Lightbulb.IssueMutationHoldReason[] {
   return [
     ...dependencyHoldReasons(row, input),
@@ -275,7 +284,23 @@ function passHoldReasons(
     ...unsupportedCapabilityReasons(action, input),
     ...staleSnapshotReasons(action, input),
     ...unsafeStateLabelReasons(action, input),
+    ...(safeWriteEvaluation?.holdReasons ?? []),
   ].filter(uniqueReason)
+}
+
+function safeWriteEvaluationForApply(
+  action: IssueMutationApplyAction,
+  input: IssueMutationApplyPassInput,
+) {
+  const policy = input.safeWritePolicy ?? safeWritePolicyFromAdapter(input.adapter)
+  return evaluateIssueMutationSafeWritePolicy({ mutation: action, policy })
+}
+
+function safeWritePolicyFromAdapter(adapter: IssueMutationApplyAdapter): SafeWritePolicyInput | undefined {
+  if (!adapter.capabilityProfile) return
+  return {
+    profile: adapter.capabilityProfile,
+  }
 }
 
 function dependencyHoldReasons(row: IssueMutationRow, input: IssueMutationApplyPassInput) {
@@ -367,6 +392,27 @@ function uniqueReason(
   reasons: readonly Lightbulb.IssueMutationHoldReason[],
 ) {
   return reasons.indexOf(reason) === index
+}
+
+function applyMetadata(
+  approval: IssueMutationApplyApproval | undefined,
+  evaluation: SafeWritePolicyEvaluation | null,
+) {
+  return {
+    approval_handle: approval?.approvalHandle ?? null,
+    ...(evaluation ? { safe_write_policy: safeWritePolicyEvaluationMetadata(evaluation) } : {}),
+  }
+}
+
+function applyResultMetadata(
+  metadata: Record<string, unknown> | undefined,
+  evaluation: SafeWritePolicyEvaluation | null,
+) {
+  if (!evaluation) return metadata
+  return {
+    ...(metadata ?? {}),
+    safe_write_policy: safeWritePolicyEvaluationMetadata(evaluation),
+  }
 }
 
 const conflictingReadyLabelSet = new Set([

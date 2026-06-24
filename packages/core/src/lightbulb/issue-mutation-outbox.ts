@@ -3,6 +3,11 @@ import { Effect } from "effect"
 import type { Database } from "../database/database"
 import type { Lightbulb } from "../lightbulb"
 import { Hash } from "../util/hash"
+import {
+  evaluateIssueMutationSafeWritePolicy,
+  safeWritePolicyEvaluationMetadata,
+  type SafeWritePolicyEvaluation,
+} from "./safe-write-policy"
 import { LightbulbEventTable, LightbulbIssueMutationOutboxTable } from "./sql"
 
 type IssueMutationRow = typeof LightbulbIssueMutationOutboxTable.$inferSelect
@@ -102,6 +107,7 @@ export function proposeIssueMutationInDb(
               desired_state: draft.desiredState,
               idempotency_key: draft.idempotencyKey,
               hold_reasons: draft.holdReasons,
+              safe_write_policy: draft.metadata?.safe_write_policy ?? null,
               source: draft.source,
             },
             time_created: draft.now,
@@ -268,7 +274,11 @@ export function buildIssueMutationDraft(input: Lightbulb.IssueMutationProposalIn
     source,
     precondition: input.precondition ?? null,
   } satisfies Lightbulb.IssueMutationRenderedMutation
-  const holdReasons = holdReasonsForProposal(input, renderedMutation)
+  const safeWriteEvaluation = evaluateIssueMutationSafeWritePolicy({
+    mutation: renderedMutation,
+    policy: input.safeWritePolicy,
+  })
+  const holdReasons = holdReasonsForProposal(input, renderedMutation, safeWriteEvaluation)
 
   return {
     accountID: input.accountID,
@@ -283,7 +293,7 @@ export function buildIssueMutationDraft(input: Lightbulb.IssueMutationProposalIn
     renderedMutation,
     holdReasons,
     applySummary,
-    metadata: input.metadata ?? null,
+    metadata: metadataWithSafeWritePolicy(input.metadata, safeWriteEvaluation),
     now,
   }
 }
@@ -313,6 +323,7 @@ export function toIssueMutationOutboxItem(row: IssueMutationRow): Lightbulb.Issu
 function holdReasonsForProposal(
   input: Lightbulb.IssueMutationProposalInput,
   renderedMutation: Lightbulb.IssueMutationRenderedMutation,
+  safeWriteEvaluation: SafeWritePolicyEvaluation | null,
 ) {
   return [
     ...missingCreateFieldReasons(renderedMutation),
@@ -320,6 +331,7 @@ function holdReasonsForProposal(
     ...conflictingStateLabelReasons(renderedMutation),
     ...unsafeLabelRemovalReasons(renderedMutation),
     ...staleSnapshotReasons(input, renderedMutation),
+    ...(safeWriteEvaluation?.holdReasons ?? []),
   ].filter(uniqueReason)
 }
 
@@ -493,6 +505,17 @@ function normalizeApplyResult(input: Lightbulb.IssueMutationApplyResultInput): L
     errorHandle: input.errorHandle ?? null,
     appliedAt: input.appliedAt ?? Date.now(),
     metadata: input.metadata ?? null,
+  }
+}
+
+function metadataWithSafeWritePolicy(
+  metadata: Record<string, unknown> | undefined,
+  evaluation: SafeWritePolicyEvaluation | null,
+) {
+  if (!evaluation) return metadata ?? null
+  return {
+    ...(metadata ?? {}),
+    safe_write_policy: safeWritePolicyEvaluationMetadata(evaluation),
   }
 }
 
