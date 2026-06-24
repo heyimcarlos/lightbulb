@@ -90,7 +90,14 @@ import type {
   TransitionDecisionArtifactInput,
   WorkerDispatchPlan,
 } from "./lightbulb/decision-artifact"
-import { ingestIssueQueueSnapshots, type IssueQueueIntakeResult, type IssueQueueSnapshot } from "./lightbulb/issue-intake"
+import {
+  ingestIssueQueueSnapshots,
+  reconcileDependencyUnblocks,
+  type DependencyUnblockReconciliationInput,
+  type DependencyUnblockReconciliationResult,
+  type IssueQueueIntakeResult,
+  type IssueQueueSnapshot,
+} from "./lightbulb/issue-intake"
 import type { ContextBundleAssemblyResult, ContextBundleAssemblyServiceInput } from "./lightbulb/context-bundle"
 import {
   LightbulbAccountTable,
@@ -644,6 +651,9 @@ export interface Interface {
   ) => Effect.Effect<DecisionArtifactHandle, ArtifactRegistrationRejected>
   readonly classifyIssueRouting: (input: IssueRoutingInput) => Effect.Effect<IssueRoutingClassification>
   readonly ingestIssueQueueSnapshots: (input: { readonly snapshots: readonly IssueQueueSnapshot[] }) => Effect.Effect<IssueQueueIntakeResult>
+  readonly reconcileDependencyUnblocks: (
+    input: DependencyUnblockReconciliationInput,
+  ) => Effect.Effect<DependencyUnblockReconciliationResult>
   readonly planWorkerDispatch: (input: { readonly issues: readonly IssueRoutingInput[] }) => Effect.Effect<WorkerDispatchPlan>
   readonly discoverPRReviewCandidates: (
     input: PRReviewCandidateDiscoveryInput,
@@ -1028,6 +1038,9 @@ export const layer = Layer.effect(
       }),
       ingestIssueQueueSnapshots: Effect.fn("Lightbulb.ingestIssueQueueSnapshots")(function* (input) {
         return ingestIssueQueueSnapshots(input)
+      }),
+      reconcileDependencyUnblocks: Effect.fn("Lightbulb.reconcileDependencyUnblocks")(function* (input) {
+        return reconcileDependencyUnblocks(input)
       }),
       planWorkerDispatch: Effect.fn("Lightbulb.planWorkerDispatch")(function* (input) {
         return yield* planWorkerDispatch(db, input)
