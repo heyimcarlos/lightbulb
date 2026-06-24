@@ -1,0 +1,12 @@
+{
+  "capturedAt": "2026-06-24T02:01:38.541Z",
+  "durationMs": 897,
+  "route": "/lightbulb/dashboard",
+  "screenshot": ".lightbulb/evidence/pr-112/lightbulb-dashboard.png",
+  "selector": "[data-page='lightbulb-dashboard']",
+  "size": {
+    "width": 956,
+    "height": 1036
+  },
+  "url": "oc://renderer/index.html"
+}
