@@ -139,6 +139,14 @@ script from `.github/workflows/adversarial-review.yml` and uploads both JSON and
 review. For UI, desktop, browser, or CLI-affecting PRs, the PR body should include screenshot, recording, terminal
 evidence, or an explicit not-applicable rationale.
 
+## PR Babysitter Digest
+
+PR review routes expose a compact operator digest grouped into watched, escalated, and recent items. The digest is a
+read model over PR review route rows and route wakes; it does not mutate GitHub and does not become authoritative route
+state. Each item carries the bounded PR status, current stop, attempt count, latest compact evidence, active worker
+handle, human decision, next wake source, and escalation reasons. Terminal routes stay in the recent bucket only inside
+the read-model retention window, giving operators short-lived trust evidence without reopening raw review histories.
+
 ## Desktop Browser QA
 
 Desktop/browser PRs can produce local visual evidence with:
