@@ -452,7 +452,13 @@ Queue
 
 Artifacts
 - handle lbartifact_demo report [registered] .lightbulb/runs/issue-3-dashboard.md
-- handle lbartifact_decision adr [registered] decision=pending docs/lightbulb/adr/0005-issue-24-routing.md (issue #24, goal lbgoal_demo)`)
+- handle lbartifact_decision adr [registered] decision=pending docs/lightbulb/adr/0005-issue-24-routing.md (issue #24, goal lbgoal_demo)
+
+Operator Exports
+- lightbulb operator-export --account lbacc_demo
+- lightbulb operator-export --account lbacc_demo --section state
+- lightbulb operator-export --account lbacc_demo --section budget
+- lightbulb operator-export --account lbacc_demo --section run-log`)
   })
 
   test("renders recent scheduler ticks as bounded operations state", () => {
@@ -531,7 +537,13 @@ Queue
 - empty
 
 Artifacts
-- none`)
+- none
+
+Operator Exports
+- lightbulb operator-export --account lbacc_ops
+- lightbulb operator-export --account lbacc_ops --section state
+- lightbulb operator-export --account lbacc_ops --section budget
+- lightbulb operator-export --account lbacc_ops --section run-log`)
   })
 
   test("renders the operations snapshot as bounded operator state", () => {
@@ -639,7 +651,13 @@ Queue
 - empty
 
 Artifacts
-- none`)
+- none
+
+Operator Exports
+- lightbulb operator-export --account lbacc_ops
+- lightbulb operator-export --account lbacc_ops --section state
+- lightbulb operator-export --account lbacc_ops --section budget
+- lightbulb operator-export --account lbacc_ops --section run-log`)
   })
 
 })
