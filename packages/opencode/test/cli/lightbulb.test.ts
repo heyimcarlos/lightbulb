@@ -394,6 +394,7 @@ describe("lightbulb dashboard display", () => {
         },
         operations: {
           schedulerTicks: [],
+          snapshot: null,
         },
         artifactHandles: [
           artifactHandle,
@@ -476,6 +477,7 @@ Artifacts
           },
         },
         operations: {
+          snapshot: null,
           schedulerTicks: [
             {
               id: Lightbulb.EventID.make("lbevent_ops"),
@@ -524,6 +526,112 @@ Operations
     source cron_id=heartbeat
     loop lbloop_ops implementation [admitted] classification=due reason=none run=lbrun_ops
     loop lbloop_wait status [skipped] classification=not_due reason=next_due_at_in_future run=none
+
+Queue
+- empty
+
+Artifacts
+- none`)
+  })
+
+  test("renders the operations snapshot as bounded operator state", () => {
+    expect(
+      formatLightbulbDashboard({
+        account: {
+          id: Lightbulb.AccountID.make("lbacc_ops"),
+          name: "Lightbulb Ops",
+          status: "active",
+        },
+        goals: [],
+        inbox: {
+          taskPackets: [],
+          gates: [],
+          discoveryCandidates: emptyDiscoveryInbox(),
+          prReviewCandidates: [],
+          prReviewRoutes: [],
+          prReviewRouteDigest: {
+            watched: [],
+            escalated: [],
+            recent: [],
+          },
+        },
+        operations: {
+          schedulerTicks: [],
+          snapshot: {
+            id: Lightbulb.OperationsSnapshotID.make("lbops_demo"),
+            accountID: Lightbulb.AccountID.make("lbacc_ops"),
+            snapshotKey: "latest",
+            status: "attention_required",
+            summary: "1 ready loops, 1 review gates, 1 budget holds, 1 dependency releases.",
+            sourceHash: "sha256-demo",
+            generatedAt: Date.UTC(2026, 0, 1),
+            nextWakeAt: Date.UTC(2026, 0, 1),
+            counts: {
+              goals: { active: 1, held: 0, terminal: 0 },
+              loops: { total: 1, active: 1, ready: 1, held: 1, disabled: 0, noOp: 0, stale: 0, recoveryRequired: 0 },
+              runs: { queued: 1, running: 0, blocked: 0, complete: 0, failed: 0 },
+              workers: { queued: 0, running: 0, blocked: 0, complete: 0, failed: 0 },
+              gates: { pendingReview: 1, blocked: 0, failed: 0, passed: 0 },
+              discovery: { topActionable: 1, needsHuman: 0, watch: 0, noise: 0 },
+              budget: { open: 0, held: 1, exhausted: 0 },
+              dependencies: { released: 1, blocked: 0 },
+              artifacts: { reports: 1, recent: 1 },
+              launchAttempts: { active: 1, failed: 0, complete: 0 },
+            },
+            handles: {
+              selectedLoop: null,
+              activeOwnership: [
+                {
+                  id: "lbworker_active",
+                  kind: "worker",
+                  status: "running",
+                  summary: "Implementation worker owns the active run.",
+                },
+              ],
+              readyWork: [
+                {
+                  id: "lbpacket_ready",
+                  kind: "task_packet",
+                  status: "ready",
+                  summary: "Implement operations snapshot",
+                },
+              ],
+              heldLoops: [],
+              staleWorkers: [],
+              recoveryRequired: [],
+              reviewGates: [
+                {
+                  id: "lbgate_review",
+                  kind: "review_gate",
+                  status: "pending",
+                  summary: "Parent review pending",
+                },
+              ],
+              budgetHolds: [],
+              dependencyReleases: [],
+              recentArtifacts: [],
+            },
+            metadata: null,
+            timeCreated: Date.UTC(2026, 0, 1),
+            timeUpdated: Date.UTC(2026, 0, 1),
+          },
+        },
+        artifactHandles: [],
+      }).replaceAll(EOL, "\n"),
+    ).toBe(`Lightbulb Status
+Account: Lightbulb Ops [active] lbacc_ops
+Totals: 0 goals, 0 loops, 0 runs, 0 gates waiting
+
+Work
+- none
+
+Operations
+  snapshot lbops_demo [attention_required] key=latest
+    1 ready loops, 1 review gates, 1 budget holds, 1 dependency releases.
+    nextWake=1767225600000 hash=sha256-demo
+    counts ready=1 activeOwners=1 reviewGates=1 budgetHeld=1 dependencyReleased=1
+    ready lbpacket_ready task_packet Implement operations snapshot
+    review lbgate_review [pending] Parent review pending
 
 Queue
 - empty

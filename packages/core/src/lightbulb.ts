@@ -30,6 +30,7 @@ export type {
 } from "./lightbulb/context-bundle"
 export * from "./lightbulb/loop-profile"
 export * from "./lightbulb/loop-runner-tick"
+export * from "./lightbulb/operations-snapshot"
 export * from "./lightbulb/discovery-inbox"
 export * from "./lightbulb/issue-intake"
 export * from "./lightbulb/pickup-packet"
@@ -87,6 +88,9 @@ import {
   readPRReviewRouteDigestInDb,
   type PRReviewRouteDigestInput,
 } from "./lightbulb/pr-review-state"
+import {
+  publishOperationsSnapshotInDb,
+} from "./lightbulb/operations-snapshot"
 import { planGoalRoute as planGoalRouteInDb, readGoalRoute as readGoalRouteFromDb, steerGoalRoute as steerGoalRouteInDb } from "./lightbulb/route"
 import {
   classifyIssueRouting,
@@ -121,6 +125,7 @@ import {
   LightbulbGateTable,
   LightbulbGoalTable,
   LightbulbLoopTable,
+  LightbulbOperationsSnapshotTable,
   LightbulbPRReviewCandidateTable,
   LightbulbPRReviewRouteTable,
   LightbulbPRReviewRouteWakeTable,
@@ -217,6 +222,8 @@ export const DiscoveryCandidateID = prefixedID("lbdiscand", "Lightbulb.Discovery
 export type DiscoveryCandidateID = typeof DiscoveryCandidateID.Type
 export const PRReviewRouteWakeID = prefixedID("lbprwake", "Lightbulb.PRReviewRouteWakeID")
 export type PRReviewRouteWakeID = typeof PRReviewRouteWakeID.Type
+export const OperationsSnapshotID = prefixedID("lbops", "Lightbulb.OperationsSnapshotID")
+export type OperationsSnapshotID = typeof OperationsSnapshotID.Type
 
 export type AccountStatus = "active" | "paused" | "archived"
 export type GoalStatus = "active" | "held" | "completed" | "cancelled" | "stopped"
@@ -264,6 +271,7 @@ export type PRReviewRouteWakeSource =
   | "ci_evidence"
   | "schedule_tick"
   | "human_steering"
+export type OperationsSnapshotStatus = "empty" | "active" | "attention_required" | "held"
 
 export type PRReviewCandidateRouteSeed = {
   readonly sourceRef: string
@@ -436,6 +444,121 @@ export type PRReviewRouteDigest = {
   readonly recent: PRReviewRouteDigestItem[]
 }
 
+export type OperationsSnapshotCounts = {
+  readonly goals: {
+    readonly active: number
+    readonly held: number
+    readonly terminal: number
+  }
+  readonly loops: {
+    readonly total: number
+    readonly active: number
+    readonly ready: number
+    readonly held: number
+    readonly disabled: number
+    readonly noOp: number
+    readonly stale: number
+    readonly recoveryRequired: number
+  }
+  readonly runs: {
+    readonly queued: number
+    readonly running: number
+    readonly blocked: number
+    readonly complete: number
+    readonly failed: number
+  }
+  readonly workers: {
+    readonly queued: number
+    readonly running: number
+    readonly blocked: number
+    readonly complete: number
+    readonly failed: number
+  }
+  readonly gates: {
+    readonly pendingReview: number
+    readonly blocked: number
+    readonly failed: number
+    readonly passed: number
+  }
+  readonly discovery: {
+    readonly topActionable: number
+    readonly needsHuman: number
+    readonly watch: number
+    readonly noise: number
+  }
+  readonly budget: {
+    readonly open: number
+    readonly held: number
+    readonly exhausted: number
+  }
+  readonly dependencies: {
+    readonly released: number
+    readonly blocked: number
+  }
+  readonly artifacts: {
+    readonly reports: number
+    readonly recent: number
+  }
+  readonly launchAttempts: {
+    readonly active: number
+    readonly failed: number
+    readonly complete: number
+  }
+}
+
+export type OperationsSnapshotCompactHandle = {
+  readonly id: string
+  readonly kind: string
+  readonly status?: string
+  readonly summary: string
+  readonly uri?: string
+  readonly issueRef?: string
+  readonly reason?: string
+  readonly nextWakeAt?: number | null
+}
+
+export type OperationsSnapshotHandles = {
+  readonly selectedLoop: OperationsSnapshotCompactHandle | null
+  readonly activeOwnership: OperationsSnapshotCompactHandle[]
+  readonly readyWork: OperationsSnapshotCompactHandle[]
+  readonly heldLoops: OperationsSnapshotCompactHandle[]
+  readonly staleWorkers: OperationsSnapshotCompactHandle[]
+  readonly recoveryRequired: OperationsSnapshotCompactHandle[]
+  readonly reviewGates: OperationsSnapshotCompactHandle[]
+  readonly budgetHolds: OperationsSnapshotCompactHandle[]
+  readonly dependencyReleases: OperationsSnapshotCompactHandle[]
+  readonly recentArtifacts: OperationsSnapshotCompactHandle[]
+}
+
+export type OperationsSnapshot = {
+  readonly id: OperationsSnapshotID
+  readonly accountID: AccountID
+  readonly snapshotKey: string
+  readonly status: OperationsSnapshotStatus
+  readonly summary: string
+  readonly sourceHash: string
+  readonly generatedAt: number
+  readonly nextWakeAt: number | null
+  readonly counts: OperationsSnapshotCounts
+  readonly handles: OperationsSnapshotHandles
+  readonly metadata: Record<string, unknown> | null
+  readonly timeCreated: number
+  readonly timeUpdated: number
+}
+
+export type PublishOperationsSnapshotInput = {
+  readonly accountID: AccountID
+  readonly snapshotKey?: string
+  readonly now?: number
+  readonly metadata?: Record<string, unknown>
+}
+
+export type PublishOperationsSnapshotResult = {
+  readonly snapshot: OperationsSnapshot
+  readonly changed: boolean
+  readonly eventID: EventID | null
+}
+
 export type ArtifactRetentionDecision =
   | "keep"
   | "expire"
@@ -533,6 +656,7 @@ export type AccountGraph = {
   readonly routeSteers: (typeof LightbulbRouteSteerTable.$inferSelect)[]
   readonly prReviewCandidates: (typeof LightbulbPRReviewCandidateTable.$inferSelect)[]
   readonly discoveryCandidates: (typeof LightbulbDiscoveryCandidateTable.$inferSelect)[]
+  readonly operationsSnapshots: (typeof LightbulbOperationsSnapshotTable.$inferSelect)[]
   readonly prReviewRoutes: (typeof LightbulbPRReviewRouteTable.$inferSelect)[]
   readonly prReviewRouteWakes: (typeof LightbulbPRReviewRouteWakeTable.$inferSelect)[]
   readonly artifacts: (typeof LightbulbArtifactTable.$inferSelect)[]
@@ -662,6 +786,7 @@ export type Dashboard = {
   }
   readonly operations: {
     readonly schedulerTicks: DashboardSchedulerTick[]
+    readonly snapshot: OperationsSnapshot | null
   }
   readonly artifactHandles: ArtifactHandle[]
 }
@@ -784,6 +909,7 @@ export interface Interface {
   readonly readAccountGraph: (accountID: AccountID) => Effect.Effect<AccountGraph | undefined>
   readonly readLoopSchedules: (input: { readonly accountID: AccountID; readonly now?: number }) => Effect.Effect<LoopScheduleReadModel[]>
   readonly readLoopProfileSummaries: (input: { readonly accountID: AccountID; readonly goalID: GoalID }) => Effect.Effect<LoopProfileCompactSummary[]>
+  readonly publishOperationsSnapshot: (input: PublishOperationsSnapshotInput) => Effect.Effect<PublishOperationsSnapshotResult>
   readonly readDashboard: (accountID: AccountID) => Effect.Effect<Dashboard | undefined>
   readonly readLatestDashboard: () => Effect.Effect<Dashboard | undefined>
   readonly readIssueArtifacts: (input: ReadIssueArtifactsInput) => Effect.Effect<ArtifactHandle[]>
@@ -1181,6 +1307,17 @@ export const layer = Layer.effect(
       }),
       readLoopProfileSummaries: Effect.fn("Lightbulb.readLoopProfileSummaries")(function* (input) {
         return yield* readLoopProfileSummariesInDb(db, input)
+      }),
+      publishOperationsSnapshot: Effect.fn("Lightbulb.publishOperationsSnapshot")(function* (input) {
+        const graph = yield* readAccountGraphFromDb(db, input.accountID)
+        if (!graph) return yield* Effect.die(new Error("Lightbulb account not found: " + input.accountID))
+        return yield* publishOperationsSnapshotInDb(
+          db,
+          input,
+          graph,
+          yield* readRecentSchedulerTicksFromDb(db, input.accountID),
+          { snapshot: OperationsSnapshotID.create, event: EventID.create },
+        )
       }),
       discoverPRReviewCandidates: Effect.fn("Lightbulb.discoverPRReviewCandidates")(function* (input) {
         return yield* discoverPRReviewCandidatesInDb(db, input, {
@@ -1599,6 +1736,13 @@ function readAccountGraphFromDb(
           desc(LightbulbDiscoveryCandidateTable.score),
           asc(LightbulbDiscoveryCandidateTable.source_id),
         )
+        .all()
+        .pipe(Effect.orDie),
+      operationsSnapshots: yield* db
+        .select()
+        .from(LightbulbOperationsSnapshotTable)
+        .where(eq(LightbulbOperationsSnapshotTable.account_id, accountID))
+        .orderBy(desc(LightbulbOperationsSnapshotTable.time_updated))
         .all()
         .pipe(Effect.orDie),
       prReviewRoutes: yield* db

@@ -327,6 +327,33 @@ export const LightbulbDiscoveryCandidateTable = sqliteTable(
   ],
 )
 
+export const LightbulbOperationsSnapshotTable = sqliteTable(
+  "lightbulb_operations_snapshot",
+  {
+    id: text().$type<Lightbulb.OperationsSnapshotID>().primaryKey(),
+    account_id: text()
+      .$type<Lightbulb.AccountID>()
+      .notNull()
+      .references(() => LightbulbAccountTable.id, { onDelete: "cascade" }),
+    snapshot_key: text().notNull(),
+    status: text().$type<Lightbulb.OperationsSnapshotStatus>().notNull(),
+    summary: text().notNull(),
+    source_hash: text().notNull(),
+    generated_at: integer().notNull(),
+    next_wake_at: integer(),
+    counts: text({ mode: "json" }).$type<Lightbulb.OperationsSnapshotCounts>().notNull(),
+    handles: text({ mode: "json" }).$type<Lightbulb.OperationsSnapshotHandles>().notNull(),
+    metadata: text({ mode: "json" }).$type<Record<string, unknown>>(),
+    ...Timestamps,
+  },
+  (table) => [
+    index("lightbulb_operations_snapshot_account_idx").on(table.account_id),
+    index("lightbulb_operations_snapshot_status_idx").on(table.account_id, table.status),
+    uniqueIndex("lightbulb_operations_snapshot_key_idx").on(table.account_id, table.snapshot_key),
+    uniqueIndex("lightbulb_operations_snapshot_account_id_idx").on(table.account_id, table.id),
+  ],
+)
+
 export const LightbulbRunTable = sqliteTable(
   "lightbulb_run",
   {

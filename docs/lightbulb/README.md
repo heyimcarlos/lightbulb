@@ -267,3 +267,20 @@ This coordinator sits before final-report ingestion and after issue intake. Repo
 turning completed worker reports into run status, artifact lineage, review gates, and budget usage evidence. Crash
 recovery should resume from the runner tick journal, scheduler pass, worker launch attempt, heartbeat/log handles, and
 expected report URI rather than raw worker transcripts.
+
+## Operations Snapshot Feed
+
+The operations snapshot feed is the compact operator read model above scheduler ticks, worker launch attempts, discovery
+inbox rows, gates, artifacts, and dependency reconciliation evidence. A snapshot refresh reads the account graph and
+recent scheduler tick events, computes bounded counts plus compact handles, and upserts one durable
+`lightbulb_operations_snapshot` row per account/snapshot key.
+
+Scheduler ticks remain the journal of one wakeup. The operations snapshot is the current account-level view: ready work,
+active ownership, no-op/skipped loops, pending review gates, budget holds, stale worker holds, recovery-required holds,
+dependency releases, next wake, and recent report/artifact handles. It stores source hashes so re-running the same
+snapshot against unchanged state returns the existing row without duplicating events. It does not embed raw worker
+transcripts, full issue histories, or report bodies.
+
+The seeded dashboard tracer demonstrates one visible dogfood route. The operations snapshot is the feed that future TUI,
+desktop, human inbox, `STATE.md`-style exports, and run-log/status views should consume when they need the current
+control-plane state rather than a single tracer graph.

@@ -17,6 +17,7 @@ import type { GoalLifecycle, GoalRunTree, GoalSummary } from "./goal"
 import { toPRReviewCandidateSummary } from "./pr-review-candidate"
 import { toPRReviewRouteSummary } from "./pr-review-route"
 import { toPRReviewRouteDigest } from "./pr-review-state"
+import { toOperationsSnapshot } from "./operations-snapshot"
 import { classifyLoopSchedule } from "./scheduler"
 import { toLoopProfileCompactSummary } from "./loop-profile"
 import { toReviewGateReadModel } from "./review-gate"
@@ -110,6 +111,7 @@ export function toDashboard(
     },
     operations: {
       schedulerTicks: schedulerTickEvents.map(toDashboardSchedulerTick),
+      snapshot: graph.operationsSnapshots[0] ? toOperationsSnapshot(graph.operationsSnapshots[0]) : null,
     },
     artifactHandles: graph.artifacts.map((artifact) => toGraphArtifactHandle(artifact, graph)),
   }

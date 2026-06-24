@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "67fb5753-6113-4479-8981-08962e26a1ed",
+  "id": "383f2753-9f8a-491c-8d80-b15928daa27b",
   "prevIds": [
-    "cdaadf16-94f4-46a3-b593-1da28ebcf482"
+    "67fb5753-6113-4479-8981-08962e26a1ed"
   ],
   "ddl": [
     {
@@ -68,6 +68,10 @@
     },
     {
       "name": "lightbulb_loop",
+      "entityType": "tables"
+    },
+    {
+      "name": "lightbulb_operations_snapshot",
       "entityType": "tables"
     },
     {
@@ -1547,6 +1551,136 @@
       "name": "time_updated",
       "entityType": "columns",
       "table": "lightbulb_loop"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "lightbulb_operations_snapshot"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "account_id",
+      "entityType": "columns",
+      "table": "lightbulb_operations_snapshot"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "snapshot_key",
+      "entityType": "columns",
+      "table": "lightbulb_operations_snapshot"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "lightbulb_operations_snapshot"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "summary",
+      "entityType": "columns",
+      "table": "lightbulb_operations_snapshot"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "source_hash",
+      "entityType": "columns",
+      "table": "lightbulb_operations_snapshot"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "generated_at",
+      "entityType": "columns",
+      "table": "lightbulb_operations_snapshot"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "next_wake_at",
+      "entityType": "columns",
+      "table": "lightbulb_operations_snapshot"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "counts",
+      "entityType": "columns",
+      "table": "lightbulb_operations_snapshot"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "handles",
+      "entityType": "columns",
+      "table": "lightbulb_operations_snapshot"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "metadata",
+      "entityType": "columns",
+      "table": "lightbulb_operations_snapshot"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "lightbulb_operations_snapshot"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_updated",
+      "entityType": "columns",
+      "table": "lightbulb_operations_snapshot"
     },
     {
       "type": "text",
@@ -4420,6 +4554,21 @@
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
+      "name": "fk_lightbulb_operations_snapshot_account_id_lightbulb_account_id_fk",
+      "entityType": "fks",
+      "table": "lightbulb_operations_snapshot"
+    },
+    {
+      "columns": [
+        "account_id"
+      ],
+      "tableTo": "lightbulb_account",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
       "name": "fk_lightbulb_pr_review_candidate_account_id_lightbulb_account_id_fk",
       "entityType": "fks",
       "table": "lightbulb_pr_review_candidate"
@@ -5408,6 +5557,15 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "lightbulb_operations_snapshot_pk",
+      "table": "lightbulb_operations_snapshot",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "lightbulb_pr_review_candidate_pk",
       "table": "lightbulb_pr_review_candidate",
       "entityType": "pks"
@@ -5989,6 +6147,74 @@
       "name": "lightbulb_loop_account_id_idx",
       "entityType": "indexes",
       "table": "lightbulb_loop"
+    },
+    {
+      "columns": [
+        {
+          "value": "account_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "lightbulb_operations_snapshot_account_idx",
+      "entityType": "indexes",
+      "table": "lightbulb_operations_snapshot"
+    },
+    {
+      "columns": [
+        {
+          "value": "account_id",
+          "isExpression": false
+        },
+        {
+          "value": "status",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "lightbulb_operations_snapshot_status_idx",
+      "entityType": "indexes",
+      "table": "lightbulb_operations_snapshot"
+    },
+    {
+      "columns": [
+        {
+          "value": "account_id",
+          "isExpression": false
+        },
+        {
+          "value": "snapshot_key",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "lightbulb_operations_snapshot_key_idx",
+      "entityType": "indexes",
+      "table": "lightbulb_operations_snapshot"
+    },
+    {
+      "columns": [
+        {
+          "value": "account_id",
+          "isExpression": false
+        },
+        {
+          "value": "id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "lightbulb_operations_snapshot_account_id_idx",
+      "entityType": "indexes",
+      "table": "lightbulb_operations_snapshot"
     },
     {
       "columns": [
