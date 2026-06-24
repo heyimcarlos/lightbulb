@@ -32,6 +32,7 @@ export * from "./lightbulb/loop-profile"
 export * from "./lightbulb/loop-runner-tick"
 export * from "./lightbulb/operations-snapshot"
 export * from "./lightbulb/discovery-inbox"
+export * from "./lightbulb/issue-mutation-outbox"
 export * from "./lightbulb/issue-intake"
 export * from "./lightbulb/pickup-packet"
 export * from "./lightbulb/pr-review-candidate"
@@ -115,6 +116,11 @@ import {
   type IssueQueueIntakeResult,
   type IssueQueueSnapshot,
 } from "./lightbulb/issue-intake"
+import {
+  proposeIssueMutationInDb,
+  readIssueMutationOutboxInDb,
+  recordIssueMutationApplyResultInDb,
+} from "./lightbulb/issue-mutation-outbox"
 import type { ContextBundleAssemblyResult, ContextBundleAssemblyServiceInput } from "./lightbulb/context-bundle"
 import {
   LightbulbAccountTable,
@@ -124,6 +130,7 @@ import {
   LightbulbDiscoveryCandidateTable,
   LightbulbGateTable,
   LightbulbGoalTable,
+  LightbulbIssueMutationOutboxTable,
   LightbulbLoopTable,
   LightbulbOperationsSnapshotTable,
   LightbulbPRReviewCandidateTable,
@@ -224,6 +231,8 @@ export const PRReviewRouteWakeID = prefixedID("lbprwake", "Lightbulb.PRReviewRou
 export type PRReviewRouteWakeID = typeof PRReviewRouteWakeID.Type
 export const OperationsSnapshotID = prefixedID("lbops", "Lightbulb.OperationsSnapshotID")
 export type OperationsSnapshotID = typeof OperationsSnapshotID.Type
+export const IssueMutationID = prefixedID("lbim", "Lightbulb.IssueMutationID")
+export type IssueMutationID = typeof IssueMutationID.Type
 
 export type AccountStatus = "active" | "paused" | "archived"
 export type GoalStatus = "active" | "held" | "completed" | "cancelled" | "stopped"
@@ -277,6 +286,152 @@ export type PRReviewRouteWakeSource =
   | "schedule_tick"
   | "human_steering"
 export type OperationsSnapshotStatus = "empty" | "active" | "attention_required" | "held"
+export type IssueMutationAction = "create_issue" | "edit_issue" | "add_label" | "remove_label" | "add_comment"
+export type IssueMutationStatus = "ready" | "held" | "applied" | "skipped" | "failed" | "superseded"
+export type IssueMutationIssueState = "open" | "closed"
+export type IssueMutationHoldReason =
+  | "missing_create_title"
+  | "missing_create_body"
+  | "missing_target_issue"
+  | "conflicting_state_label"
+  | "unsafe_label_removal"
+  | "stale_snapshot_precondition"
+export type IssueMutationApplyStatus = "applied" | "skipped" | "failed" | "superseded"
+
+export type IssueMutationSource = {
+  readonly goalID?: GoalID
+  readonly loopID?: LoopID
+  readonly runID?: RunID
+  readonly artifactIDs?: readonly ArtifactID[]
+  readonly artifactHandles?: readonly string[]
+  readonly plannerArtifactHandle?: string
+}
+
+export type IssueMutationTargetIssue = {
+  readonly number: number
+  readonly ref?: string
+  readonly handle?: string
+  readonly url?: string
+  readonly snapshotUpdatedAt?: number
+  readonly labels?: readonly string[]
+  readonly state?: IssueMutationIssueState
+}
+
+export type IssueMutationSnapshotPrecondition = {
+  readonly expectedSnapshotUpdatedAt?: number
+}
+
+export type IssueMutationCommentProposal = {
+  readonly body: string
+  readonly bodyHandle?: string
+  readonly marker?: string
+  readonly summary?: string
+}
+
+export type IssueMutationProposalInput = {
+  readonly accountID: AccountID
+  readonly repository: string
+  readonly action: IssueMutationAction
+  readonly source?: IssueMutationSource
+  readonly targetIssue?: IssueMutationTargetIssue
+  readonly title?: string | null
+  readonly body?: string | null
+  readonly labels?: readonly string[]
+  readonly addLabels?: readonly string[]
+  readonly removeLabels?: readonly string[]
+  readonly state?: IssueMutationIssueState
+  readonly comment?: IssueMutationCommentProposal
+  readonly precondition?: IssueMutationSnapshotPrecondition
+  readonly applySummary?: string
+  readonly idempotencyKey?: string
+  readonly now?: number
+  readonly metadata?: Record<string, unknown>
+}
+
+export type IssueMutationRenderedTarget = {
+  readonly issueNumber: number
+  readonly issueRef: string
+  readonly issueHandle: string
+  readonly issueURL: string
+  readonly snapshotUpdatedAt: number | null
+  readonly labels: readonly string[]
+  readonly state: IssueMutationIssueState | null
+}
+
+export type IssueMutationRenderedMutation = {
+  readonly action: IssueMutationAction
+  readonly repository: string
+  readonly idempotencyKey: string
+  readonly targetIssue: IssueMutationRenderedTarget | null
+  readonly title: string | null
+  readonly body: string | null
+  readonly labels: readonly string[]
+  readonly addLabels: readonly string[]
+  readonly removeLabels: readonly string[]
+  readonly state: IssueMutationIssueState | null
+  readonly comment: IssueMutationCommentProposal | null
+  readonly summary: string
+  readonly source: IssueMutationSource
+  readonly precondition: IssueMutationSnapshotPrecondition | null
+}
+
+export type IssueMutationApplyResult = {
+  readonly status: IssueMutationApplyStatus
+  readonly summary: string
+  readonly issueURL: string | null
+  readonly resultHandle: string | null
+  readonly errorHandle: string | null
+  readonly appliedAt: number
+  readonly metadata: Record<string, unknown> | null
+}
+
+export type IssueMutationOutboxItem = {
+  readonly id: IssueMutationID
+  readonly accountID: AccountID
+  readonly repository: string
+  readonly action: IssueMutationAction
+  readonly status: IssueMutationStatus
+  readonly targetIssue: IssueMutationRenderedTarget | null
+  readonly desiredLabels: readonly string[]
+  readonly desiredState: IssueMutationIssueState | null
+  readonly idempotencyKey: string
+  readonly source: IssueMutationSource
+  readonly renderedMutation: IssueMutationRenderedMutation | null
+  readonly holdReasons: readonly IssueMutationHoldReason[]
+  readonly applySummary: string
+  readonly applyResult: IssueMutationApplyResult | null
+  readonly metadata: Record<string, unknown> | null
+  readonly timeCreated: number
+  readonly timeUpdated: number
+}
+
+export type IssueMutationProposalResult = {
+  readonly item: IssueMutationOutboxItem
+  readonly created: boolean
+  readonly eventID: EventID | null
+}
+
+export type IssueMutationOutboxReadInput = {
+  readonly accountID: AccountID
+  readonly status?: IssueMutationStatus
+}
+
+export type IssueMutationApplyResultInput = {
+  readonly mutationID: IssueMutationID
+  readonly status: IssueMutationApplyStatus
+  readonly summary: string
+  readonly issueURL?: string
+  readonly resultHandle?: string
+  readonly errorHandle?: string
+  readonly appliedAt?: number
+  readonly metadata?: Record<string, unknown>
+}
+
+export type IssueMutationApplyRecordResult = {
+  readonly item: IssueMutationOutboxItem
+  readonly changed: boolean
+  readonly eventID: EventID | null
+}
 
 export type PRReviewCandidateRouteSeed = {
   readonly sourceRef: string
@@ -663,6 +818,7 @@ export type AccountGraph = {
   readonly prReviewCandidates: (typeof LightbulbPRReviewCandidateTable.$inferSelect)[]
   readonly discoveryCandidates: (typeof LightbulbDiscoveryCandidateTable.$inferSelect)[]
   readonly operationsSnapshots: (typeof LightbulbOperationsSnapshotTable.$inferSelect)[]
+  readonly issueMutationOutbox: (typeof LightbulbIssueMutationOutboxTable.$inferSelect)[]
   readonly prReviewRoutes: (typeof LightbulbPRReviewRouteTable.$inferSelect)[]
   readonly prReviewRouteWakes: (typeof LightbulbPRReviewRouteWakeTable.$inferSelect)[]
   readonly artifacts: (typeof LightbulbArtifactTable.$inferSelect)[]
@@ -916,6 +1072,11 @@ export interface Interface {
   readonly readLoopSchedules: (input: { readonly accountID: AccountID; readonly now?: number }) => Effect.Effect<LoopScheduleReadModel[]>
   readonly readLoopProfileSummaries: (input: { readonly accountID: AccountID; readonly goalID: GoalID }) => Effect.Effect<LoopProfileCompactSummary[]>
   readonly publishOperationsSnapshot: (input: PublishOperationsSnapshotInput) => Effect.Effect<PublishOperationsSnapshotResult>
+  readonly proposeIssueMutation: (input: IssueMutationProposalInput) => Effect.Effect<IssueMutationProposalResult>
+  readonly readIssueMutationOutbox: (input: IssueMutationOutboxReadInput) => Effect.Effect<IssueMutationOutboxItem[]>
+  readonly recordIssueMutationApplyResult: (
+    input: IssueMutationApplyResultInput,
+  ) => Effect.Effect<IssueMutationApplyRecordResult>
   readonly readDashboard: (accountID: AccountID) => Effect.Effect<Dashboard | undefined>
   readonly readLatestDashboard: () => Effect.Effect<Dashboard | undefined>
   readonly readIssueArtifacts: (input: ReadIssueArtifactsInput) => Effect.Effect<ArtifactHandle[]>
@@ -1323,6 +1484,23 @@ export const layer = Layer.effect(
           graph,
           yield* readRecentSchedulerTicksFromDb(db, input.accountID),
           { snapshot: OperationsSnapshotID.create, event: EventID.create },
+        )
+      }),
+      proposeIssueMutation: Effect.fn("Lightbulb.proposeIssueMutation")(function* (input) {
+        return yield* proposeIssueMutationInDb(
+          db,
+          { ...input, now: input.now ?? Date.now() },
+          { mutation: IssueMutationID.create, event: EventID.create },
+        )
+      }),
+      readIssueMutationOutbox: Effect.fn("Lightbulb.readIssueMutationOutbox")(function* (input) {
+        return yield* readIssueMutationOutboxInDb(db, input)
+      }),
+      recordIssueMutationApplyResult: Effect.fn("Lightbulb.recordIssueMutationApplyResult")(function* (input) {
+        return yield* recordIssueMutationApplyResultInDb(
+          db,
+          { ...input, appliedAt: input.appliedAt ?? Date.now() },
+          { event: EventID.create },
         )
       }),
       discoverPRReviewCandidates: Effect.fn("Lightbulb.discoverPRReviewCandidates")(function* (input) {
@@ -1749,6 +1927,13 @@ function readAccountGraphFromDb(
         .from(LightbulbOperationsSnapshotTable)
         .where(eq(LightbulbOperationsSnapshotTable.account_id, accountID))
         .orderBy(desc(LightbulbOperationsSnapshotTable.time_updated))
+        .all()
+        .pipe(Effect.orDie),
+      issueMutationOutbox: yield* db
+        .select()
+        .from(LightbulbIssueMutationOutboxTable)
+        .where(eq(LightbulbIssueMutationOutboxTable.account_id, accountID))
+        .orderBy(asc(LightbulbIssueMutationOutboxTable.time_created))
         .all()
         .pipe(Effect.orDie),
       prReviewRoutes: yield* db

@@ -230,6 +230,28 @@ returns an operator summary with compact issue, gate, or git handles. Mixed hold
 ADR labels and remain out of worker dispatch until those separate holds clear. Missing or pending evidence leaves the
 issue dependency-held with an exact skipped reason.
 
+## Issue Mutation Outbox
+
+The issue mutation outbox is the outbound companion to issue intake (#12). Intake reads compact GitHub-like snapshots and
+turns ready issues into local work handles; the outbox stores compact proposed GitHub mutations that a parent or future
+apply pass can inspect without reopening planner reports, worker transcripts, or full issue histories.
+
+Outbox proposals cover issue creation, title/body edits, label additions and removals, and comments. Each proposal records
+the source account plus optional goal, loop, run, artifact, and planner handles; the target issue when one exists; desired
+labels or state; a deterministic idempotency key; a bounded apply summary; and the exact renderable mutation. Re-emitting
+the same proposal returns the existing item and does not duplicate outbox rows or proposal events.
+
+The outbox holds unsafe or ambiguous proposals instead of treating them as apply-ready. Missing create title/body fields,
+conflicting state and triage-label requests, unsafe removals of human/budget/context/review labels, and stale snapshot
+preconditions are recorded as bounded hold reasons. Dependency reconciliation (#29) may produce mutation-shaped requests
+for dependency-only releases, but it remains the evidence/read-model seam; the outbox is where those requests become
+durable parent-applicable proposals. Operations snapshots (#33) summarize account health and may later count or link
+outbox handles, but snapshots are read models and do not apply or author GitHub mutations.
+
+The v0 outbox has only a fake apply-result seam. It can mark proposals `applied`, `skipped`, `failed`, or `superseded`
+with compact result, issue URL, or error handles while preserving source evidence. Live GitHub writes, operator approval,
+adapter capability checks, dry-run grouping, and retry policy belong to the future operator-approved apply pass (#52).
+
 ## Pickup Packets
 
 Pickup packets are the structured worker handoff contract layered on top of task packets. A packet records the work
