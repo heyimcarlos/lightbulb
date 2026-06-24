@@ -12,6 +12,10 @@ type DashboardArgs = {
   readonly format: "text" | "json"
 }
 
+type ExportArgs = DashboardArgs & {
+  readonly section: Lightbulb.OperatorExportSection
+}
+
 const decodeAccountID = Schema.decodeUnknownOption(Lightbulb.AccountID)
 
 export const LightbulbDashboardCommand = effectCmd({
@@ -73,11 +77,76 @@ export const LightbulbDashboardCommand = effectCmd({
   }),
 })
 
+export const LightbulbOperatorExportCommand = effectCmd({
+  command: "operator-export",
+  describe: "show compact Lightbulb operator exports",
+  instance: false,
+  builder: (yargs: Argv) =>
+    yargs
+      .option("account", {
+        describe: "Lightbulb account ID to export",
+        type: "string",
+      })
+      .option("seed", {
+        describe: "seed a tracer-bullet graph before exporting it",
+        type: "boolean",
+      })
+      .option("account-name", {
+        describe: "account name to use with --seed",
+        type: "string",
+      })
+      .option("artifact-uri", {
+        describe: "artifact URI to use with --seed",
+        type: "string",
+      })
+      .option("section", {
+        describe: "operator export section",
+        choices: ["all", "state", "budget", "run-log"] as const,
+        default: "all" as const,
+      })
+      .option("format", {
+        describe: "output format",
+        choices: ["text", "json"] as const,
+        default: "text" as const,
+      }),
+  handler: Effect.fn("Cli.lightbulb.operatorExport")(function* (args: ExportArgs) {
+    return yield* Effect.gen(function* () {
+      if (args.seed && args.account) return yield* fail("Use either --seed or --account, not both")
+
+      const lightbulb = yield* Lightbulb.Service
+      const seeded = args.seed
+        ? yield* lightbulb.seedTracerBullet({
+            accountName: args.accountName,
+            artifactUri: args.artifactUri,
+          })
+        : undefined
+      const decodedAccountID =
+        args.account === undefined ? undefined : Option.getOrUndefined(decodeAccountID(args.account))
+      if (args.account !== undefined && decodedAccountID === undefined) {
+        return yield* fail(`Invalid Lightbulb account ID: ${args.account}`)
+      }
+
+      const accountID = seeded?.accountID ?? decodedAccountID
+      if (accountID === undefined) return yield* fail("Pass --seed to create a tracer graph or --account <lbacc_...>")
+
+      const operatorExport = yield* lightbulb.readOperatorExport({ accountID })
+      if (!operatorExport) return yield* fail(`Lightbulb account not found: ${accountID}`)
+
+      if (args.format === "json") {
+        console.log(JSON.stringify(operatorExportSection(operatorExport, args.section), null, 2))
+        return
+      }
+      console.log(formatLightbulbOperatorExport(operatorExport, args.section))
+    }).pipe(Effect.provide(Lightbulb.defaultLayer))
+  }),
+})
+
 export const LightbulbCommand = effectCmd({
   command: "lightbulb",
   describe: "Lightbulb account orchestration tools",
   instance: false,
-  builder: (yargs: Argv) => yargs.command(LightbulbDashboardCommand).demandCommand(),
+  builder: (yargs: Argv) =>
+    yargs.command(LightbulbDashboardCommand).command(LightbulbOperatorExportCommand).demandCommand(),
   handler: Effect.fn("Cli.lightbulb")(function* () {}),
 })
 
@@ -98,7 +167,104 @@ export function formatLightbulbDashboard(dashboard: Lightbulb.Dashboard) {
     ...(dashboard.artifactHandles.length === 0
       ? ["- none"]
       : dashboard.artifactHandles.map((artifact) => `- ${formatArtifactHandle(artifact)}`)),
+    "",
+    "Operator Exports",
+    `- lightbulb operator-export --account ${dashboard.account.id}`,
+    `- lightbulb operator-export --account ${dashboard.account.id} --section state`,
+    `- lightbulb operator-export --account ${dashboard.account.id} --section budget`,
+    `- lightbulb operator-export --account ${dashboard.account.id} --section run-log`,
   ].join(EOL)
+}
+
+export function formatLightbulbOperatorExport(
+  operatorExport: Lightbulb.OperatorExport,
+  section: Lightbulb.OperatorExportSection = "all",
+) {
+  return [
+    "Lightbulb Operator Export",
+    `Account: ${operatorExport.account.name} [${operatorExport.account.status}] ${operatorExport.account.id}`,
+    `Generated: ${operatorExport.generatedAt}`,
+    "",
+    "Read Paths",
+    `- all: ${operatorExport.access.all}`,
+    `- state: ${operatorExport.access.state}`,
+    `- budget: ${operatorExport.access.budget}`,
+    `- run-log: ${operatorExport.access.runLog}`,
+    ...(section === "all" || section === "state" ? formatOperatorState(operatorExport.state) : []),
+    ...(section === "all" || section === "budget" ? formatOperatorBudget(operatorExport.budget) : []),
+    ...(section === "all" || section === "run-log" ? formatOperatorRunLog(operatorExport.runLog) : []),
+  ].join(EOL)
+}
+
+function operatorExportSection(operatorExport: Lightbulb.OperatorExport, section: Lightbulb.OperatorExportSection) {
+  if (section === "state") return operatorExport.state
+  if (section === "budget") return operatorExport.budget
+  if (section === "run-log") return operatorExport.runLog
+  return operatorExport
+}
+
+function formatOperatorState(state: Lightbulb.OperatorStateExport) {
+  return [
+    "",
+    "State",
+    ...formatOperatorStateSection("high-priority/active", state.highPriorityActive),
+    ...formatOperatorStateSection("watch", state.watch),
+    ...formatOperatorStateSection("human inbox", state.humanInbox),
+    ...formatOperatorStateSection("noise/ignored", state.recentNoiseIgnored),
+    ...formatOperatorStateSection("resolved/recent", state.resolvedRecent),
+  ]
+}
+
+function formatOperatorStateSection(label: string, items: readonly Lightbulb.OperatorStateItem[]) {
+  return [
+    `  ${label}: ${items.length}`,
+    ...(items.length === 0 ? ["    - none"] : items.map((item) => `    - ${formatOperatorStateItem(item)}`)),
+  ]
+}
+
+function formatOperatorStateItem(item: Lightbulb.OperatorStateItem) {
+  return (
+    `${item.kind} ${item.id} [${item.status}] ${item.title} - ${item.summary}` +
+    `${item.issueRef ? ` issue=${item.issueRef}` : ""}` +
+    `${item.action ? ` action=${item.action}` : ""}`
+  )
+}
+
+function formatOperatorBudget(budget: Lightbulb.OperatorBudgetExport) {
+  return [
+    "",
+    "Budget",
+    `  kill-switch=${budget.killSwitch.active ? "active" : "inactive"} reason=${budget.killSwitch.reason ?? "none"}`,
+    `  totals loops=${budget.totals.loops} open=${budget.totals.open} held=${budget.totals.held} ` +
+      `exhausted=${budget.totals.exhausted} unknown=${budget.totals.unknown}`,
+    `  remaining runs=${budget.totals.remainingRunsToday ?? "unknown"} tokens=${budget.totals.remainingTokenUnits ?? "unknown"} ` +
+      `cost=${budget.totals.remainingCostUnits ?? "unknown"} context=${budget.totals.remainingContextUnits ?? "unknown"} ` +
+      `approvals=${budget.totals.remainingApprovals ?? "unbounded"} workerSpawns=${budget.totals.remainingWorkerSpawnsForActiveRun ?? "not-configured"}`,
+    ...(budget.loops.length === 0
+      ? ["  loops: none"]
+      : budget.loops.map(
+          (loop) =>
+            `  - loop ${loop.loopID} profile=${loop.profileID ?? "none"} [${loop.state}] reason=${loop.reason ?? "none"} ` +
+            `remainingRuns=${loop.remaining.runsToday ?? "unknown"} remainingTokens=${loop.remaining.tokenUnits ?? "unknown"} ` +
+            `workerSpawns=${loop.remaining.workerSpawnsForActiveRun ?? "not-configured"}`,
+        )),
+  ]
+}
+
+function formatOperatorRunLog(runLog: Lightbulb.OperatorRunLogExport) {
+  return [
+    "",
+    "Run Log",
+    ...(runLog.entries.length === 0
+      ? ["  - none"]
+      : runLog.entries.map(
+          (entry) =>
+            `  - run ${entry.runID} profile=${entry.profileID ?? "none"} [${entry.outcome}] ` +
+            `duration=${entry.durationMs ?? "open"} items=${entry.itemsFound.length} actions=${entry.actions.length} ` +
+            `escalations=${entry.escalations.length} cost=${entry.usageEstimate.costUnits} tokens=${entry.usageEstimate.tokenUnits} ` +
+            `artifacts=${entry.handles.artifactIDs.length}`,
+        )),
+  ]
 }
 
 function formatGoal(goal: Lightbulb.DashboardGoal) {

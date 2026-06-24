@@ -112,6 +112,28 @@ tokens, cost units, context units, and optional approval counts all produce boun
 `approval_budget_exhausted`. Loops without profile budget metadata report `budget_profile_missing` instead of guessing.
 Schedulers and supervisor snapshots consume these compact reasons to hold work before launching more workers.
 
+## Operator Exports
+
+Operator exports are compact read models over the durable Lightbulb graph. They mirror the useful parts of
+`STATE.md`, `loop-budget.md`, and JSONL-style run logs without making generated files authoritative. SQLite, event rows,
+artifacts, gates, budget usage, and dashboard projections remain the source of truth.
+
+Use the CLI to read the current export:
+
+```bash
+lightbulb operator-export --account <lbacc_...>
+lightbulb operator-export --account <lbacc_...> --section state
+lightbulb operator-export --account <lbacc_...> --section budget
+lightbulb operator-export --account <lbacc_...> --section run-log
+```
+
+The state export groups high-priority/active work, watch items, human inbox work, recent noise/ignored items, and
+resolved/recent items. The budget export includes per-loop limits, used and remaining daily units, exhausted/unknown
+reasons, account kill-switch status, and an explicit not-configured worker-spawn budget dimension until that policy
+exists. The run-log export emits one compact entry per run with profile, duration, found items, actions, escalations,
+usage estimates, and report/artifact/gate handles. None of the sections include raw worker transcripts, full issue
+histories, or credentials.
+
 ## Worker Runtime Adapter Contract
 
 OpenCode-native execution is the default Lightbulb worker runtime for stable loop v0. Lightbulb is an OpenCode fork and

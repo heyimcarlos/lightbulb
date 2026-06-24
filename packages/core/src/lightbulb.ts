@@ -47,6 +47,7 @@ export * from "./lightbulb/worker-launch"
 export * from "./lightbulb/worker-report"
 export * from "./lightbulb/worker-runtime"
 export * from "./lightbulb/budget-ledger"
+export * from "./lightbulb/operator-export"
 
 import { and, asc, desc, eq, or } from "drizzle-orm"
 import { Context, Effect, Layer, Schema } from "effect"
@@ -93,6 +94,7 @@ import {
 import {
   publishOperationsSnapshotInDb,
 } from "./lightbulb/operations-snapshot"
+import { buildOperatorExport, type OperatorExport } from "./lightbulb/operator-export"
 import { planGoalRoute as planGoalRouteInDb, readGoalRoute as readGoalRouteFromDb, steerGoalRoute as steerGoalRouteInDb } from "./lightbulb/route"
 import {
   classifyIssueRouting,
@@ -1094,6 +1096,10 @@ export interface Interface {
   readonly readLoopSchedules: (input: { readonly accountID: AccountID; readonly now?: number }) => Effect.Effect<LoopScheduleReadModel[]>
   readonly readLoopProfileSummaries: (input: { readonly accountID: AccountID; readonly goalID: GoalID }) => Effect.Effect<LoopProfileCompactSummary[]>
   readonly publishOperationsSnapshot: (input: PublishOperationsSnapshotInput) => Effect.Effect<PublishOperationsSnapshotResult>
+  readonly readOperatorExport: (input: {
+    readonly accountID: AccountID
+    readonly now?: number
+  }) => Effect.Effect<OperatorExport | undefined>
   readonly proposeIssueMutation: (input: IssueMutationProposalInput) => Effect.Effect<IssueMutationProposalResult>
   readonly readIssueMutationOutbox: (input: IssueMutationOutboxReadInput) => Effect.Effect<IssueMutationOutboxItem[]>
   readonly recordIssueMutationApplyResult: (
@@ -1517,6 +1523,13 @@ export const layer = Layer.effect(
           yield* readRecentSchedulerTicksFromDb(db, input.accountID),
           { snapshot: OperationsSnapshotID.create, event: EventID.create },
         )
+      }),
+      readOperatorExport: Effect.fn("Lightbulb.readOperatorExport")(function* (input) {
+        const graph = yield* readAccountGraphFromDb(db, input.accountID)
+        if (!graph) return
+        return buildOperatorExport(graph, yield* readRecentSchedulerTicksFromDb(db, input.accountID), {
+          now: input.now ?? Date.now(),
+        })
       }),
       proposeIssueMutation: Effect.fn("Lightbulb.proposeIssueMutation")(function* (input) {
         return yield* proposeIssueMutationInDb(
