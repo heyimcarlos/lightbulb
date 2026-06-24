@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm"
-import { check, foreignKey, index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core"
+import { check, foreignKey, index, integer, primaryKey, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core"
 import { Timestamps } from "../database/schema.sql"
 import type { Lightbulb } from "../lightbulb"
 
@@ -679,6 +679,72 @@ export const LightbulbArtifactEdgeTable = sqliteTable(
       foreignColumns: [LightbulbWorkerTable.account_id, LightbulbWorkerTable.id],
       name: "lightbulb_artifact_edge_account_consumer_worker_fk",
     }).onDelete("cascade"),
+  ],
+)
+
+export const LightbulbBudgetUsageTable = sqliteTable(
+  "lightbulb_budget_usage",
+  {
+    id: text().$type<Lightbulb.BudgetUsageID>().primaryKey(),
+    account_id: text()
+      .$type<Lightbulb.AccountID>()
+      .notNull()
+      .references(() => LightbulbAccountTable.id, { onDelete: "cascade" }),
+    goal_id: text()
+      .$type<Lightbulb.GoalID>()
+      .notNull()
+      .references(() => LightbulbGoalTable.id, { onDelete: "cascade" }),
+    loop_id: text()
+      .$type<Lightbulb.LoopID>()
+      .notNull()
+      .references(() => LightbulbLoopTable.id, { onDelete: "cascade" }),
+    run_id: text()
+      .$type<Lightbulb.RunID>()
+      .notNull()
+      .references(() => LightbulbRunTable.id, { onDelete: "cascade" }),
+    worker_id: text().$type<Lightbulb.WorkerID>().references(() => LightbulbWorkerTable.id, { onDelete: "set null" }),
+    source_kind: text().$type<Lightbulb.BudgetUsageSourceKind>().notNull(),
+    idempotency_key: text().notNull(),
+    source_issue_ref: text(),
+    source_artifact_id: text()
+      .$type<Lightbulb.ArtifactID>()
+      .references(() => LightbulbArtifactTable.id, { onDelete: "set null" }),
+    source_artifact_uri: text(),
+    source_artifact_summary: text(),
+    cost_units: real().notNull(),
+    token_units: integer().notNull(),
+    context_units: integer().notNull(),
+    approval_count: integer().notNull(),
+    usage_at: integer().notNull(),
+    ...Timestamps,
+  },
+  (table) => [
+    index("lightbulb_budget_usage_account_idx").on(table.account_id),
+    index("lightbulb_budget_usage_loop_idx").on(table.account_id, table.loop_id, table.usage_at),
+    index("lightbulb_budget_usage_run_idx").on(table.account_id, table.run_id),
+    index("lightbulb_budget_usage_worker_idx").on(table.account_id, table.worker_id),
+    uniqueIndex("lightbulb_budget_usage_idempotency_idx").on(table.account_id, table.idempotency_key),
+    uniqueIndex("lightbulb_budget_usage_account_id_idx").on(table.account_id, table.id),
+    foreignKey({
+      columns: [table.account_id, table.goal_id],
+      foreignColumns: [LightbulbGoalTable.account_id, LightbulbGoalTable.id],
+      name: "lightbulb_budget_usage_account_goal_fk",
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [table.account_id, table.loop_id],
+      foreignColumns: [LightbulbLoopTable.account_id, LightbulbLoopTable.id],
+      name: "lightbulb_budget_usage_account_loop_fk",
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [table.account_id, table.run_id],
+      foreignColumns: [LightbulbRunTable.account_id, LightbulbRunTable.id],
+      name: "lightbulb_budget_usage_account_run_fk",
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [table.account_id, table.worker_id],
+      foreignColumns: [LightbulbWorkerTable.account_id, LightbulbWorkerTable.id],
+      name: "lightbulb_budget_usage_account_worker_fk",
+    }).onDelete("set null"),
   ],
 )
 

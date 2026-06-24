@@ -4,7 +4,14 @@ import type { Database } from "../database/database"
 import type { Lightbulb } from "../lightbulb"
 import { readLoopProfileMetadata } from "./loop-profile"
 import { classifyLoopSchedule, type LoopScheduleReadModel } from "./scheduler"
-import { LightbulbAccountTable, LightbulbEventTable, LightbulbGoalTable, LightbulbLoopTable, LightbulbRunTable } from "./sql"
+import {
+  LightbulbAccountTable,
+  LightbulbBudgetUsageTable,
+  LightbulbEventTable,
+  LightbulbGoalTable,
+  LightbulbLoopTable,
+  LightbulbRunTable,
+} from "./sql"
 
 export type LoopRunTrigger = "schedule" | "manual" | "recovery"
 export type LoopRunAdmissionSourceValue = string | number | boolean | null
@@ -74,7 +81,20 @@ export function admitLoopRunInDb(
           .where(and(eq(LightbulbRunTable.account_id, input.accountID), eq(LightbulbRunTable.loop_id, input.loopID)))
           .orderBy(asc(LightbulbRunTable.started_at))
           .all()
-        const schedule = classifyLoopSchedule({ loop, runs, now: input.now })
+        const usage = yield* tx
+          .select({
+            loop_id: LightbulbBudgetUsageTable.loop_id,
+            cost_units: LightbulbBudgetUsageTable.cost_units,
+            token_units: LightbulbBudgetUsageTable.token_units,
+            context_units: LightbulbBudgetUsageTable.context_units,
+            approval_count: LightbulbBudgetUsageTable.approval_count,
+            usage_at: LightbulbBudgetUsageTable.usage_at,
+          })
+          .from(LightbulbBudgetUsageTable)
+          .where(and(eq(LightbulbBudgetUsageTable.account_id, input.accountID), eq(LightbulbBudgetUsageTable.loop_id, input.loopID)))
+          .orderBy(asc(LightbulbBudgetUsageTable.usage_at))
+          .all()
+        const schedule = classifyLoopSchedule({ loop, runs, usage, now: input.now })
 
         if (account.status !== "active") {
           return yield* insertSkippedEvent(tx, input, loop, schedule, ids.event(), "account_not_active", {

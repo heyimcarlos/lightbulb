@@ -99,6 +99,19 @@ reports preserve exact terminal reasons. Reports that need parent review complet
 gate against the report artifact so dashboard and parent summaries show the human-held integration state separately from
 dependency or budget holds.
 
+## Budget Usage Ledger
+
+Budget usage is stored as compact ledger rows, not raw transcripts. A usage row names the account, goal, loop, run,
+optional worker, source issue or artifact handle, idempotency key, cost units, token units, context units, approval
+count, and usage time. Worker final-report ingestion records usage through the same seam, so a retry with the same report
+handle updates report state without double-counting budget consumption.
+
+Loop budget read models roll the current UTC day into used, remaining, exhausted, and unknown states. Run counts,
+tokens, cost units, context units, and optional approval counts all produce bounded scheduler reasons such as
+`daily_run_budget_exhausted`, `token_budget_exhausted`, `cost_budget_exhausted`, `context_budget_exhausted`, and
+`approval_budget_exhausted`. Loops without profile budget metadata report `budget_profile_missing` instead of guessing.
+Schedulers and supervisor snapshots consume these compact reasons to hold work before launching more workers.
+
 ## Worker Runtime Adapter Contract
 
 OpenCode-native execution is the default Lightbulb worker runtime for stable loop v0. Lightbulb is an OpenCode fork and

@@ -12,6 +12,7 @@ export type LoopProfileBudgetEnvelope = {
   readonly maxTokens: number
   readonly maxCostUsd: number
   readonly maxContextTokens: number
+  readonly maxApprovals?: number
   readonly holdReason?: string
 }
 
@@ -88,6 +89,7 @@ export type LoopProfileBudgetOverride = {
   readonly maxTokens?: number
   readonly maxCostUsd?: number
   readonly maxContextTokens?: number
+  readonly maxApprovals?: number
   readonly holdReason?: string
 }
 
@@ -694,6 +696,7 @@ function validateProfiles(input: LoopProfileBootstrapInput): readonly ValidatedP
       maxTokens: definition.budget?.maxTokens ?? input.defaultPolicy.budget.maxTokens,
       maxCostUsd: definition.budget?.maxCostUsd ?? input.defaultPolicy.budget.maxCostUsd,
       maxContextTokens: definition.budget?.maxContextTokens ?? input.defaultPolicy.budget.maxContextTokens,
+      maxApprovals: definition.budget?.maxApprovals ?? input.defaultPolicy.budget.maxApprovals,
       holdReason: definition.budget?.holdReason ?? input.defaultPolicy.budget.holdReason,
     }
     const registry = normalizeProfileRegistry(definition, schedule, budget)
@@ -711,10 +714,12 @@ function validateProfiles(input: LoopProfileBootstrapInput): readonly ValidatedP
       !Number.isSafeInteger(budget.maxTokens) ||
       !Number.isFinite(budget.maxCostUsd) ||
       !Number.isSafeInteger(budget.maxContextTokens) ||
+      (budget.maxApprovals !== undefined && !Number.isSafeInteger(budget.maxApprovals)) ||
       budget.maxRunsPerDay <= 0 ||
       budget.maxTokens <= 0 ||
       budget.maxCostUsd <= 0 ||
-      budget.maxContextTokens <= 0
+      budget.maxContextTokens <= 0 ||
+      (budget.maxApprovals !== undefined && budget.maxApprovals <= 0)
     ) {
       return invalidProfile(definition, "invalid_budget")
     }
@@ -832,6 +837,7 @@ function toLoopProfileMetadata(
         max_tokens: profile.budget.maxTokens,
         max_cost_usd: profile.budget.maxCostUsd,
         max_context_tokens: profile.budget.maxContextTokens,
+        max_approvals: profile.budget.maxApprovals,
         hold_reason: profile.budget.holdReason,
         custom: false,
       },
@@ -953,6 +959,7 @@ function loopBudgetMatches(current: LoopProfileMetadata["budget"], next: LoopPro
     current.maxTokens === next.maxTokens &&
     current.maxCostUsd === next.maxCostUsd &&
     current.maxContextTokens === next.maxContextTokens &&
+    current.maxApprovals === next.maxApprovals &&
     current.holdReason === next.holdReason
   )
 }
@@ -975,7 +982,8 @@ export function readLoopProfileMetadata(metadata: Record<string, unknown> | null
     typeof budget.max_runs_per_day !== "number" ||
     typeof budget.max_tokens !== "number" ||
     typeof budget.max_cost_usd !== "number" ||
-    typeof budget.max_context_tokens !== "number"
+    typeof budget.max_context_tokens !== "number" ||
+    (budget.max_approvals !== undefined && typeof budget.max_approvals !== "number")
   ) {
     return
   }
@@ -996,6 +1004,7 @@ export function readLoopProfileMetadata(metadata: Record<string, unknown> | null
       maxTokens: budget.max_tokens,
       maxCostUsd: budget.max_cost_usd,
       maxContextTokens: budget.max_context_tokens,
+      maxApprovals: budget.max_approvals,
       holdReason: typeof budget.hold_reason === "string" ? budget.hold_reason : undefined,
       custom: budget.custom === true,
     },

@@ -144,7 +144,7 @@ function toDashboardLoop(
   runs: readonly (typeof LightbulbRunTable.$inferSelect)[] = graph.runs,
   retentionGraph = graph,
 ): DashboardLoop {
-  const schedule = classifyLoopSchedule({ loop, runs: graph.runs, now: Date.now() })
+  const schedule = classifyLoopSchedule({ loop, runs: graph.runs, usage: graph.budgetUsage, now: Date.now() })
   return {
     id: loop.id,
     kind: loop.kind,

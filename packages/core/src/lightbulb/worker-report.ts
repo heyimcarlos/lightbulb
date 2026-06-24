@@ -3,9 +3,11 @@ import { Effect, Schema } from "effect"
 import type { Database } from "../database/database"
 import type { Lightbulb } from "../lightbulb"
 import { registerArtifactInDb } from "./artifact-registration"
+import { recordBudgetUsageInDb, type BudgetUsageRecordResult } from "./budget-ledger"
 import { openReviewGateInDb, type ReviewGateHandle } from "./review-gate"
 import {
   LightbulbEventTable,
+  LightbulbLoopTable,
   LightbulbRunTable,
   LightbulbTaskPacketTable,
   LightbulbWorkerLaunchAttemptTable,
@@ -81,13 +83,18 @@ export type WorkerReportIngestionResult = {
   readonly taskPacketID: Lightbulb.TaskPacketID
   readonly artifactHandles: Lightbulb.ArtifactHandle[]
   readonly reviewGate: ReviewGateHandle | null
+  readonly budgetUsage: BudgetUsageRecordResult | null
   readonly eventID: Lightbulb.EventID
 }
 
 export function ingestWorkerReportInDb(
   db: Database.Interface["db"],
   input: IngestWorkerReportInput,
-  ids: { readonly event: () => Lightbulb.EventID; readonly gate: () => Lightbulb.GateID },
+  ids: {
+    readonly event: () => Lightbulb.EventID
+    readonly gate: () => Lightbulb.GateID
+    readonly usage: () => Lightbulb.BudgetUsageID
+  },
 ): Effect.Effect<WorkerReportIngestionResult, WorkerReportRejected> {
   return Effect.gen(function* () {
     const rejected = validateWorkerReportInput(input)
@@ -120,6 +127,34 @@ export function ingestWorkerReportInDb(
     )
     const reportArtifact = artifactHandles.find((artifact) => artifact.type === "report" || artifact.type === "run_report")
     if (!reportArtifact) return yield* Effect.fail(new WorkerReportRejected({ reason: "worker report artifact is required" }))
+    const budgetUsage = input.usage
+      ? yield* recordBudgetUsageInDb(
+          db,
+          {
+            accountID: input.accountID,
+            goalID: target.loop.goal_id,
+            loopID: target.loop.id,
+            runID: input.runID,
+            workerID: input.workerID,
+            source: {
+              kind: "worker_report",
+              artifactHandle: {
+                id: reportArtifact.id,
+                uri: reportArtifact.uri,
+                summary: reportArtifact.summary,
+              },
+              idempotencyKey: ["worker-report", input.runID, input.workerID, input.taskPacketID, reportArtifact.uri].join(":"),
+            },
+            costUnits: input.usage.costUsd,
+            tokenUnits: input.usage.totalTokens,
+            contextUnits: input.usage.contextTokens,
+            approvalCount: 0,
+            usageAt: input.now,
+            now: input.now,
+          },
+          { usage: ids.usage },
+        ).pipe(Effect.mapError((error) => new WorkerReportRejected({ reason: error.reason })))
+      : null
 
     yield* db
       .transaction((tx) =>
@@ -231,6 +266,7 @@ export function ingestWorkerReportInDb(
       taskPacketID: input.taskPacketID,
       artifactHandles,
       reviewGate,
+      budgetUsage,
       eventID,
     }
   })
@@ -286,6 +322,14 @@ function resolveReportTarget(db: Database.Interface["db"], input: IngestWorkerRe
     if (taskPacket.worker_id !== worker.id)
       return yield* Effect.fail(new WorkerReportRejected({ reason: "worker report task packet does not belong to worker" }))
 
+    const loop = yield* db
+      .select()
+      .from(LightbulbLoopTable)
+      .where(and(eq(LightbulbLoopTable.account_id, input.accountID), eq(LightbulbLoopTable.id, run.loop_id)))
+      .get()
+      .pipe(Effect.orDie)
+    if (!loop) return yield* Effect.fail(new WorkerReportRejected({ reason: "worker report loop was not found" }))
+
     const launchAttempt = yield* db
       .select()
       .from(LightbulbWorkerLaunchAttemptTable)
@@ -299,7 +343,7 @@ function resolveReportTarget(db: Database.Interface["db"], input: IngestWorkerRe
       .get()
       .pipe(Effect.orDie)
 
-    return { run, worker, taskPacket, launchAttempt }
+    return { run, loop, worker, taskPacket, launchAttempt }
   })
 }
 
