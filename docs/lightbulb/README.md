@@ -154,6 +154,10 @@ and exits. It uses `OPENCODE_DESKTOP_QA=1`, an in-memory database, a temporary u
 `OPENCODE_DESKTOP_REMOTE_DEBUGGING_PORT=off` so it can run next to a normal desktop dev session without stealing the
 default single-instance lock or DevTools port.
 
+Use `OPENCODE_DESKTOP_QA_ROUTE=/lightbulb/pr-review` to capture the Lightbulb route monitor. The harness waits for the
+route's own `data-page` marker and writes `lightbulb-pr-review.png` plus `lightbulb-pr-review.json`. For new visual
+routes, use a stable `data-page` marker that matches the route slug, or set `OPENCODE_DESKTOP_QA_SELECTOR` explicitly.
+
 ## Scheduler Supervisor Passes
 
 The recurring scheduler supervisor is the account-level controller above loop admission. A supervisor pass reads loop
