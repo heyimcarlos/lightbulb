@@ -29,6 +29,7 @@ export type {
   ContextBundleWorkItemSummary,
 } from "./lightbulb/context-bundle"
 export * from "./lightbulb/loop-profile"
+export * from "./lightbulb/loop-starter"
 export * from "./lightbulb/loop-runner-tick"
 export * from "./lightbulb/operations-snapshot"
 export * from "./lightbulb/discovery-inbox"
@@ -168,6 +169,11 @@ import {
   type LoopProfileBootstrapSummary,
   type LoopProfileCompactSummary,
 } from "./lightbulb/loop-profile"
+import {
+  bootstrapLoopStarters,
+  type LoopStarterBootstrapServiceInput,
+  type LoopStarterBootstrapSummary,
+} from "./lightbulb/loop-starter"
 import {
   runAccountLoopTickInDb,
   type AccountLoopRunnerTickResult,
@@ -1034,6 +1040,7 @@ export interface Interface {
   readonly readGoal: (goalID: GoalID) => Effect.Effect<GoalLifecycle | undefined>
   readonly updateGoalStatus: (input: UpdateGoalStatusInput) => Effect.Effect<GoalLifecycle>
   readonly bootstrapLoopProfiles: (input: LoopProfileBootstrapServiceInput) => Effect.Effect<LoopProfileBootstrapSummary>
+  readonly bootstrapLoopStarters: (input: LoopStarterBootstrapServiceInput) => Effect.Effect<LoopStarterBootstrapSummary>
   readonly admitLoopRun: (input: LoopRunAdmissionServiceInput) => Effect.Effect<LoopRunAdmissionResult>
   readonly superviseScheduledLoops: (input: SchedulerSupervisorServiceInput) => Effect.Effect<SchedulerSupervisorResult>
   readonly admitScheduledLoopRuns: (input: LoopSchedulerTickServiceInput) => Effect.Effect<LoopSchedulerTickResult>
@@ -1158,6 +1165,13 @@ export const layer = Layer.effect(
       bootstrapLoopProfiles: Effect.fn("Lightbulb.bootstrapLoopProfiles")(function* (input) {
         return yield* bootstrapLoopProfiles({
           ...input,
+          storage: databaseLoopProfileStorage(db, { event: EventID.create }),
+        })
+      }),
+      bootstrapLoopStarters: Effect.fn("Lightbulb.bootstrapLoopStarters")(function* (input) {
+        return yield* bootstrapLoopStarters({
+          ...input,
+          now: input.now ?? Date.now(),
           storage: databaseLoopProfileStorage(db, { event: EventID.create }),
         })
       }),

@@ -18,7 +18,18 @@ type ExportArgs = DashboardArgs & {
 
 type ReadinessArgs = DashboardArgs
 
+type LoopStartersArgs = {
+  readonly account?: string
+  readonly goal?: string
+  readonly seed?: boolean
+  readonly bootstrap?: boolean
+  readonly promote?: boolean
+  readonly starter?: readonly string[]
+  readonly format: "text" | "json"
+}
+
 const decodeAccountID = Schema.decodeUnknownOption(Lightbulb.AccountID)
+const decodeGoalID = Schema.decodeUnknownOption(Lightbulb.GoalID)
 
 export const LightbulbDashboardCommand = effectCmd({
   command: "dashboard",
@@ -202,6 +213,94 @@ export const LightbulbReadinessAuditCommand = effectCmd({
   }),
 })
 
+export const LightbulbLoopStartersCommand = effectCmd({
+  command: "loop-starters",
+  describe: "list or bootstrap Lightbulb loop profile starters",
+  instance: false,
+  builder: (yargs: Argv) =>
+    yargs
+      .option("account", {
+        describe: "Lightbulb account ID to bootstrap into",
+        type: "string",
+      })
+      .option("goal", {
+        describe: "Lightbulb goal ID to bootstrap into",
+        type: "string",
+      })
+      .option("seed", {
+        describe: "seed a tracer-bullet graph before bootstrapping starters",
+        type: "boolean",
+      })
+      .option("bootstrap", {
+        describe: "create or adopt starter profiles for the selected goal",
+        type: "boolean",
+      })
+      .option("promote", {
+        describe: "enable starter schedules immediately instead of report-only defaults",
+        type: "boolean",
+      })
+      .option("starter", {
+        describe: "specific starter ID to bootstrap; can be passed more than once",
+        type: "string",
+        array: true,
+      })
+      .option("format", {
+        describe: "output format",
+        choices: ["text", "json"] as const,
+        default: "text" as const,
+      }),
+  handler: Effect.fn("Cli.lightbulb.loopStarters")(function* (args: LoopStartersArgs) {
+    return yield* Effect.gen(function* () {
+      if (!args.bootstrap) {
+        if (args.format === "json") {
+          console.log(JSON.stringify(Lightbulb.standardLoopStarters, null, 2))
+          return
+        }
+        console.log(formatLightbulbLoopStarters(Lightbulb.standardLoopStarters))
+        return
+      }
+      if (args.seed && (args.account || args.goal)) return yield* fail("Use either --seed or --account/--goal, not both")
+
+      const starterIDs = parseStarterIDs(args.starter)
+      const invalidStarterIDs = args.starter?.filter((starterID) => !isLoopStarterID(starterID)) ?? []
+      if (invalidStarterIDs.length > 0) {
+        return yield* fail(`Unknown Lightbulb starter ID: ${invalidStarterIDs.join(", ")}`)
+      }
+
+      const lightbulb = yield* Lightbulb.Service
+      const seeded = args.seed ? yield* lightbulb.seedTracerBullet() : undefined
+      const decodedAccountID =
+        args.account === undefined ? undefined : Option.getOrUndefined(decodeAccountID(args.account))
+      if (args.account !== undefined && decodedAccountID === undefined) {
+        return yield* fail(`Invalid Lightbulb account ID: ${args.account}`)
+      }
+      const decodedGoalID = args.goal === undefined ? undefined : Option.getOrUndefined(decodeGoalID(args.goal))
+      if (args.goal !== undefined && decodedGoalID === undefined) {
+        return yield* fail(`Invalid Lightbulb goal ID: ${args.goal}`)
+      }
+
+      const accountID = seeded?.accountID ?? decodedAccountID
+      const goalID = seeded?.goalID ?? decodedGoalID
+      if (accountID === undefined || goalID === undefined) {
+        return yield* fail("Pass --bootstrap with --seed or --account <lbacc_...> --goal <lbgoal_...>")
+      }
+
+      const summary = yield* lightbulb.bootstrapLoopStarters({
+        accountID,
+        goalID,
+        starterIDs,
+        promote: args.promote === true,
+      })
+
+      if (args.format === "json") {
+        console.log(JSON.stringify(summary, null, 2))
+        return
+      }
+      console.log(formatLightbulbLoopStarterBootstrap(summary))
+    }).pipe(Effect.provide(Lightbulb.defaultLayer))
+  }),
+})
+
 export const LightbulbCommand = effectCmd({
   command: "lightbulb",
   describe: "Lightbulb account orchestration tools",
@@ -211,6 +310,7 @@ export const LightbulbCommand = effectCmd({
       .command(LightbulbDashboardCommand)
       .command(LightbulbOperatorExportCommand)
       .command(LightbulbReadinessAuditCommand)
+      .command(LightbulbLoopStartersCommand)
       .demandCommand(),
   handler: Effect.fn("Cli.lightbulb")(function* () {}),
 })
@@ -262,6 +362,43 @@ export function formatLightbulbReadinessAudit(readiness: Lightbulb.LoopReadiness
   ].join(EOL)
 }
 
+export function formatLightbulbLoopStarters(starters: readonly Lightbulb.LoopStarterDefinition[]) {
+  return [
+    "Lightbulb Loop Starters",
+    ...(starters.length === 0
+      ? ["- none"]
+      : starters.map(
+          (starter) =>
+            `- ${starter.starterID} ${starter.title} ${starter.profile.kind} ` +
+            `[${starter.profile.registry?.readinessMode ?? "unknown"}] ${starter.summary}`,
+        )),
+  ].join(EOL)
+}
+
+export function formatLightbulbLoopStarterBootstrap(summary: Lightbulb.LoopStarterBootstrapSummary) {
+  return [
+    "Lightbulb Loop Starter Bootstrap",
+    `Account: ${summary.accountID}`,
+    `Goal: ${summary.goalID}`,
+    `Totals: created=${summary.created.length} adopted=${summary.adopted.length} skipped=${summary.skipped.length} ` +
+      `held=${summary.held.length} invalid=${summary.invalid.length}`,
+    ...(summary.unknownStarterIDs.length > 0 ? [`Unknown: ${summary.unknownStarterIDs.join(", ")}`] : []),
+    "",
+    "Starters",
+    ...(summary.starters.length === 0 ? ["- none"] : summary.starters.flatMap(formatLoopStarterHandle)),
+  ].join(EOL)
+}
+
+function formatLoopStarterHandle(starter: Lightbulb.LoopStarterHandle) {
+  return [
+    `- ${starter.starterID} ${starter.title} [${starter.outcome}] loop=${starter.loopID ?? "none"} ` +
+      `promoted=${starter.promoted ? "yes" : "no"} reason=${starter.reason ?? "none"}`,
+    `  route: ${starter.routeSeed.destination}`,
+    `  first wake: ${starter.firstWakePrompt}`,
+    `  run-log: ${starter.runLogPolicy.mode} handles=${starter.runLogPolicy.requiredHandles.join(",") || "none"}`,
+  ]
+}
+
 export function formatLightbulbOperatorExport(
   operatorExport: Lightbulb.OperatorExport,
   section: Lightbulb.OperatorExportSection = "all",
@@ -287,6 +424,14 @@ function operatorExportSection(operatorExport: Lightbulb.OperatorExport, section
   if (section === "budget") return operatorExport.budget
   if (section === "run-log") return operatorExport.runLog
   return operatorExport
+}
+
+function parseStarterIDs(values: readonly string[] | undefined) {
+  return values?.filter(isLoopStarterID)
+}
+
+function isLoopStarterID(value: string): value is Lightbulb.LoopStarterID {
+  return Lightbulb.standardLoopStarters.some((starter) => starter.starterID === value)
 }
 
 function formatOperatorState(state: Lightbulb.OperatorStateExport) {

@@ -45,6 +45,31 @@ summaries or task candidates. Implementation, debug, and review/integration loop
 after the loop handle is enabled, due, and inside budget. Parent/operator summaries expose created, adopted, skipped,
 held, and invalid profile handles without raw prompt or worker transcript content.
 
+## Loop Profile Starters
+
+Loop starters are reusable stable-v0 seeds for common Lightbulb loops. They are the product equivalent of a local
+`loop-init`: each starter defines a managed loop profile, route seed, stop instructions, budget envelope, compact
+run-log policy, human gates, readiness mode, and first wake prompt.
+
+The initial starter set is System Discovery, PR Review Babysitter, Issue Triage, Daily Status, Failure Debug, and Trace
+Eval. Starters default to report-only: their schedule is disabled, their readiness mode is human-gated, and their route
+seed is stored in managed loop profile metadata for operator review. This keeps the profile/state/budget/run-log contract
+durable without admitting unattended work until an operator explicitly promotes the starter.
+
+Use the CLI to inspect or bootstrap starters:
+
+```bash
+lightbulb loop-starters
+lightbulb loop-starters --format json
+lightbulb loop-starters --bootstrap --seed
+lightbulb loop-starters --bootstrap --account <lbacc_...> --goal <lbgoal_...>
+lightbulb loop-starters --bootstrap --account <lbacc_...> --goal <lbgoal_...> --starter daily-status --promote
+```
+
+Starters differ from schedules and route edits. A starter is the reusable template for profile metadata, route seed,
+first wake prompt, and run-log policy. A schedule is only the loop wake policy stored under `loop_profile.schedule`.
+Route edits steer one concrete goal route after it exists; they do not redefine the starter template.
+
 ## Traceable Loop Run Admission
 
 Scheduler wakeups must admit due loops into the durable run ledger before any model, worker, or external connector runs.
