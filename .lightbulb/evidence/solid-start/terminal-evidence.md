@@ -2,6 +2,7 @@
 
 Issue: https://github.com/heyimcarlos/lightbulb/issues/116
 Related CI blocker: https://github.com/heyimcarlos/lightbulb/issues/118
+Second CI blocker: https://github.com/heyimcarlos/lightbulb/issues/119
 
 ## Dependency Selection
 
@@ -29,6 +30,8 @@ Related CI blocker: https://github.com/heyimcarlos/lightbulb/issues/118
 - PR #117 unit windows failed twice in `opencode acp lifecycle subprocess > stdin EOF exits cleanly`.
 - Failing runs timed out at the test's explicit 5s `Effect.timeout`, with observed durations of 5266ms and 5546ms.
 - The ACP command already explicitly releases its internal server on stdin EOF; the follow-up keeps the exit-code assertion and gives Windows process teardown a 15s deadline.
+- After the ACP fix, PR #117 unit windows advanced further and then failed in `test/session/prompt.test.ts`: `loop waits while shell runs and starts after shell exits`.
+- That test already used a Windows-specific 30000ms timeout; the follow-up keeps Linux at 3000ms and gives Windows 60000ms for the same behavior assertion.
 
 ## Visual Evidence
 
