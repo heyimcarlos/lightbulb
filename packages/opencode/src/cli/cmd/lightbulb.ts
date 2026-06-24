@@ -16,6 +16,8 @@ type ExportArgs = DashboardArgs & {
   readonly section: Lightbulb.OperatorExportSection
 }
 
+type ReadinessArgs = DashboardArgs
+
 const decodeAccountID = Schema.decodeUnknownOption(Lightbulb.AccountID)
 
 export const LightbulbDashboardCommand = effectCmd({
@@ -141,12 +143,75 @@ export const LightbulbOperatorExportCommand = effectCmd({
   }),
 })
 
+export const LightbulbReadinessAuditCommand = effectCmd({
+  command: "readiness-audit",
+  describe: "show native Lightbulb loop readiness",
+  instance: false,
+  builder: (yargs: Argv) =>
+    yargs
+      .option("account", {
+        describe: "Lightbulb account ID to audit",
+        type: "string",
+      })
+      .option("seed", {
+        describe: "seed a tracer-bullet graph before auditing it",
+        type: "boolean",
+      })
+      .option("account-name", {
+        describe: "account name to use with --seed",
+        type: "string",
+      })
+      .option("artifact-uri", {
+        describe: "artifact URI to use with --seed",
+        type: "string",
+      })
+      .option("format", {
+        describe: "output format",
+        choices: ["text", "json"] as const,
+        default: "text" as const,
+      }),
+  handler: Effect.fn("Cli.lightbulb.readinessAudit")(function* (args: ReadinessArgs) {
+    return yield* Effect.gen(function* () {
+      if (args.seed && args.account) return yield* fail("Use either --seed or --account, not both")
+
+      const lightbulb = yield* Lightbulb.Service
+      const seeded = args.seed
+        ? yield* lightbulb.seedTracerBullet({
+            accountName: args.accountName,
+            artifactUri: args.artifactUri,
+          })
+        : undefined
+      const decodedAccountID =
+        args.account === undefined ? undefined : Option.getOrUndefined(decodeAccountID(args.account))
+      if (args.account !== undefined && decodedAccountID === undefined) {
+        return yield* fail(`Invalid Lightbulb account ID: ${args.account}`)
+      }
+
+      const accountID = seeded?.accountID ?? decodedAccountID
+      if (accountID === undefined) return yield* fail("Pass --seed to create a tracer graph or --account <lbacc_...>")
+
+      const readiness = yield* lightbulb.readLoopReadiness({ accountID })
+      if (!readiness) return yield* fail(`Lightbulb account not found: ${accountID}`)
+
+      if (args.format === "json") {
+        console.log(JSON.stringify(readiness, null, 2))
+        return
+      }
+      console.log(formatLightbulbReadinessAudit(readiness))
+    }).pipe(Effect.provide(Lightbulb.defaultLayer))
+  }),
+})
+
 export const LightbulbCommand = effectCmd({
   command: "lightbulb",
   describe: "Lightbulb account orchestration tools",
   instance: false,
   builder: (yargs: Argv) =>
-    yargs.command(LightbulbDashboardCommand).command(LightbulbOperatorExportCommand).demandCommand(),
+    yargs
+      .command(LightbulbDashboardCommand)
+      .command(LightbulbOperatorExportCommand)
+      .command(LightbulbReadinessAuditCommand)
+      .demandCommand(),
   handler: Effect.fn("Cli.lightbulb")(function* () {}),
 })
 
@@ -158,6 +223,7 @@ export function formatLightbulbDashboard(dashboard: Lightbulb.Dashboard) {
     "",
     "Work",
     ...(dashboard.goals.length === 0 ? ["- none"] : dashboard.goals.flatMap(formatGoal)),
+    ...formatDashboardReadiness(dashboard),
     ...formatOperations(dashboard),
     "",
     "Queue",
@@ -173,6 +239,26 @@ export function formatLightbulbDashboard(dashboard: Lightbulb.Dashboard) {
     `- lightbulb operator-export --account ${dashboard.account.id} --section state`,
     `- lightbulb operator-export --account ${dashboard.account.id} --section budget`,
     `- lightbulb operator-export --account ${dashboard.account.id} --section run-log`,
+    `- lightbulb readiness-audit --account ${dashboard.account.id}`,
+  ].join(EOL)
+}
+
+export function formatLightbulbReadinessAudit(readiness: Lightbulb.LoopReadinessAudit) {
+  return [
+    "Lightbulb Readiness Audit",
+    `Account: ${readiness.account.name} [${readiness.account.status}] ${readiness.account.id}`,
+    `Generated: ${readiness.generatedAt}`,
+    `Level: ${readiness.level} score=${readiness.score}`,
+    readiness.summary,
+    "",
+    "Profiles",
+    ...(readiness.profiles.length === 0
+      ? ["- none"]
+      : readiness.profiles.map(
+          (profile) =>
+            `- ${profile.profileID ?? "unprofiled"} ${profile.kind} ${profile.loopID} [${profile.level}] ` +
+            `score=${profile.score} missing=${formatMissingReasons(profile.missingReasons)}`,
+        )),
   ].join(EOL)
 }
 
@@ -272,6 +358,20 @@ function formatGoal(goal: Lightbulb.DashboardGoal) {
     `- ${goal.title} [${goal.status}] ${goal.id}`,
     `  ${goal.summary}`,
     ...(goal.loops.length === 0 ? ["  loops: none"] : goal.loops.flatMap(formatLoop)),
+  ]
+}
+
+function formatDashboardReadiness(dashboard: Lightbulb.Dashboard) {
+  if (!dashboard.readiness) return []
+  return [
+    "",
+    "Readiness",
+    `  account [${dashboard.readiness.level}] score=${dashboard.readiness.score} - ${dashboard.readiness.summary}`,
+    ...dashboard.readiness.profiles.map(
+      (profile) =>
+        `  - profile ${profile.profileID ?? "unprofiled"} loop=${profile.loopID} ` +
+        `[${profile.level}] score=${profile.score} missing=${formatMissingReasons(profile.missingReasons)}`,
+    ),
   ]
 }
 
@@ -465,6 +565,11 @@ function summarizeGates(gates: readonly Lightbulb.DashboardGate[]) {
 
 function formatGate(gate: Lightbulb.DashboardGate) {
   return `${gate.id} ${gate.kind} [${gate.status}] artifact=${gate.artifactID ?? "none"}`
+}
+
+function formatMissingReasons(reasons: readonly string[]) {
+  if (reasons.length === 0) return "none"
+  return reasons.join(",")
 }
 
 function formatOperationSource(source: Record<string, unknown>) {
