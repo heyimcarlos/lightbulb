@@ -46,6 +46,7 @@ export * from "./lightbulb/scheduler-tick"
 export * from "./lightbulb/worker-launch"
 export * from "./lightbulb/worker-report"
 export * from "./lightbulb/worker-runtime"
+export * from "./lightbulb/budget-ledger"
 
 import { and, asc, desc, eq, or } from "drizzle-orm"
 import { Context, Effect, Layer, Schema } from "effect"
@@ -126,6 +127,7 @@ import {
   LightbulbAccountTable,
   LightbulbArtifactEdgeTable,
   LightbulbArtifactTable,
+  LightbulbBudgetUsageTable,
   LightbulbEventTable,
   LightbulbDiscoveryCandidateTable,
   LightbulbGateTable,
@@ -193,6 +195,14 @@ import {
   type IngestWorkerReportServiceInput,
   type WorkerReportIngestionResult,
 } from "./lightbulb/worker-report"
+import {
+  BudgetUsageRejected,
+  readLoopBudgetInDb,
+  recordBudgetUsageInDb,
+  type BudgetUsageRecordResult,
+  type BudgetUsageServiceInput,
+  type LoopBudgetReadModel,
+} from "./lightbulb/budget-ledger"
 
 const prefixedID = <const Prefix extends string>(prefix: Prefix, brand: string) =>
   Schema.String.check(Schema.isStartsWith(`${prefix}_`)).pipe(
@@ -233,6 +243,8 @@ export const OperationsSnapshotID = prefixedID("lbops", "Lightbulb.OperationsSna
 export type OperationsSnapshotID = typeof OperationsSnapshotID.Type
 export const IssueMutationID = prefixedID("lbim", "Lightbulb.IssueMutationID")
 export type IssueMutationID = typeof IssueMutationID.Type
+export const BudgetUsageID = prefixedID("lbusage", "Lightbulb.BudgetUsageID")
+export type BudgetUsageID = typeof BudgetUsageID.Type
 
 export type AccountStatus = "active" | "paused" | "archived"
 export type GoalStatus = "active" | "held" | "completed" | "cancelled" | "stopped"
@@ -252,6 +264,7 @@ export type WorkerLaunchHoldReason =
   | "budget_held"
   | "context_policy_held"
   | "ownership_collision"
+export type BudgetUsageSourceKind = "worker_report" | "run_usage" | "local_report"
 export type ArtifactType =
   | "report"
   | "plan"
@@ -821,6 +834,7 @@ export type AccountGraph = {
   readonly issueMutationOutbox: (typeof LightbulbIssueMutationOutboxTable.$inferSelect)[]
   readonly prReviewRoutes: (typeof LightbulbPRReviewRouteTable.$inferSelect)[]
   readonly prReviewRouteWakes: (typeof LightbulbPRReviewRouteWakeTable.$inferSelect)[]
+  readonly budgetUsage: (typeof LightbulbBudgetUsageTable.$inferSelect)[]
   readonly artifacts: (typeof LightbulbArtifactTable.$inferSelect)[]
   readonly artifactEdges: (typeof LightbulbArtifactEdgeTable.$inferSelect)[]
   readonly gates: (typeof LightbulbGateTable.$inferSelect)[]
@@ -1023,6 +1037,14 @@ export interface Interface {
   readonly ingestWorkerReport: (
     input: IngestWorkerReportServiceInput,
   ) => Effect.Effect<WorkerReportIngestionResult, WorkerReportRejected>
+  readonly recordBudgetUsage: (
+    input: BudgetUsageServiceInput,
+  ) => Effect.Effect<BudgetUsageRecordResult, BudgetUsageRejected>
+  readonly readLoopBudget: (input: {
+    readonly accountID: AccountID
+    readonly loopID: LoopID
+    readonly now?: number
+  }) => Effect.Effect<LoopBudgetReadModel | undefined>
   readonly readGoalRunTree: (goalID: GoalID) => Effect.Effect<GoalRunTree | undefined>
   readonly seedTracerBullet: (input?: {
     readonly accountName?: string
@@ -1159,8 +1181,18 @@ export const layer = Layer.effect(
         return yield* ingestWorkerReportInDb(
           db,
           { ...input, now: input.now ?? Date.now() },
-          { event: EventID.create, gate: GateID.create },
+          { event: EventID.create, gate: GateID.create, usage: BudgetUsageID.create },
         )
+      }),
+      recordBudgetUsage: Effect.fn("Lightbulb.recordBudgetUsage")(function* (input) {
+        return yield* recordBudgetUsageInDb(
+          db,
+          { ...input, now: input.now ?? Date.now() },
+          { usage: BudgetUsageID.create },
+        )
+      }),
+      readLoopBudget: Effect.fn("Lightbulb.readLoopBudget")(function* (input) {
+        return yield* readLoopBudgetInDb(db, { ...input, now: input.now ?? Date.now() })
       }),
       readGoalRunTree: Effect.fn("Lightbulb.readGoalRunTree")(function* (goalID) {
         const goal = yield* db
@@ -1948,6 +1980,13 @@ function readAccountGraphFromDb(
         .from(LightbulbPRReviewRouteWakeTable)
         .where(eq(LightbulbPRReviewRouteWakeTable.account_id, accountID))
         .orderBy(asc(LightbulbPRReviewRouteWakeTable.time_created))
+        .all()
+        .pipe(Effect.orDie),
+      budgetUsage: yield* db
+        .select()
+        .from(LightbulbBudgetUsageTable)
+        .where(eq(LightbulbBudgetUsageTable.account_id, accountID))
+        .orderBy(asc(LightbulbBudgetUsageTable.usage_at))
         .all()
         .pipe(Effect.orDie),
       artifacts: yield* db

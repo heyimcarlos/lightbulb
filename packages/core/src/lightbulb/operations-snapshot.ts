@@ -142,7 +142,9 @@ export function buildOperationsSnapshot(
     readonly metadata?: Record<string, unknown>
   },
 ): OperationsSnapshotDraft {
-  const schedules = graph.loops.map((loop) => classifyLoopSchedule({ loop, runs: graph.runs, now: input.now }))
+  const schedules = graph.loops.map((loop) =>
+    classifyLoopSchedule({ loop, runs: graph.runs, usage: graph.budgetUsage, now: input.now }),
+  )
   const latestTick = schedulerTickEvents[0] ?? null
   const latestOutcomes = eventOutcomes(latestTick)
   const handles = {

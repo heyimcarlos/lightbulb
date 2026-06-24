@@ -2,27 +2,33 @@ import { asc, eq } from "drizzle-orm"
 import { Effect } from "effect"
 import type { Database } from "../database/database"
 import type { Lightbulb } from "../lightbulb"
+import { rollupLoopBudget, type LoopBudgetReadModel, type LoopBudgetStoredUsage } from "./budget-ledger"
 import {
   readLoopProfileMetadata,
-  type LoopProfileBudgetEnvelope,
   type LoopProfileScheduleEnvelope,
 } from "./loop-profile"
-import { LightbulbLoopTable, LightbulbRunTable } from "./sql"
-
-const DAY_MS = 24 * 60 * 60 * 1000
+import { LightbulbBudgetUsageTable, LightbulbLoopTable, LightbulbRunTable } from "./sql"
 
 export type LoopScheduleClassification = "due" | "not_due" | "disabled" | "budget_held"
 
 export type LoopScheduleBudgetState = {
-  readonly status: "open" | "held"
+  readonly status: "open" | "held" | "unknown"
   readonly maxRunsPerDay: number
   readonly maxTokens: number
   readonly maxCostUsd: number
   readonly maxContextTokens: number
+  readonly maxApprovals?: number | null
   readonly holdReason: string | null
   readonly runsStartedToday: number
-  readonly remainingRunsToday: number
+  readonly remainingRunsToday: number | null
   readonly resetsAt: number
+  readonly state?: LoopBudgetReadModel["state"]
+  readonly exhausted?: boolean
+  readonly exhaustedReasons?: LoopBudgetReadModel["exhaustedReasons"]
+  readonly unknownReasons?: LoopBudgetReadModel["unknownReasons"]
+  readonly used?: LoopBudgetReadModel["used"]
+  readonly remaining?: LoopBudgetReadModel["remaining"]
+  readonly limits?: LoopBudgetReadModel["limits"]
 }
 
 export type LoopScheduleReadModel = {
@@ -49,6 +55,7 @@ export type LoopScheduleStoredRun = Pick<typeof LightbulbRunTable.$inferSelect, 
 export type LoopScheduleClassifierInput = {
   readonly loop: LoopScheduleStoredLoop
   readonly runs: readonly LoopScheduleStoredRun[]
+  readonly usage?: readonly LoopBudgetStoredUsage[]
   readonly now: number
 }
 
@@ -66,7 +73,7 @@ export function classifyLoopSchedule(input: LoopScheduleClassifierInput): LoopSc
         nextDueAt: profile.schedule.nextDueAt,
       }
     : null
-  const budget = profile ? toBudgetState(profile.budget, input) : null
+  const budget = profile ? toBudgetState(rollupLoopBudget({ ...input, usage: input.usage ?? [] })) : null
 
   if (!profile || !schedule || !budget) {
     return toReadModel(input, profile?.profileID ?? null, schedule, budget, "not_due", "schedule_not_configured")
@@ -111,37 +118,35 @@ export function readLoopSchedulesInDb(db: Database.Interface["db"], input: ReadL
       .orderBy(asc(LightbulbRunTable.started_at))
       .all()
       .pipe(Effect.orDie)
+    const usage = yield* db
+      .select({
+        loop_id: LightbulbBudgetUsageTable.loop_id,
+        cost_units: LightbulbBudgetUsageTable.cost_units,
+        token_units: LightbulbBudgetUsageTable.token_units,
+        context_units: LightbulbBudgetUsageTable.context_units,
+        approval_count: LightbulbBudgetUsageTable.approval_count,
+        usage_at: LightbulbBudgetUsageTable.usage_at,
+      })
+      .from(LightbulbBudgetUsageTable)
+      .where(eq(LightbulbBudgetUsageTable.account_id, input.accountID))
+      .orderBy(asc(LightbulbBudgetUsageTable.usage_at))
+      .all()
+      .pipe(Effect.orDie)
 
-    return loops.map((loop) => classifyLoopSchedule({ loop, runs, now: input.now }))
+    return loops.map((loop) => classifyLoopSchedule({ loop, runs, usage, now: input.now }))
   })
 }
 
-function toBudgetState(
-  budget: LoopProfileBudgetEnvelope,
-  input: LoopScheduleClassifierInput,
-): LoopScheduleBudgetState {
-  const date = new Date(input.now)
-  const dayStart = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
-  const runsStartedToday = input.runs.filter(
-    (run) => run.loop_id === input.loop.id && run.started_at >= dayStart && run.started_at <= input.now,
-  ).length
-  const holdReason =
-    budget.status === "held"
-      ? budget.holdReason ?? "budget_held"
-      : runsStartedToday >= budget.maxRunsPerDay
-        ? "daily_run_budget_exhausted"
-        : null
-
+function toBudgetState(budget: LoopBudgetReadModel): LoopScheduleBudgetState {
   return {
-    status: holdReason ? "held" : "open",
-    maxRunsPerDay: budget.maxRunsPerDay,
-    maxTokens: budget.maxTokens,
-    maxCostUsd: budget.maxCostUsd,
-    maxContextTokens: budget.maxContextTokens,
-    holdReason,
-    runsStartedToday,
-    remainingRunsToday: Math.max(0, budget.maxRunsPerDay - runsStartedToday),
-    resetsAt: dayStart + DAY_MS,
+    ...budget,
+    maxRunsPerDay: budget.limits?.maxRunsPerDay ?? 0,
+    maxTokens: budget.limits?.maxTokenUnits ?? 0,
+    maxCostUsd: budget.limits?.maxCostUnits ?? 0,
+    maxContextTokens: budget.limits?.maxContextUnits ?? 0,
+    maxApprovals: budget.limits?.maxApprovals ?? null,
+    runsStartedToday: budget.used.runsStartedToday,
+    remainingRunsToday: budget.remaining.runsToday,
   }
 }
 
