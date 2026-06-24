@@ -42,6 +42,35 @@ function emptyDiscoveryInbox(): Lightbulb.DiscoveryCandidateInbox {
   }
 }
 
+function emptyHumanInbox(accountID: Lightbulb.AccountID = Lightbulb.AccountID.make("lbacc_demo")): Lightbulb.HumanInboxDigest {
+  return {
+    accountID,
+    generatedAt: Date.UTC(2026, 0, 1),
+    actionRequired: [],
+    suppressed: [],
+    byType: {
+      approval_needed: [],
+      needs_info: [],
+      conflict: [],
+      stale_worker: [],
+      budget_kill_switch: [],
+      max_attempts: [],
+      reroute_proposal: [],
+    },
+    counts: {
+      actionRequired: 0,
+      suppressed: 0,
+      approvalNeeded: 0,
+      needsInfo: 0,
+      conflict: 0,
+      staleWorker: 0,
+      budgetKillSwitch: 0,
+      maxAttempts: 0,
+      rerouteProposal: 0,
+    },
+  }
+}
+
 describe("lightbulb CLI entrypoint", () => {
   test("runs the direct package binary wrapper for the primary command path", async () => {
     const lightbulb = await runPackageBin(["dashboard", "--help"])
@@ -429,6 +458,7 @@ describe("lightbulb dashboard display", () => {
             escalated: [],
             recent: [],
           },
+          humanInbox: emptyHumanInbox(),
         },
         operations: {
           schedulerTicks: [],
@@ -520,6 +550,7 @@ Operator Exports
             escalated: [],
             recent: [],
           },
+          humanInbox: emptyHumanInbox(),
         },
         operations: {
           snapshot: null,
@@ -606,6 +637,7 @@ Operator Exports
             escalated: [],
             recent: [],
           },
+          humanInbox: emptyHumanInbox(Lightbulb.AccountID.make("lbacc_ops")),
         },
         operations: {
           schedulerTicks: [],
@@ -629,6 +661,7 @@ Operator Exports
               dependencies: { released: 1, blocked: 0 },
               artifacts: { reports: 1, recent: 1 },
               launchAttempts: { active: 1, failed: 0, complete: 0, collisionHolds: 1 },
+              humanInbox: { actionRequired: 0, approvalNeeded: 0, needsInfo: 0, conflicts: 0, escalated: 0 },
             },
             handles: {
               selectedLoop: null,
@@ -663,6 +696,7 @@ Operator Exports
               budgetHolds: [],
               dependencyReleases: [],
               recentArtifacts: [],
+              humanActions: [],
             },
             metadata: null,
             timeCreated: Date.UTC(2026, 0, 1),
@@ -682,7 +716,7 @@ Operations
   snapshot lbops_demo [attention_required] key=latest
     1 ready loops, 1 review gates, 1 budget holds, 1 dependency releases.
     nextWake=1767225600000 hash=sha256-demo
-    counts ready=1 activeOwners=1 reviewGates=1 budgetHeld=1 dependencyReleased=1 collisionHolds=1
+    counts ready=1 activeOwners=1 reviewGates=1 budgetHeld=1 dependencyReleased=1 collisionHolds=1 humanActions=0
     owner lbworker_active [running] Implementation worker owns the active run. (branch collision-guards, path group packages/core)
     ready lbpacket_ready task_packet Implement operations snapshot
     review lbgate_review [pending] Parent review pending

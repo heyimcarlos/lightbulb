@@ -547,12 +547,14 @@ function formatOperationsSnapshot(snapshot: Lightbulb.OperationsSnapshot) {
     `    nextWake=${snapshot.nextWakeAt ?? "none"} hash=${snapshot.sourceHash}`,
     `    counts ready=${snapshot.counts.loops.ready} activeOwners=${snapshot.handles.activeOwnership.length} ` +
       `reviewGates=${snapshot.counts.gates.pendingReview} budgetHeld=${snapshot.counts.budget.held} ` +
-      `dependencyReleased=${snapshot.counts.dependencies.released} collisionHolds=${snapshot.counts.launchAttempts.collisionHolds}`,
+      `dependencyReleased=${snapshot.counts.dependencies.released} collisionHolds=${snapshot.counts.launchAttempts.collisionHolds} ` +
+      `humanActions=${snapshot.counts.humanInbox.actionRequired}`,
     ...snapshot.handles.activeOwnership.map(
       (item) => `    owner ${item.id} [${item.status ?? "unknown"}] ${item.summary}${item.reason ? ` (${item.reason})` : ""}`,
     ),
     ...snapshot.handles.readyWork.map((item) => `    ready ${item.id} ${item.kind} ${item.summary}`),
     ...snapshot.handles.reviewGates.map((item) => `    review ${item.id} [${item.status ?? "unknown"}] ${item.summary}`),
+    ...snapshot.handles.humanActions.map((item) => `    human ${item.id} ${item.kind} ${item.summary}`),
   ]
 }
 
@@ -581,7 +583,8 @@ function formatInbox(dashboard: Lightbulb.Dashboard) {
     countDiscoveryCandidates(dashboard.inbox.discoveryCandidates) === 0 &&
     dashboard.inbox.prReviewCandidates.length === 0 &&
     dashboard.inbox.prReviewRoutes.length === 0 &&
-    countPRReviewDigestItems(dashboard.inbox.prReviewRouteDigest) === 0
+    countPRReviewDigestItems(dashboard.inbox.prReviewRouteDigest) === 0 &&
+    countHumanInboxItems(dashboard.inbox.humanInbox) === 0
   ) {
     return ["- empty"]
   }
@@ -594,6 +597,7 @@ function formatInbox(dashboard: Lightbulb.Dashboard) {
     ...dashboard.inbox.prReviewCandidates.map(formatPRReviewCandidate),
     ...dashboard.inbox.prReviewRoutes.map(formatPRReviewRoute),
     ...formatPRReviewRouteDigest(dashboard.inbox.prReviewRouteDigest),
+    ...formatHumanInbox(dashboard.inbox.humanInbox),
   ]
 }
 
@@ -667,6 +671,35 @@ function formatPRReviewDigestItem(kind: "watch" | "escalated" | "recent", item: 
 
 function countPRReviewDigestItems(digest: Lightbulb.PRReviewRouteDigest) {
   return digest.watched.length + digest.escalated.length + digest.recent.length
+}
+
+function formatHumanInbox(inbox: Lightbulb.HumanInboxDigest) {
+  if (countHumanInboxItems(inbox) === 0) return []
+  return [
+    "  Human inbox",
+    ...inbox.actionRequired.map(
+      (item) =>
+        `  - human ${item.type} [${item.priority}] ${item.summary} ` +
+        `reason=${item.reason} action=${item.suggestedDecision} source=${formatHumanInboxSource(item.source)}`,
+    ),
+  ]
+}
+
+function countHumanInboxItems(inbox: Lightbulb.HumanInboxDigest) {
+  return inbox.actionRequired.length
+}
+
+function formatHumanInboxSource(source: Lightbulb.HumanInboxSource) {
+  return (
+    source.issueRef ??
+    source.gateID ??
+    source.routeID ??
+    source.loopID ??
+    source.runID ??
+    source.mutationID ??
+    source.eventID ??
+    "unknown"
+  )
 }
 
 function formatArtifactHandle(artifact: Lightbulb.ArtifactHandle) {

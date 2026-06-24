@@ -159,6 +159,19 @@ exists. The run-log export emits one compact entry per run with profile, duratio
 usage estimates, and report/artifact/gate handles. None of the sections include raw worker transcripts, full issue
 histories, or credentials.
 
+## Human Inbox And Escalation Digest
+
+The human inbox is a durable read model for decisions that should not be hidden inside worker transcripts or cron state.
+Projection reads the account graph and writes one stable inbox item per active human decision: review approvals,
+needs-info discovery candidates, safe-write conflicts, stale workers, budget or kill-switch holds, max-attempt PR review
+routes, reroute proposals, and ownership collisions.
+
+Each inbox item stores a bounded reason, suggested decision, last action, age, priority, and compact source handles for
+the relevant goal, loop, route, run, worker, gate, artifact, issue, mutation, launch attempt, or event. Reprojection is
+idempotent: unchanged decisions do not emit duplicate events, and decisions that disappear from the graph are resolved
+and retained as suppressed history. Operations snapshots, operator exports, the text dashboard, and the desktop stable-v0
+surface consume the digest without raw worker logs, raw issue bodies, credentials, or full transcripts.
+
 ## Loop Readiness Audit
 
 The loop readiness audit is Lightbulb-native. It reads durable account graph state instead of checking for Cobus-style

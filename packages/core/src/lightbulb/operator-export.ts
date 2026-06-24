@@ -185,18 +185,7 @@ function buildStateExport(
       ...schedulerTickEvents.slice(0, 3).map(schedulerTickItem),
     ].slice(0, 12),
     watch: graph.discoveryCandidates.filter((candidate) => candidate.section === "watch").map(candidateItem),
-    humanInbox: [
-      ...graph.discoveryCandidates.filter((candidate) => candidate.section === "needs_human").map(candidateItem),
-      ...graph.gates
-        .filter((gate) => gate.status === "pending" || gate.status === "blocked")
-        .map((gate) => gateItem(gate, "human gate")),
-      ...graph.taskPackets
-        .filter((packet) => packet.status === "ready" || packet.status === "claimed")
-        .map(taskPacketItem),
-      ...graph.issueMutationOutbox
-        .filter((item) => item.status === "ready" || item.status === "held")
-        .map(issueMutationItem),
-    ].slice(0, 12),
+    humanInbox: projectedHumanInboxItems(graph).slice(0, 12),
     recentNoiseIgnored: [
       ...graph.discoveryCandidates.filter((candidate) => candidate.section === "noise").map(candidateItem),
       ...graph.discoveryCandidates.filter((candidate) => candidate.section === "possible_duplicates").map(candidateItem),
@@ -209,6 +198,49 @@ function buildStateExport(
         .reverse()
         .map((run) => runItem(graph, run, "recent run")),
     ].slice(0, 12),
+  }
+}
+
+function projectedHumanInboxItems(graph: Lightbulb.AccountGraph) {
+  const projected = graph.humanInboxItems.filter((item) => item.status === "open").map(humanInboxItem)
+  if (projected.length > 0) return projected
+  return [
+    ...graph.discoveryCandidates.filter((candidate) => candidate.section === "needs_human").map(candidateItem),
+    ...graph.gates
+      .filter((gate) => gate.status === "pending" || gate.status === "blocked")
+      .map((gate) => gateItem(gate, "human gate")),
+    ...graph.taskPackets
+      .filter((packet) => packet.status === "ready" || packet.status === "claimed")
+      .map(taskPacketItem),
+    ...graph.issueMutationOutbox
+      .filter((item) => item.status === "ready" || item.status === "held")
+      .map(issueMutationItem),
+  ]
+}
+
+function humanInboxItem(item: Lightbulb.AccountGraph["humanInboxItems"][number]): OperatorStateItem {
+  return {
+    id: item.id,
+    kind: item.type,
+    status: item.status,
+    title: item.summary,
+    summary: item.reason,
+    url: item.source.issueURL,
+    issueRef: item.source.issueRef,
+    action: item.suggested_decision,
+    handles: compactHandles([
+      item.source.goalID,
+      item.source.loopID,
+      item.source.routeID,
+      item.source.runID,
+      item.source.workerID,
+      item.source.taskPacketID,
+      item.source.gateID,
+      item.source.artifactID,
+      item.source.mutationID,
+      item.source.launchAttemptID,
+      item.source.eventID,
+    ]),
   }
 }
 

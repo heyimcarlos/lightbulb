@@ -33,6 +33,7 @@ export * from "./lightbulb/loop-starter"
 export * from "./lightbulb/loop-runner-tick"
 export * from "./lightbulb/operations-snapshot"
 export * from "./lightbulb/discovery-inbox"
+export * from "./lightbulb/human-inbox"
 export * from "./lightbulb/issue-mutation-apply"
 export * from "./lightbulb/issue-mutation-outbox"
 export * from "./lightbulb/issue-intake"
@@ -81,6 +82,12 @@ import {
   type DiscoveryInboxProjectionInput,
   type DiscoveryInboxProjectionResult,
 } from "./lightbulb/discovery-inbox"
+import {
+  projectHumanInboxInDb,
+  readHumanInboxDigestInDb,
+  type HumanInboxProjectionInput,
+  type HumanInboxProjectionResult,
+} from "./lightbulb/human-inbox"
 import {
   admitPRReviewRouteInDb,
   readActivePRReviewRoutesInDb,
@@ -143,6 +150,7 @@ import {
   LightbulbDiscoveryCandidateTable,
   LightbulbGateTable,
   LightbulbGoalTable,
+  LightbulbHumanInboxItemTable,
   LightbulbIssueMutationOutboxTable,
   LightbulbLoopTable,
   LightbulbOperationsSnapshotTable,
@@ -257,6 +265,8 @@ export const PRReviewRouteWakeID = prefixedID("lbprwake", "Lightbulb.PRReviewRou
 export type PRReviewRouteWakeID = typeof PRReviewRouteWakeID.Type
 export const OperationsSnapshotID = prefixedID("lbops", "Lightbulb.OperationsSnapshotID")
 export type OperationsSnapshotID = typeof OperationsSnapshotID.Type
+export const HumanInboxItemID = prefixedID("lbinbox", "Lightbulb.HumanInboxItemID")
+export type HumanInboxItemID = typeof HumanInboxItemID.Type
 export const IssueMutationID = prefixedID("lbim", "Lightbulb.IssueMutationID")
 export type IssueMutationID = typeof IssueMutationID.Type
 export const BudgetUsageID = prefixedID("lbusage", "Lightbulb.BudgetUsageID")
@@ -315,6 +325,16 @@ export type PRReviewRouteWakeSource =
   | "schedule_tick"
   | "human_steering"
 export type OperationsSnapshotStatus = "empty" | "active" | "attention_required" | "held"
+export type HumanInboxDecisionType =
+  | "approval_needed"
+  | "needs_info"
+  | "conflict"
+  | "stale_worker"
+  | "budget_kill_switch"
+  | "max_attempts"
+  | "reroute_proposal"
+export type HumanInboxItemStatus = "open" | "resolved" | "suppressed"
+export type HumanInboxPriority = "low" | "medium" | "high"
 export type IssueMutationAction = "create_issue" | "edit_issue" | "add_label" | "remove_label" | "add_comment"
 export type IssueMutationStatus = "ready" | "held" | "applied" | "skipped" | "failed" | "superseded"
 export type IssueMutationIssueState = "open" | "closed"
@@ -637,6 +657,69 @@ export type PRReviewRouteDigest = {
   readonly recent: PRReviewRouteDigestItem[]
 }
 
+export type HumanInboxSource = {
+  readonly goalID?: GoalID
+  readonly loopID?: LoopID
+  readonly routeID?: RouteID
+  readonly routeStopID?: RouteStopID
+  readonly routeSteerID?: RouteSteerID
+  readonly runID?: RunID
+  readonly workerID?: WorkerID
+  readonly taskPacketID?: TaskPacketID
+  readonly gateID?: GateID
+  readonly artifactID?: ArtifactID
+  readonly issueRef?: string
+  readonly issueURL?: string
+  readonly mutationID?: IssueMutationID
+  readonly launchAttemptID?: WorkerLaunchAttemptID
+  readonly eventID?: EventID
+}
+
+export type HumanInboxItem = {
+  readonly id: HumanInboxItemID
+  readonly accountID: AccountID
+  readonly type: HumanInboxDecisionType
+  readonly status: HumanInboxItemStatus
+  readonly priority: HumanInboxPriority
+  readonly summary: string
+  readonly reason: string
+  readonly suggestedDecision: string
+  readonly lastAction: string
+  readonly source: HumanInboxSource
+  readonly ageMs: number
+  readonly firstSeenAt: number
+  readonly lastSeenAt: number
+  readonly resolvedAt: number | null
+  readonly metadata: Record<string, unknown> | null
+}
+
+export type HumanInboxDigest = {
+  readonly accountID: AccountID
+  readonly generatedAt: number
+  readonly actionRequired: readonly HumanInboxItem[]
+  readonly suppressed: readonly HumanInboxItem[]
+  readonly byType: {
+    readonly approval_needed: readonly HumanInboxItem[]
+    readonly needs_info: readonly HumanInboxItem[]
+    readonly conflict: readonly HumanInboxItem[]
+    readonly stale_worker: readonly HumanInboxItem[]
+    readonly budget_kill_switch: readonly HumanInboxItem[]
+    readonly max_attempts: readonly HumanInboxItem[]
+    readonly reroute_proposal: readonly HumanInboxItem[]
+  }
+  readonly counts: {
+    readonly actionRequired: number
+    readonly suppressed: number
+    readonly approvalNeeded: number
+    readonly needsInfo: number
+    readonly conflict: number
+    readonly staleWorker: number
+    readonly budgetKillSwitch: number
+    readonly maxAttempts: number
+    readonly rerouteProposal: number
+  }
+}
+
 export type OperationsSnapshotCounts = {
   readonly goals: {
     readonly active: number
@@ -698,6 +781,13 @@ export type OperationsSnapshotCounts = {
     readonly complete: number
     readonly collisionHolds: number
   }
+  readonly humanInbox: {
+    readonly actionRequired: number
+    readonly approvalNeeded: number
+    readonly needsInfo: number
+    readonly conflicts: number
+    readonly escalated: number
+  }
 }
 
 export type OperationsSnapshotCompactHandle = {
@@ -722,6 +812,7 @@ export type OperationsSnapshotHandles = {
   readonly budgetHolds: OperationsSnapshotCompactHandle[]
   readonly dependencyReleases: OperationsSnapshotCompactHandle[]
   readonly recentArtifacts: OperationsSnapshotCompactHandle[]
+  readonly humanActions: OperationsSnapshotCompactHandle[]
 }
 
 export type OperationsSnapshot = {
@@ -851,6 +942,7 @@ export type AccountGraph = {
   readonly prReviewCandidates: (typeof LightbulbPRReviewCandidateTable.$inferSelect)[]
   readonly discoveryCandidates: (typeof LightbulbDiscoveryCandidateTable.$inferSelect)[]
   readonly operationsSnapshots: (typeof LightbulbOperationsSnapshotTable.$inferSelect)[]
+  readonly humanInboxItems: (typeof LightbulbHumanInboxItemTable.$inferSelect)[]
   readonly issueMutationOutbox: (typeof LightbulbIssueMutationOutboxTable.$inferSelect)[]
   readonly prReviewRoutes: (typeof LightbulbPRReviewRouteTable.$inferSelect)[]
   readonly prReviewRouteWakes: (typeof LightbulbPRReviewRouteWakeTable.$inferSelect)[]
@@ -980,6 +1072,7 @@ export type Dashboard = {
     readonly discoveryCandidates: DiscoveryCandidateInbox
     readonly prReviewRoutes: PRReviewRouteSummary[]
     readonly prReviewRouteDigest: PRReviewRouteDigest
+    readonly humanInbox: HumanInboxDigest
   }
   readonly operations: {
     readonly schedulerTicks: DashboardSchedulerTick[]
@@ -1116,6 +1209,8 @@ export interface Interface {
   readonly readLoopSchedules: (input: { readonly accountID: AccountID; readonly now?: number }) => Effect.Effect<LoopScheduleReadModel[]>
   readonly readLoopProfileSummaries: (input: { readonly accountID: AccountID; readonly goalID: GoalID }) => Effect.Effect<LoopProfileCompactSummary[]>
   readonly publishOperationsSnapshot: (input: PublishOperationsSnapshotInput) => Effect.Effect<PublishOperationsSnapshotResult>
+  readonly projectHumanInbox: (input: HumanInboxProjectionInput) => Effect.Effect<HumanInboxProjectionResult>
+  readonly readHumanInbox: (input: { readonly accountID: AccountID; readonly now?: number }) => Effect.Effect<HumanInboxDigest>
   readonly readOperatorExport: (input: {
     readonly accountID: AccountID
     readonly now?: number
@@ -1536,6 +1631,22 @@ export const layer = Layer.effect(
           },
           { candidate: DiscoveryCandidateID.create, event: EventID.create },
         )
+        const graph = yield* readAccountGraphFromDb(db, ids.accountID)
+        if (graph) {
+          yield* projectHumanInboxInDb(
+            db,
+            {
+              accountID: ids.accountID,
+              now,
+              source: {
+                seed: "tracer_bullet",
+                route: "stable_loop_v0_dogfood",
+              },
+            },
+            graph,
+            { event: EventID.create },
+          )
+        }
         return ids
       }),
       readAccountGraph: Effect.fn("Lightbulb.readAccountGraph")(function* (accountID) {
@@ -1557,6 +1668,14 @@ export const layer = Layer.effect(
           yield* readRecentSchedulerTicksFromDb(db, input.accountID),
           { snapshot: OperationsSnapshotID.create, event: EventID.create },
         )
+      }),
+      projectHumanInbox: Effect.fn("Lightbulb.projectHumanInbox")(function* (input) {
+        const graph = yield* readAccountGraphFromDb(db, input.accountID)
+        if (!graph) return yield* Effect.die(new Error("Lightbulb account not found: " + input.accountID))
+        return yield* projectHumanInboxInDb(db, { ...input, now: input.now ?? Date.now() }, graph, { event: EventID.create })
+      }),
+      readHumanInbox: Effect.fn("Lightbulb.readHumanInbox")(function* (input) {
+        return yield* readHumanInboxDigestInDb(db, input)
       }),
       readOperatorExport: Effect.fn("Lightbulb.readOperatorExport")(function* (input) {
         const graph = yield* readAccountGraphFromDb(db, input.accountID)
@@ -2022,6 +2141,13 @@ function readAccountGraphFromDb(
         .from(LightbulbOperationsSnapshotTable)
         .where(eq(LightbulbOperationsSnapshotTable.account_id, accountID))
         .orderBy(desc(LightbulbOperationsSnapshotTable.time_updated))
+        .all()
+        .pipe(Effect.orDie),
+      humanInboxItems: yield* db
+        .select()
+        .from(LightbulbHumanInboxItemTable)
+        .where(eq(LightbulbHumanInboxItemTable.account_id, accountID))
+        .orderBy(asc(LightbulbHumanInboxItemTable.first_seen_at), asc(LightbulbHumanInboxItemTable.id))
         .all()
         .pipe(Effect.orDie),
       issueMutationOutbox: yield* db

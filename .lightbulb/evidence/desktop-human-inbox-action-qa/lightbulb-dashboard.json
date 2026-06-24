@@ -1,0 +1,13 @@
+{
+  "capturedAt": "2026-06-24T15:55:31.794Z",
+  "durationMs": 1264,
+  "route": "/lightbulb/dashboard",
+  "scrollSelector": "aside section:last-child",
+  "screenshot": "/home/ren/wt/lightbulb/human-inbox/.lightbulb/evidence/desktop-human-inbox-action-qa/lightbulb-dashboard.png",
+  "selector": "[data-page='lightbulb-dashboard']",
+  "size": {
+    "width": 956,
+    "height": 1036
+  },
+  "url": "oc://renderer/index.html"
+}
